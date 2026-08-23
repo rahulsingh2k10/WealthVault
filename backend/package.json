@@ -1,0 +1,26 @@
+{
+  "name": "cypher-folio-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cypher Folio — database migration service (Railway)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "migrate": "npx prisma migrate deploy",
+    "migrate:dev": "npx prisma migrate dev",
+    "migrate:reset": "npx prisma migrate reset",
+    "db:seed": "node prisma/seed.js",
+    "studio": "npx prisma studio"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.14.0",
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "prisma": "^5.14.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

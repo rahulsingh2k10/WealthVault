@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Stores the passphrase verifier and other app-level config
+model AppConfig {
+  id    Int    @id @default(autoincrement())
+  key   String @unique
+  value String
+
+  @@map("app_config")
+}
+
+model EquityHolding {
+  id            Int      @id @default(autoincrement())
+  encryptedData String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("equity_holdings")
+}
+
+model MutualFund {
+  id            Int      @id @default(autoincrement())
+  encryptedData String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("mutual_funds")
+}
+
+model NpsHolding {
+  id            Int      @id @default(autoincrement())
+  encryptedData String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("nps_holdings")
+}
+
+model CryptoHolding {
+  id            Int      @id @default(autoincrement())
+  encryptedData String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("crypto_holdings")
+}
+
+model PostOfficeScheme {
+  id            Int      @id @default(autoincrement())
+  encryptedData String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("post_office_schemes")
+}
+
+model FixedDeposit {
+  id            Int      @id @default(autoincrement())
+  encryptedData String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("fixed_deposits")
+}
+
+model ForeignHolding {
+  id            Int      @id @default(autoincrement())
+  encryptedData String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("foreign_holdings")
+}
+
+model OtherInvestment {
+  id            Int      @id @default(autoincrement())
+  encryptedData String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("other_investments")
+}
+
+model BankAccount {
+  id            Int      @id @default(autoincrement())
+  encryptedData String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("bank_accounts")
+}
+
+model CurrencyRate {
+  id           Int      @id @default(autoincrement())
+  currencyCode String   @unique
+  currencyName String
+  rate         Float
+  updatedAt    DateTime @updatedAt @default(now())
+
+  @@map("currency_rates")
+}
+
+// ── User identity (Google OAuth) ───────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  googleId  String   @unique
+  email     String   @unique
+  firstName String
+  lastName  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
