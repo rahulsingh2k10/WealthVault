@@ -1,34 +1,37 @@
 "use client";
 
-import { Lock, Globe, BarChart3, Shield, RefreshCw } from "lucide-react";
+import { useEffect } from "react";
+import { Lock, Globe, BarChart3, Shield, RefreshCw, Sparkles } from "lucide-react";
+import { useColorTheme } from "@/context/ColorThemeContext";
+import FeatureCarousel from "@/components/landing/FeatureCarousel";
 
 
 /* ── Feature list ────────────────────────────────────────────────── */
 const features = [
   {
     icon: Lock,
-    title: "End-to-End Encrypted",
-    desc: "Your data is encrypted before it leaves your device—accessible only to you, secured with AES-256-GCM encryption.",
+    title: "End-to-End Encryption",
+    desc: "Encrypted before it leaves your device. Secured with AES-256-GCM. Decrypted only on your device. Accessible only to you.",
   },
   {
     icon: BarChart3,
     title: "A Unified View of Your Wealth",
-    desc: "All your assets—stocks, funds, crypto, deposits, and more—in one place.",
+    desc: "Stocks, funds, crypto, deposits, and more. All in one place.",
   },
   {
     icon: Globe,
     title: "Global Currency Support",
-    desc: "View your wealth in any currency—instantly and effortlessly.",
+    desc: "View your wealth in any currency. Instantly. Effortlessly.",
   },
   {
     icon: RefreshCw,
     title: "Real-Time Performance Tracking",
-    desc: "Across every asset—with precise valuations and cost-basis tracking, effortlessly.",
+    desc: "Every asset. Precise valuations. Cost basis, tracked effortlessly.",
   },
   {
     icon: Shield,
     title: "Private by Design",
-    desc: "No analytics. No data sharing. Your data remains yours—always.",
+    desc: "No analytics. No data sharing. Your data remains yours. Always.",
   },
 ];
 
@@ -84,20 +87,32 @@ function AppleIcon() {
    Main Page
 ═══════════════════════════════════════════════════════════════════ */
 export default function LandingPage() {
+  const { colorTheme } = useColorTheme();
+
+  // Mirror the color theme onto <body> so overscroll bounce above the page
+  // reveals this theme's gradient instead of the app's plain dark background.
+  // Cleaned up on unmount so other routes aren't affected.
+  useEffect(() => {
+    document.body.setAttribute("data-color-theme", colorTheme);
+    return () => {
+      document.body.removeAttribute("data-color-theme");
+    };
+  }, [colorTheme]);
+
   /* ── All colour tokens are CSS variables — no JS needed ── */
-  const textPri    = "var(--ui-text-pri)";
-  const textSec    = "var(--ui-text-sec)";
-  const textMuted  = "var(--ui-text-muted)";
-  const accent     = "var(--ui-accent)";
-  const cardBg     = "var(--ui-card-bg)";
-  const cardBorder = "var(--ui-card-border)";
-  const iconBg     = "var(--ui-icon-bg)";
-  const divider    = "var(--ui-card-border)";
+  const textPri    = "var(--land-fg)";
+  const textSec    = "var(--land-fg-soft)";
+  const textMuted  = "var(--land-fg-faint)";
+  const accent     = "var(--land-accent-a)";
+  const cardBg     = "var(--land-card-bg)";
+  const cardBorder = "var(--land-card-line)";
+  const divider    = "var(--land-card-line)";
 
   return (
     <div
-      className="relative min-h-screen overflow-x-hidden"
-      style={{ background: "var(--warm-page-bg)" }}
+      data-color-theme={colorTheme}
+      className="relative min-h-screen overflow-x-hidden pt-14"
+      style={{ background: "var(--land-bg)", fontFamily: "Georgia, 'Times New Roman', serif" }}
     >
 
       {/* ── Background ambient orbs ───────────────────────────── */}
@@ -107,7 +122,7 @@ export default function LandingPage() {
           style={{
             top: "-15%", right: "-10%",
             height: "700px", width: "700px",
-            background: "radial-gradient(circle, var(--warm-orb-1) 0%, transparent 65%)",
+            background: "var(--land-blob-1)",
             filter: "blur(60px)",
           }}
         />
@@ -116,7 +131,7 @@ export default function LandingPage() {
           style={{
             bottom: "-15%", left: "-10%",
             height: "700px", width: "700px",
-            background: "radial-gradient(circle, var(--warm-orb-2) 0%, transparent 65%)",
+            background: "var(--land-blob-2)",
             filter: "blur(60px)",
           }}
         />
@@ -125,7 +140,7 @@ export default function LandingPage() {
           style={{
             top: "30%", left: "35%",
             height: "400px", width: "400px",
-            background: "radial-gradient(circle, var(--warm-orb-3) 0%, transparent 70%)",
+            background: "var(--land-blob-3)",
             filter: "blur(80px)",
           }}
         />
@@ -134,20 +149,41 @@ export default function LandingPage() {
       {/* ── Hero ────────────────────────────────────────────────── */}
       <section className="relative z-10 mx-auto max-w-4xl px-5 pb-16 pt-10 text-center lg:pt-16">
 
+        {/* Eyebrow badge */}
+        <div
+          className="relative mb-5 inline-flex items-center gap-1.5 overflow-hidden rounded-full px-4 py-2 text-xs font-bold tracking-wide"
+          style={{
+            background:
+              "linear-gradient(90deg, color-mix(in srgb, var(--land-accent-a) 38%, transparent), color-mix(in srgb, var(--land-accent-b) 38%, transparent))",
+            border: "1px solid color-mix(in srgb, var(--land-accent-a) 70%, transparent)",
+            boxShadow: "0 0 24px color-mix(in srgb, var(--land-accent-a) 45%, transparent)",
+            color: textPri,
+          }}
+        >
+          <Sparkles className="h-3.5 w-3.5 animate-pulse" style={{ color: accent }} />
+          Truly One of a Kind
+          {/* Shimmer sweep */}
+          <span
+            aria-hidden
+            className="animate-badge-shimmer pointer-events-none absolute inset-y-0 w-1/3"
+            style={{ background: "linear-gradient(100deg, transparent, rgba(255,255,255,0.55), transparent)" }}
+          />
+        </div>
+
         {/* Headline — fixed size, never scales with viewport */}
         <h1
           className="mb-5 font-extrabold leading-tight tracking-tight"
           style={{ color: textPri, fontSize: "clamp(1.6rem, 5.5vw, 2.5rem)" }}
         >
           Your Wealth.{" "}
-          <span style={{ color: "var(--ui-accent)" }}>Safeguarded Here.</span>{" "}
-          <span style={{ color: "var(--ui-accent-warm)" }}>Under Your Sole Control.</span>
+          <span style={{ color: "var(--land-accent-a)" }}>Privacy By Design.</span>{" "}
+          <span style={{ color: "var(--land-accent-b)" }}>Visible Only to You.</span>
         </h1>
 
         {/* Subheadline */}
         <div className="mx-auto mb-10 max-w-xl text-base sm:text-lg" style={{ color: textSec }}>
-          <p>Zero compromise. Your entire wealth—brought together as one.</p>
-          <p>Secured by a passphrase only you hold. Visible only to you.</p>
+          <p>Your Entire WEALTH. One Complete VIEW. Zero COMPROMISE.</p>
+          <p>Only you hold the PASSPHRASE. ENCRYPTED before it reaches us. SEEN only by you.</p>
         </div>
 
         {/* ── Sign-in card ─────────────────────────────────────── */}
@@ -165,15 +201,15 @@ export default function LandingPage() {
           <div
             style={{
               height: "4px",
-              background: "linear-gradient(90deg, var(--ui-accent), var(--ui-accent-warm))",
+              background: "linear-gradient(90deg, var(--land-accent-a), var(--land-accent-b))",
             }}
           />
 
           <div className="p-6">
-            <h3 className="text-lg font-bold mb-1" style={{ color: textPri }}>
+            <h3 className="text-xl font-bold mb-1" style={{ color: textPri }}>
               Unlock Your Vault
             </h3>
-            <p className="text-xs mb-5" style={{ color: textSec }}>
+            <p className="text-sm mb-5" style={{ color: textSec }}>
               Sign in to securely access your wealth.
             </p>
 
@@ -199,9 +235,9 @@ export default function LandingPage() {
 
             {/* Divider */}
             <div className="flex items-center gap-3 mb-3">
-              <div className="flex-1 h-px" style={{ background: "var(--ui-card-border)" }} />
-              <span className="text-[10px]" style={{ color: textMuted }}>or</span>
-              <div className="flex-1 h-px" style={{ background: "var(--ui-card-border)" }} />
+              <div className="flex-1 h-px" style={{ background: divider }} />
+              <span className="text-[15px]" style={{ color: textMuted }}>OR</span>
+              <div className="flex-1 h-px" style={{ background: divider }} />
             </div>
 
             {/* X + LinkedIn — side by side */}
@@ -212,7 +248,6 @@ export default function LandingPage() {
                 style={{ background: "#0f1419" }}
               >
                 <XIcon />
-                X
               </a>
               <a
                 href="/api/auth/linkedin"
@@ -229,75 +264,24 @@ export default function LandingPage() {
       </section>
 
       {/* ── Feature grid ────────────────────────────────────────── */}
-      <section className="relative z-10 mx-auto max-w-5xl px-5 pb-28">
+      <section className="relative z-10 mx-auto max-w-[2200px] px-5 pb-28">
         <div className="mb-12 text-center">
-          <h2
-            className="text-xl font-bold sm:text-2xl"
-            style={{ color: textPri }}
-          >
-            Designed for Absolute Privacy
+          <h2 className="text-xl font-bold sm:text-2xl" style={{ color: textPri }}>
+            Everything You Own. In One Place.
           </h2>
           <p className="mt-2 text-sm" style={{ color: textSec }}>
-            Accessible only to you. Never to us.
+            Track it all. See it clearly. Keep it private.
           </p>
         </div>
 
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {features.map(({ icon: Icon, title, desc }) => (
-            <div
-              key={title}
-              className="rounded-xl p-7 transition hover:scale-[1.02]"
-              style={{
-                background: cardBg,
-                border: `1px solid ${cardBorder}`,
-                backdropFilter: "blur(14px)",
-                WebkitBackdropFilter: "blur(14px)",
-              }}
-            >
-              <div
-                className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-lg"
-                style={{ background: iconBg }}
-              >
-                <Icon className="h-4 w-4" style={{ color: accent }} />
-              </div>
-              <h3 className="mb-1.5 text-sm font-semibold" style={{ color: textPri }}>
-                {title}
-              </h3>
-              <p className="text-xs leading-relaxed" style={{ color: textSec }}>
-                {desc}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── Security callout ────────────────────────────────────── */}
-      <section
-        className="relative z-10 px-5 py-12"
-        style={{
-          background: "var(--ui-section-bg)",
-          borderTop: `1px solid ${divider}`,
-          borderBottom: `1px solid ${divider}`,
-          backdropFilter: "blur(8px)",
-        }}
-      >
-        <div className="mx-auto max-w-3xl text-center">
-          <div
-            className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl"
-            style={{ background: iconBg }}
-          >
-            <Lock className="h-5 w-5" style={{ color: accent }} />
-          </div>
-          <h3 className="mb-2 text-lg font-bold" style={{ color: textPri }}>
-            Zero-Knowledge Architecture
-          </h3>
-          <p className="text-sm leading-relaxed" style={{ color: textSec }}>
-            Your data is encrypted on your device using AES-256-GCM, with a key derived from
-            your passphrase. The key exists only during your active session and fades with
-            inactivity—never stored or retained. Even with full system access, your data
-            remains unreadable to us.
-          </p>
-        </div>
+        <FeatureCarousel
+          features={features}
+          cardBg={cardBg}
+          cardBorder={cardBorder}
+          textPri={textPri}
+          textSec={textSec}
+          accent={accent}
+        />
       </section>
 
       {/* ── Footer ──────────────────────────────────────────────── */}
@@ -306,7 +290,7 @@ export default function LandingPage() {
         style={{ borderTop: `1px solid ${divider}` }}
       >
         <p className="text-center text-xs font-semibold" style={{ color: textPri }}>
-          © {new Date().getFullYear()} · Designed for privacy. Built for you.
+          © {new Date().getFullYear()} · Designed For Privacy. Built For You.
         </p>
       </footer>
     </div>

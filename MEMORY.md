@@ -4,7 +4,7 @@
 
 ---
 
-## Secure Wealth Vault — Project Context
+## Wealth Vault — Project Context
 
 **Repo:** `/Users/rahulsingh/Documents/Documents/CreativeAppz/Github/Finance/portfolio-dashboard/frontend`
 **Stack:** Next.js 14.1.0 App Router · Prisma 5 + PostgreSQL (Railway) · iron-session v8 · Tailwind CSS · next-themes · jose · lucide-react
@@ -70,7 +70,7 @@ APPLE_TEAM_ID / APPLE_KEY_ID / APPLE_CLIENT_ID / APPLE_PRIVATE_KEY
 
 **AppBar** (`src/components/layout/AppBar.tsx`)
 - Height: `h-14` (3.5rem) — AppShell uses `h-[calc(100vh-3.5rem)]`
-- Left: brand icon + "Secure Wealth Vault"
+- Left: brand icon + "Wealth Vault"
 - Right: `ProfileBadge` only — no theme toggle here
 
 **Sidebar** (`src/components/layout/Sidebar.tsx`)

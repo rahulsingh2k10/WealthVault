@@ -242,7 +242,7 @@ export default function UnlockPage() {
 
   return (
     <div
-      className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center p-4 sm:p-8"
+      className="mt-14 flex min-h-[calc(100vh-3.5rem)] items-center justify-center p-4 sm:p-8"
       style={{ background: "var(--warm-page-bg)" }}
     >
       {/* Ambient orbs */}

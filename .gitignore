@@ -65,3 +65,5 @@ package-lock [0-9]*.json
 
 # ── Personal data (not project source) ────────────────────────────────────────
 Investments.numbers
+
+.superpowers/

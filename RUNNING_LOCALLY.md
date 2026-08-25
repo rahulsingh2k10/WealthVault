@@ -1,4 +1,4 @@
-# Running Secure Wealth Vault Locally
+# Running Wealth Vault Locally
 
 ---
 

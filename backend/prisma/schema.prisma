@@ -1,3 +1,8 @@
+// This schema must stay identical to frontend/prisma/schema.prisma — this
+// service only runs migrations against the same database the frontend reads.
+// A divergent schema here can generate a migration that drops columns the
+// frontend depends on. Edit frontend/prisma/schema.prisma and copy it here.
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,17 +12,30 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Stores the passphrase verifier and other app-level config
 model AppConfig {
-  id    Int    @id @default(autoincrement())
-  key   String @unique
-  value String
+  id     Int    @id @default(autoincrement())
+  userId String
+  key    String
+  value  String
 
+  @@unique([userId, key])
   @@map("app_config")
+}
+
+model NavConfig {
+  id        Int    @id @default(autoincrement())
+  country   String
+  href      String
+  labelKey  String
+  iconName  String
+  sortOrder Int    @default(0)
+
+  @@map("nav_config")
 }
 
 model EquityHolding {
   id            Int      @id @default(autoincrement())
+  userId        String
   encryptedData String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -27,6 +45,7 @@ model EquityHolding {
 
 model MutualFund {
   id            Int      @id @default(autoincrement())
+  userId        String
   encryptedData String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -36,6 +55,7 @@ model MutualFund {
 
 model NpsHolding {
   id            Int      @id @default(autoincrement())
+  userId        String
   encryptedData String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -45,6 +65,7 @@ model NpsHolding {
 
 model CryptoHolding {
   id            Int      @id @default(autoincrement())
+  userId        String
   encryptedData String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -54,6 +75,7 @@ model CryptoHolding {
 
 model PostOfficeScheme {
   id            Int      @id @default(autoincrement())
+  userId        String
   encryptedData String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -63,6 +85,7 @@ model PostOfficeScheme {
 
 model FixedDeposit {
   id            Int      @id @default(autoincrement())
+  userId        String
   encryptedData String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -72,6 +95,7 @@ model FixedDeposit {
 
 model ForeignHolding {
   id            Int      @id @default(autoincrement())
+  userId        String
   encryptedData String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -81,6 +105,7 @@ model ForeignHolding {
 
 model OtherInvestment {
   id            Int      @id @default(autoincrement())
+  userId        String
   encryptedData String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -90,6 +115,7 @@ model OtherInvestment {
 
 model BankAccount {
   id            Int      @id @default(autoincrement())
+  userId        String
   encryptedData String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -97,24 +123,98 @@ model BankAccount {
   @@map("bank_accounts")
 }
 
-model CurrencyRate {
-  id           Int      @id @default(autoincrement())
-  currencyCode String   @unique
-  currencyName String
-  rate         Float
-  updatedAt    DateTime @updatedAt @default(now())
+model GoldHolding {
+  id            Int      @id @default(autoincrement())
+  userId        String
+  encryptedData String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  @@map("currency_rates")
+  @@map("gold_holdings")
 }
 
-// ── User identity (Google OAuth) ───────────────────────────────────────────
+model RealEstateHolding {
+  id            Int      @id @default(autoincrement())
+  userId        String
+  encryptedData String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("real_estate_holdings")
+}
+
+model InsurancePolicy {
+  id            Int      @id @default(autoincrement())
+  userId        String
+  encryptedData String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("insurance_policies")
+}
+
+model CashAccount {
+  id            Int      @id @default(autoincrement())
+  userId        String
+  encryptedData String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("cash_accounts")
+}
+
+model Liability {
+  id            Int      @id @default(autoincrement())
+  userId        String
+  encryptedData String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("liabilities")
+}
+
+model FixedIncomeHolding {
+  id            Int      @id @default(autoincrement())
+  userId        String
+  encryptedData String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("fixed_income_holdings")
+}
+
+model GovernmentScheme {
+  id            Int      @id @default(autoincrement())
+  userId        String
+  encryptedData String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("government_schemes")
+}
+
+
+enum Plan {
+  FREE
+  PRO
+  MAX
+}
 
 model User {
   id        String   @id @default(cuid())
-  googleId  String   @unique
-  email     String   @unique
-  firstName String
-  lastName  String
+  fullName  String
+  // Unique identity key across all providers:
+  //   Google / LinkedIn / Apple → actual email      (e.g. rahul@gmail.com)
+  //   X                         → handle only       (e.g. rahulsingh2k10)
+  //   No clash possible: emails always contain @, X handles never do.
+  username  String   @unique
+  platform  String   // "Google" | "X" | "LinkedIn" | "Apple"
+  avatar    String?  // OAuth-provided URL or user-uploaded base64 data URL
+  plan      Plan     @default(FREE)
+  // AES-256-GCM encrypted verifier — encrypt("PORTFOLIO_APP_V1", derivedKey)
+  // null  → first-time setup; non-null → passphrase already established
+  // The passphrase itself is NEVER stored anywhere.
+  verifier  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

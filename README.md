@@ -1,4 +1,4 @@
-# Secure Wealth Vault
+# Wealth Vault
 
 > **Zero-knowledge portfolio tracker** — AES-256-GCM encrypted, client-side passphrase, zero analytics.
 
