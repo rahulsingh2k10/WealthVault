@@ -1,6 +1,8 @@
 # ── Claude Code ──────────────────────────────────────────────────────────────
 # Session workspaces (auto-created per session, safe to delete)
 local_*/
+# Git worktrees for isolated feature work
+.worktrees/
 # Local machine-specific permissions/settings — not shared across machines
 .claude/settings.local.json
 
