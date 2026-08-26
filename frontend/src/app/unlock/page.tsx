@@ -569,7 +569,7 @@ export default function UnlockPage() {
               <Lock className="h-3.5 w-3.5 shrink-0" />
               First time here?
             </p>
-            <p className="text-sm leading-relaxed" style={{ color: textSec }}>
+            <p className="text-sm leading-relaxed" style={{ color: accent }}>
               Your passphrase becomes your key—only you can access your vault.
             </p>
           </div>
