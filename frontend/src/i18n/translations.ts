@@ -34,7 +34,7 @@ export interface Translations {
     logout:               string;
     freeSubscription:     string;
     monthlySubscription:  string;
-    quarterlySubscription: string;
+    quarterlySubscription:string;
     annualSubscription:   string;
   };
   language: {
@@ -72,9 +72,9 @@ const translations: Record<Locale, Translations> = {
       governmentSchemes: "Government Schemes",
     },
     sidebar: {
-      settings:   "Settings",
-      language:   "Language",
-      country:    "Country",
+      settings:              "Settings",
+      language:              "Language",
+      country:               "Country",
       subscription:          "Subscription",
       lockScreen:            "Lock Screen",
       logout:                "Log out",
@@ -101,9 +101,9 @@ const translations: Record<Locale, Translations> = {
       governmentSchemes: "Programmes gouvernementaux",
     },
     sidebar: {
-      settings:   "Paramètres",
-      language:   "Langue",
-      country:    "Pays",
+      settings:              "Paramètres",
+      language:              "Langue",
+      country:               "Pays",
       subscription:          "Abonnement",
       lockScreen:            "Verrouiller l'écran",
       logout:                "Déconnexion",
@@ -130,9 +130,9 @@ const translations: Record<Locale, Translations> = {
       governmentSchemes: "Regierungsprogramme",
     },
     sidebar: {
-      settings:   "Einstellungen",
-      language:   "Sprache",
-      country:    "Land",
+      settings:              "Einstellungen",
+      language:              "Sprache",
+      country:               "Land",
       subscription:          "Abonnement",
       lockScreen:            "Bildschirm sperren",
       logout:                "Abmelden",
@@ -159,9 +159,9 @@ const translations: Record<Locale, Translations> = {
       governmentSchemes: "सरकारी योजनाएं",
     },
     sidebar: {
-      settings:   "सेटिंग्स",
-      language:   "भाषा",
-      country:    "देश",
+      settings:              "सेटिंग्स",
+      language:              "भाषा",
+      country:               "देश",
       subscription:          "सदस्यता",
       lockScreen:            "स्क्रीन लॉक करें",
       logout:                "लॉग आउट",
@@ -188,9 +188,9 @@ const translations: Record<Locale, Translations> = {
       governmentSchemes: "Program Pemerintah",
     },
     sidebar: {
-      settings:   "Pengaturan",
-      language:   "Bahasa",
-      country:    "Negara",
+      settings:              "Pengaturan",
+      language:              "Bahasa",
+      country:               "Negara",
       subscription:          "Langganan",
       lockScreen:            "Kunci Layar",
       logout:                "Keluar",
@@ -217,9 +217,9 @@ const translations: Record<Locale, Translations> = {
       governmentSchemes: "Programmi governativi",
     },
     sidebar: {
-      settings:   "Impostazioni",
-      language:   "Lingua",
-      country:    "Paese",
+      settings:              "Impostazioni",
+      language:              "Lingua",
+      country:               "Paese",
       subscription:          "Abbonamento",
       lockScreen:            "Blocca schermo",
       logout:                "Esci",
@@ -246,9 +246,9 @@ const translations: Record<Locale, Translations> = {
       governmentSchemes: "政府制度",
     },
     sidebar: {
-      settings:   "設定",
-      language:   "言語",
-      country:    "国",
+      settings:              "設定",
+      language:              "言語",
+      country:               "国",
       subscription:          "サブスクリプション",
       lockScreen:            "画面をロック",
       logout:                "ログアウト",
@@ -275,9 +275,9 @@ const translations: Record<Locale, Translations> = {
       governmentSchemes: "정부 제도",
     },
     sidebar: {
-      settings:   "설정",
-      language:   "언어",
-      country:    "국가",
+      settings:              "설정",
+      language:              "언어",
+      country:               "국가",
       subscription:          "구독",
       lockScreen:            "화면 잠금",
       logout:                "로그아웃",
@@ -304,9 +304,9 @@ const translations: Record<Locale, Translations> = {
       governmentSchemes: "Programas Governamentais",
     },
     sidebar: {
-      settings:   "Configurações",
-      language:   "Idioma",
-      country:    "País",
+      settings:              "Configurações",
+      language:              "Idioma",
+      country:               "País",
       subscription:          "Assinatura",
       lockScreen:            "Bloquear tela",
       logout:                "Sair",
@@ -333,9 +333,9 @@ const translations: Record<Locale, Translations> = {
       governmentSchemes: "Programas gubernamentales",
     },
     sidebar: {
-      settings:   "Configuración",
-      language:   "Idioma",
-      country:    "País",
+      settings:              "Configuración",
+      language:              "Idioma",
+      country:               "País",
       subscription:          "Suscripción",
       lockScreen:            "Bloquear pantalla",
       logout:                "Cerrar sesión",
@@ -362,9 +362,9 @@ const translations: Record<Locale, Translations> = {
       governmentSchemes: "Programas gubernamentales",
     },
     sidebar: {
-      settings:   "Configuración",
-      language:   "Idioma",
-      country:    "País",
+      settings:              "Configuración",
+      language:              "Idioma",
+      country:               "País",
       subscription:          "Suscripción",
       lockScreen:            "Bloquear pantalla",
       logout:                "Cerrar sesión",
