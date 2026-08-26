@@ -195,6 +195,21 @@ enum Subscription {
   ANNUAL
 }
 
+model SubscriptionPlan {
+  id             Int          @id @default(autoincrement())
+  tier           Subscription @unique
+  price          Decimal
+  offerPrice     Decimal?
+  currency       String       @default("INR")
+  offerStartDate DateTime?
+  offerEndDate   DateTime?
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("subscription_plans")
+}
+
 model User {
   id                    String       @id @default(cuid())
   fullName              String

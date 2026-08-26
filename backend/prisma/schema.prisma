@@ -193,12 +193,26 @@ model GovernmentScheme {
   @@map("government_schemes")
 }
 
-
 enum Subscription {
   FREE
   MONTHLY
   QUARTERLY
   ANNUAL
+}
+
+model SubscriptionPlan {
+  id             Int          @id @default(autoincrement())
+  tier           Subscription @unique
+  price          Decimal
+  offerPrice     Decimal?
+  currency       String       @default("INR")
+  offerStartDate DateTime?
+  offerEndDate   DateTime?
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("subscription_plans")
 }
 
 model User {
