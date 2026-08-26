@@ -2,7 +2,7 @@
 
 > Read `00-global-architecture.md` first.
 
-This is the most complex single-page component in the app. It has two panels, five distinct sub-states, avatar upload with canvas resizing, passphrase strength validation, a first-time confirmation modal, and a reset vault flow. This doc is the authoritative reference.
+This is the most complex single-page component in the app. It has two panels, five distinct sub-states, avatar upload with canvas resizing, passphrase strength validation, a first-time confirmation modal, and a reset vault flow. This doc is the authoritative reference, verified against the code as of 2026-08-27.
 
 ---
 
@@ -12,7 +12,7 @@ The unlock page bridges OAuth authentication and vault access. A user reaches it
 - They are **authenticated** (have a valid `userId` cookie) but
 - The vault is **locked** (no `encryptionKey` in session)
 
-Its job is to accept a passphrase, POST it to `/api/auth/unlock`, and — if valid — receive the derived key stored in the session cookie, then redirect to `/dashboard`.
+Its job is to accept a passphrase, POST it to `/api/auth/unlock`, and — if valid — receive a derived encryption key stored in the session cookie, then move on to `/dashboard`. The exact path from there differs for a first-time user versus a returning user — see **Sub-flows** below.
 
 ---
 
@@ -21,15 +21,19 @@ Its job is to accept a passphrase, POST it to `/api/auth/unlock`, and — if val
 | File | Role |
 |------|------|
 | `src/app/unlock/page.tsx` | Entire unlock page — two-panel layout, all state, all flows |
-| `src/app/api/auth/unlock/route.ts` | POST handler — deriveKey, verify/create verifier, store encryptionKey in session |
-| `src/app/api/auth/me/route.ts` | GET handler — returns `{ user: { id, name, email, avatar, platform } }` |
-| `src/app/api/auth/avatar/route.ts` | PATCH handler — saves base64 JPEG to `user.avatar` in DB |
-| `src/app/api/auth/signout/route.ts` | POST handler — clears session, used by Sign Out button |
-| `src/app/api/auth/reset-vault/route.ts` | POST handler — deletes all asset rows + clears verifier blob |
-| `src/components/layout/AppBar.tsx` | Top bar still visible (from root layout) |
-| `src/lib/services/EncryptionService.ts` | Used server-side by unlock route — deriveKey, verifyKey, createVerifier |
-| `src/lib/validation/passphraseValidation.ts` | Re-exports strength rules used both client-side and server-side |
-| `src/lib/session.ts` | iron-session config — getSession(), saveSession() |
+| `src/app/api/auth/unlock/route.ts` | POST handler — derives the key, verifies or creates the verifier, stores `encryptionKey` in session |
+| `src/app/api/auth/me/route.ts` | GET handler — returns `{ user: { id, name, email, avatar, platform, subscription } }` |
+| `src/app/api/auth/avatar/route.ts` | PATCH handler — saves a base64 JPEG to `user.avatar` in the DB |
+| `src/app/api/auth/signout/route.ts` | POST handler — destroys the session, used by the Sign Out button |
+| `src/app/api/auth/reset-vault/route.ts` | POST handler — intended to delete all asset rows and clear the verifier blob. **Currently broken — see Known Issues.** |
+| `src/app/api/preferences/route.ts` | GET/PATCH handler — intended to read/write saved locale, country, and theme. **Currently broken — see Known Issues.** |
+| `src/components/layout/AppBar.tsx` | Top bar still visible (from root layout); shows the dark/light `ThemeTogglePill` on this route |
+| `src/lib/services/EncryptionService.ts` | `deriveKey`, `createVerifier`, `verifyKey`, `encrypt`, `decrypt` — thin wrapper around `src/lib/encryption.ts` |
+| `src/lib/validation/passphraseValidation.ts` | `validatePassphrase()` — the same 5 rules enforced both client-side (live UI checklist) and server-side (on first-time setup only) |
+| `src/lib/savePreference.ts` | `savePreference(key, value)` — fire-and-forget PATCH to `/api/preferences`; silently swallows network-level errors, but not HTTP error responses (see Known Issues) |
+| `src/lib/session.ts` | iron-session config — `getSession()`, `SessionData` shape |
+
+There is no separate "SessionService" or "UserRepository" class involved in this route — `POST /api/auth/unlock` calls `getSession()` and `prisma.user.*` directly.
 
 ---
 
@@ -39,7 +43,7 @@ Its job is to accept a passphrase, POST it to `/api/auth/unlock`, and — if val
 Root Layout
 └── AppBar
     └── UnlockPage (src/app/unlock/page.tsx)   ['use client']
-        ├── Ambient orb divs (aria-hidden)
+        ├── Ambient orb divs (aria-hidden) — <WarmBackground>-style, inline in this page
         ├── Main two-panel card
         │   ├── Gradient accent strip (top)
         │   ├── LEFT PANEL
@@ -59,7 +63,7 @@ Root Layout
         │       │   ├── Error message (conditional)
         │       │   ├── "Forgot passphrase?" link (conditional on "Invalid passphrase" error)
         │       │   ├── Reset confirmation panel (conditional on showReset)
-        │       │   └── "Unlock Vault" submit button
+        │       │   └── "Unlock Vault" submit button — label changes with loadingStep
         │       └── Footer hint ("First time here?")
         └── First-time passphrase modal (fixed overlay, conditional on showSaveAlert)
             ├── Gradient accent strip
@@ -78,12 +82,13 @@ Root Layout
 | `user` | `CurrentUser \| null` | Loaded from `/api/auth/me` on mount |
 | `passphrase` | `string` | Controlled input, capped at 256 chars |
 | `showPass` | `boolean` | Toggles input type password ↔ text |
-| `error` | `string` | Server error message from unlock API |
-| `loading` | `boolean` | True while POSTing to /api/auth/unlock |
+| `error` | `string` | Server error message from the unlock API |
+| `loading` | `boolean` | True while the unlock request (and its follow-on work) is in flight |
+| `loadingStep` | `'unlocking' \| 'syncing' \| 'done'` | Drives the submit button's label while `loading` is true — see **Passphrase submission** below |
 | `avatarUploading` | `boolean` | True while resizing + PATCHing avatar |
 | `avatarError` | `string` | Error from avatar upload |
 | `showReset` | `boolean` | Shows the destructive reset panel |
-| `resetting` | `boolean` | True while POSTing to /api/auth/reset-vault |
+| `resetting` | `boolean` | True while POSTing to `/api/auth/reset-vault` |
 | `showSaveAlert` | `boolean` | True on first-time setup — shows the passphrase modal |
 | `copied` | `boolean` | True for 2.5s after clipboard copy in modal |
 
@@ -99,10 +104,10 @@ mount
   ▼
 GET /api/auth/me
   ├── { user } → setUser(user)
-  └── { } (no user) → POST /api/auth/signout → window.location.href = "/"
+  └── { user: null } (no user) → POST /api/auth/signout → window.location.href = "/"
 ```
 
-If `/api/auth/me` returns no user (stale session after DB wipe), the page self-signs-out and redirects to `/`. This prevents a logged-in-but-ghost-user state.
+If `/api/auth/me` returns no user (stale session after a DB wipe or account deletion), the page self-signs-out and redirects to `/`. This prevents a logged-in-but-ghost-user state.
 
 ### 2. Avatar upload
 
@@ -123,7 +128,9 @@ PATCH /api/auth/avatar   { avatar: dataUrl }
 
 `resizeImage` uses `URL.createObjectURL` → draws onto a canvas → exports as JPEG at 82% quality, constrained to 256×256. The `<input>` ref is reset after every upload attempt so the same file can be re-selected.
 
-### 3. Passphrase submission (returning user)
+### 3. Passphrase submission — shared entry point for both first-time and returning users
+
+The same `handleSubmit` runs regardless of whether this is the user's first passphrase or their hundredth — the branch only happens *after* the server responds:
 
 ```
 User types passphrase → live validation updates `checks` object
@@ -132,23 +139,76 @@ User types passphrase → live validation updates `checks` object
 User clicks "Unlock Vault" (or presses Enter)
   │
   ▼
+setLoading(true); setLoadingStep('unlocking'); setError("")
+  │
+  ▼
 POST /api/auth/unlock   { passphrase }
-  ├── 200 { firstTime: false } → router.push('/dashboard') + router.refresh()
-  ├── 200 { firstTime: true }  → setShowSaveAlert(true)   ← first-time setup path
-  └── 4xx { error }            → setError(message)
+  │
+  ├── non-2xx → setError(data.error), loading stops here — nothing below runs
+  │
+  └── 200 { success: true, firstTime }
+        │
+        ▼
+      setLoadingStep('syncing')
+        │
+        ├── firstTime === true  ──────────────────────────────► see "4. First-time path" below
+        │
+        └── firstTime === false ─────────────────────────────► see "5. Returning-user path" below
 ```
 
-### 4. First-time setup path
+### 4. First-time setup path (`firstTime: true`)
 
-When `POST /api/auth/unlock` returns `{ firstTime: true }`:
-- `showSaveAlert` becomes `true`
-- The modal appears, showing the passphrase in a copyable monospace box
-- User must click "I've saved it — Open Vault" → `handleOpenVault()` → `router.push('/dashboard')`
-- The passphrase is shown only once (it is not stored anywhere after this)
+This is the **very first successful unlock** for this account — the server just created the verifier (see **Server-side Logic** below).
 
-### 5. Reset vault flow
+```
+firstTime === true
+  │
+  ▼
+Promise.all([
+  savePreference('country', <IP-detected country>),
+  savePreference('locale',  <browser-detected locale>),
+  savePreference('theme',   <current theme, defaulting to 'dark'>),
+])
+  │  (fire-and-forget — see Known Issues, this currently does not persist)
+  ▼
+setShowSaveAlert(true)
+  │
+  ▼
+Modal appears: passphrase shown once, in a copyable monospace box
+  │
+User clicks "I've saved it — Open Vault"
+  │
+  ▼
+handleOpenVault(): router.push('/dashboard'); router.refresh();
+```
 
-Surfaces only when `error === "Invalid passphrase"`:
+The passphrase is shown only once and is never stored anywhere client-side after this — closing or refreshing the tab without clicking through loses it permanently (which is the intended, documented behavior: there is no recovery).
+
+### 5. Returning-user path (`firstTime: false`)
+
+This is every unlock **after** the first — the server just verified the passphrase against the existing verifier.
+
+```
+firstTime === false
+  │
+  ▼
+GET /api/preferences
+  │  (currently returns 500 — see Known Issues — so this branch is always skipped in practice)
+  ├── ok → apply saved locale, country, theme to the UI (setLocale/setCountry/setTheme)
+  └── not ok → skip silently, defaults stay in effect
+  │
+  ▼
+setLoadingStep('done')
+  │
+  ▼
+router.push('/dashboard')
+```
+
+Unlike the first-time path, this path does **not** call `router.refresh()` — only `router.push()`.
+
+### 6. Reset vault flow
+
+Surfaces only when `error === "Invalid passphrase"` (i.e. only on the returning-user path, when the passphrase is wrong):
 ```
 "Forgot your passphrase?" link → setShowReset(true)
   │
@@ -159,87 +219,164 @@ User clicks "Yes, delete everything"
   │
   ▼
 POST /api/auth/reset-vault
-  └── Deletes all asset rows + clears user.verifier in DB
-      → setPassphrase('') + setError('') + setShowReset(false)
-      User can now create a new passphrase
+  │  (currently throws before doing anything — see Known Issues)
+  └── setPassphrase('') + setError('') + setShowReset(false) regardless of the response
+      (the client does not check response.ok here)
 ```
 
-### 6. Sign out
+### 7. Sign out
 
 ```
 User clicks "Sign out"
   │
   ▼
-POST /api/auth/signout   ← clears userId + encryptionKey from session
+POST /api/auth/signout   ← session.destroy(), clearing userId + encryptionKey + everything else
   │
   ▼
 window.location.href = "/"   ← full page reload to clear Next.js client cache
 ```
 
-`router.push()` is intentionally not used here because it can race with session clearing. `window.location.href` guarantees the full browser navigation and state reset.
+`router.push()` is intentionally not used here because it can race with session clearing. `window.location.href` guarantees a full browser navigation and state reset.
 
 ---
 
-## Passphrase Validation (client-side)
+## Passphrase Validation
 
-Computed live from the `passphrase` state value:
+The same 5 rules are enforced in two places, and must be kept in sync manually — there's no shared import between them, just parallel logic:
 
-```typescript
-const checks = {
-  minLength:       passphrase.length >= 12,
-  hasAlphanumeric: /[a-zA-Z]/.test(passphrase) && /\d/.test(passphrase),
-  hasUpper:        (passphrase.match(/[A-Z]/g) ?? []).length >= 2,
-  hasSpecial:      (passphrase.match(/[^a-zA-Z0-9]/g) ?? []).length >= 2,
-  underMax:        passphrase.length <= 256,
-}
-const allValid = Object.values(checks).every(Boolean)
-```
+- **Client-side** (`src/app/unlock/page.tsx`) — computed live on every keystroke, drives the checklist UI and disables the submit button:
+  ```typescript
+  const checks = {
+    minLength:       passphrase.length >= 12,
+    hasAlphanumeric: /[a-zA-Z]/.test(passphrase) && /\d/.test(passphrase),
+    hasUpper:        (passphrase.match(/[A-Z]/g) ?? []).length >= 2,
+    hasSpecial:      (passphrase.match(/[^a-zA-Z0-9]/g) ?? []).length >= 2,
+    underMax:        passphrase.length <= 256,
+  }
+  const allValid = Object.values(checks).every(Boolean)
+  ```
+- **Server-side** (`src/lib/validation/passphraseValidation.ts`, `validatePassphrase()`) — identical thresholds, but only actually invoked by the unlock route **on first-time setup** (see below). A returning user's passphrase is never re-validated for strength — it's only ever compared against the stored verifier.
 
-The submit button is disabled and Enter-key submission is blocked while `!allValid`. The input border changes from neutral → red (partially typed, failing) → green (all checks met).
+The input border changes from neutral → red (partially typed, failing) → green (all checks met), and the submit button is disabled / Enter-key submission is blocked while `!allValid`.
 
 ---
 
-## Server-side: `/api/auth/unlock` Logic
+## Server-side: `POST /api/auth/unlock` Logic
 
 ```
 POST { passphrase }
   │
-  ▼
-SessionService.requireSession()   ← must have userId (OAuth done)
+  ├── !passphrase ────────────────────────────► 400 { error: "Passphrase required" }
   │
   ▼
-EncryptionService.deriveKey(passphrase)   ← scrypt(passphrase, ENCRYPTION_SALT)
-  │                                          → keyHex (32-byte hex)
+getSession() → session.userId present?
+  ├── No ─────────────────────────────────────► 401 { error: "Unauthorized" }
+  │
   ▼
-Does user.verifier exist in DB?
-  ├── No  → EncryptionService.createVerifier(keyHex)
-  │         → save to user.verifier
-  │         → save keyHex to session.encryptionKey
-  │         → return { firstTime: true }
-  └── Yes → EncryptionService.verifyKey(user.verifier, keyHex)
-            ├── match → save keyHex to session.encryptionKey
-            │           return { firstTime: false }
-            └── mismatch → 401 { error: "Invalid passphrase" }
+prisma.user.findUnique({ where: { id: session.userId } })
+  ├── not found ──────────────────────────────► 404 { error: "User not found" }
+  │
+  ▼
+keyHex = EncryptionService.deriveKey(passphrase)   ← scrypt-derived key, see src/lib/encryption.ts
+  │
+  ▼
+Does user.verifier already exist?
+  │
+  ├── No (first-time) ──────────────────────────────────────────────────┐
+  │     validatePassphrase(passphrase)                                  │
+  │       ├── invalid ───────────────────────► 400 { error: <first validation error> }
+  │       └── valid                                                      │
+  │             prisma.user.update({ verifier: createVerifier(keyHex) }) │
+  │                                                                       │
+  └── Yes (returning) ───────────────────────────────────────────────────┤
+        verifyKey(keyHex, user.verifier)                                 │
+          ├── mismatch ─────────────────────► 401 { error: "Invalid passphrase" }
+          └── match                                                      │
+                (no DB write)                                            │
+                                                                          ▼
+session.encryptionKey = keyHex; await session.save()
+  │
+  ▼
+200 { success: true, firstTime: !user.verifier }
 ```
 
-The passphrase never leaves this route handler. `keyHex` exists only in the iron-session cookie for the duration of the session.
+Any unhandled exception anywhere in this handler is caught by a top-level `try/catch` and returns `500 { error: "Failed to unlock" }`.
+
+**The passphrase never leaves this route handler as plaintext beyond this function.** `keyHex` (the derived key, not the passphrase itself) is stored only in the iron-session cookie for the session's duration (8 hours, per `src/lib/session.ts`).
+
+`createVerifier(keyHex)` = `encrypt("PORTFOLIO_APP_V1", keyHex)`. `verifyKey(keyHex, verifier)` = `decrypt(verifier, keyHex) === "PORTFOLIO_APP_V1"` (returns `false` instead of throwing if decryption fails, e.g. on a wrong key).
+
+### Database effect
+
+This route touches exactly one column: `users.verifier`.
+
+| Case | Write |
+|---|---|
+| First-time (verifier was `NULL`) | `UPDATE users SET verifier = <new encrypted blob> WHERE id = ...` |
+| Returning, correct passphrase | No write — `verifier` is only read and compared |
+| Returning, wrong passphrase | No write — request fails at the `verifyKey` check |
+
+No other table or column is touched by this route. It does not write to `SubscriptionPlan`, does not create or modify any other `User` field, and does not run inside a database transaction (the two conceptual steps — verifier check/write, then session save — aren't atomic with each other, but the session write isn't a database operation, so there's no partial-DB-write risk).
+
+---
+
+## Known Issues (as of 2026-08-27)
+
+Two flows that this screen depends on were broken by the 2026-08-26 change that dropped
+17 asset/holding tables plus `AppConfig` and `NavConfig` from the schema (see
+`docs/superpowers/specs/2026-08-26-subscription-plan-pricing-table-design.md` and the
+commit that removed them). Neither breakage is in the unlock endpoint itself — both are
+in routes this screen *calls in addition to* `/api/auth/unlock`:
+
+- **`GET`/`PATCH /api/preferences`** (`src/app/api/preferences/route.ts`) still calls
+  `prisma.appConfig.findMany` / `prisma.appConfig.upsert` — `appConfig` no longer exists
+  on the generated Prisma client, so both handlers throw and Next.js returns a 500.
+  Effect on this screen: the first-time path's three `savePreference()` calls resolve
+  without throwing (a non-2xx HTTP response doesn't reject `fetch`, and `savePreference`
+  only catches network-level failures) so the UI proceeds normally, but nothing is
+  actually saved — country/locale/theme choices from first-time setup are lost. The
+  returning-user path's `GET /api/preferences` fails the same way, so `prefsRes.ok` is
+  `false` and saved preferences are never restored; the user always lands on `/dashboard`
+  with default locale/country/theme instead of what they'd previously set.
+- **`POST /api/auth/reset-vault`** (`src/app/api/auth/reset-vault/route.ts`) builds a
+  `Promise.all([...])` array that includes `prisma.equityHolding.deleteMany(...)` and
+  eight other now-nonexistent models. Accessing `.deleteMany` on `undefined` throws
+  synchronously while the array literal is being constructed — **before** `Promise.all`
+  ever runs — so the `prisma.user.update({ verifier: null })` call in the same array is
+  never reached either. Effect on this screen: clicking "Yes, delete everything" always
+  fails server-side (500), but the client doesn't check `response.ok` here — it clears
+  `passphrase`/`error`/`showReset` regardless, so the UI *looks* like the reset worked
+  while the verifier was never actually cleared. A user who clicks this will see the form
+  reset but their old passphrase is still active.
+
+Neither issue was introduced by anything specific to the unlock flow — both are
+collateral damage from the unrelated table-drop, surfaced here because this is the
+first place they were traced end-to-end. `POST /api/auth/unlock`, `PATCH
+/api/auth/avatar`, and `POST /api/auth/signout` are unaffected and work as documented.
 
 ---
 
 ## Theme Pattern
 
-Same `mounted`/`isDark` pattern as the landing page — defaults to dark during SSR, switches after hydration. All theme-sensitive colours are inline styles, not Tailwind classes.
+Same dark/light pattern as the rest of the app: `next-themes`' `ThemeProvider` (see
+`src/app/layout.tsx`), with the `ThemeTogglePill` in the `AppBar` (shown on this route
+and on `/`) letting the user switch modes. All theme-sensitive colors are the shared
+`--ui-*` / `--warm-*` CSS custom properties from `globals.css` (light on `:root`, dark on
+`.dark`), used as inline styles rather than Tailwind's `dark:` classes.
 
-Left panel uses a stronger directional gradient (`leftBg`) to visually separate it from the right panel (`rightBg`). Both adapt to dark/light mode.
+Left panel uses a stronger tint (`--unlock-left-bg`) to visually separate it from the
+right panel (`--unlock-right-bg`). Both have distinct light/dark values.
 
 ---
 
 ## API Routes Used by This Page
 
-| Method | Route | When |
-|--------|-------|------|
-| GET | `/api/auth/me` | On mount — load user name/avatar |
-| POST | `/api/auth/unlock` | On form submit |
-| PATCH | `/api/auth/avatar` | On file select |
-| POST | `/api/auth/signout` | Sign Out button |
-| POST | `/api/auth/reset-vault` | Reset vault confirm |
+| Method | Route | When | Status |
+|--------|-------|------|--------|
+| GET | `/api/auth/me` | On mount — load user name/avatar/subscription | Working |
+| POST | `/api/auth/unlock` | On form submit | Working |
+| PATCH | `/api/auth/avatar` | On file select | Working |
+| GET | `/api/preferences` | After a successful returning-user unlock | **Broken** — see Known Issues |
+| PATCH | `/api/preferences` | 3× after a successful first-time unlock | **Broken** — see Known Issues |
+| POST | `/api/auth/reset-vault` | Reset vault confirm | **Broken** — see Known Issues |
+| POST | `/api/auth/signout` | Sign Out button, and auto-signout when `/api/auth/me` returns no user | Working |
