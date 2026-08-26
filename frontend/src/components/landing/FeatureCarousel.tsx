@@ -21,12 +21,11 @@ interface FeatureCarouselProps {
 const AUTOPLAY_MS = 4000;
 const RESUME_DELAY_MS = 5000;
 
-/** Tints each card by stepping between the two shared UI accent colors. */
-function iconPanelStyle(index: number, total: number): React.CSSProperties {
-  const pct = total > 1 ? (index / (total - 1)) * 100 : 0;
-  const tint = `color-mix(in srgb, var(--ui-accent) ${100 - pct}%, var(--ui-accent-warm) ${pct}%)`;
+/** Tints each icon panel with the same top-right ambient orb color used on the
+ * page background (--warm-orb-1) — light/dark mode aware, no per-card variation. */
+function iconPanelStyle(): React.CSSProperties {
   return {
-    background: `linear-gradient(160deg, color-mix(in srgb, ${tint} 32%, transparent), color-mix(in srgb, ${tint} 14%, transparent))`,
+    background: "linear-gradient(160deg, var(--warm-orb-1), transparent)",
   };
 }
 
@@ -67,7 +66,7 @@ function FeatureCard({
     >
       <div
         className="flex w-11 shrink-0 items-center justify-center"
-        style={{ ...iconPanelStyle(index, total), borderRight: `1px solid ${cardBorder}` }}
+        style={{ ...iconPanelStyle(), borderRight: `1px solid ${cardBorder}` }}
       >
         {/* Same glow the "Truly One of a Kind" badge uses on its border,
             applied to the icon's own shape via drop-shadow instead of

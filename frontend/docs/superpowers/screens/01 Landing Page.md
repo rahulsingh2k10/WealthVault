@@ -119,12 +119,13 @@ adapts to the screen it's shown on:
 **Card design**: every card is a fixed size, so nothing changes shape based on content
 length — a short description just leaves a little empty space, and a long one scrolls
 within its own box rather than being cut off or stretching the card. Titles always
-stay on a single line. Each card's icon panel is tinted by stepping between
-`--ui-accent` and `--ui-accent-warm` across the five cards, so the set reads as a single
-gradient family rather than five unrelated colors. Each icon also gently floats up
-and down on a loop and carries a soft glow in `--ui-accent` — matching the badge's glow
-treatment — with both effects staggered slightly per card so they don't move in
-lockstep.
+stay on a single line. Every card's icon panel uses the same `--warm-orb-1` gradient
+as the page's own top-right ambient orb (light/dark mode aware, no per-card variation)
+— rather than the two-accent blend used elsewhere on the page — so the panels read as
+an extension of the background rather than a separate color system. Each icon also
+gently floats up and down on a loop and carries a soft glow in `--ui-accent` —
+matching the badge's glow treatment — with both effects staggered slightly per card so
+they don't move in lockstep.
 
 ---
 
