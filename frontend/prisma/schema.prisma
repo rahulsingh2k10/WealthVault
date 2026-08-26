@@ -206,8 +206,8 @@ model User {
   platform              String // "Google" | "X" | "LinkedIn" | "Apple"
   avatar                String? // OAuth-provided URL or user-uploaded base64 data URL
   subscription          Subscription @default(FREE)
-  subscriptionStartedAt DateTime?
-  subscriptionExpiresAt DateTime?
+  subscriptionStartDate DateTime?
+  subscriptionEndDate   DateTime?
   // AES-256-GCM encrypted verifier — encrypt("PORTFOLIO_APP_V1", derivedKey)
   // null  → first-time setup; non-null → passphrase already established
   // The passphrase itself is NEVER stored anywhere.
