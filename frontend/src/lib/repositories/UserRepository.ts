@@ -10,7 +10,7 @@ export class UserRepository implements IUserRepository {
     return prisma.user.upsert({
       where: { username: profile.id },
       update: { fullName: profile.fullName, platform: profile.platform, avatar: profile.avatar },
-      create: { username: profile.id, fullName: profile.fullName, platform: profile.platform, avatar: profile.avatar, plan: 'FREE' },
+      create: { username: profile.id, fullName: profile.fullName, platform: profile.platform, avatar: profile.avatar, subscription: 'FREE' },
       select: { id: true, fullName: true, username: true, avatar: true },
     })
   }
