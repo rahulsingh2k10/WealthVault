@@ -1,6 +1,13 @@
-# API: User Account Creation (OAuth Sign-In)
+# User Creation API (OAuth Sign-In)
 
 > Read `screens/00-global-architecture.md` first for overall app context.
+> Reference format: this doc mirrors an OpenAPI/Swagger UI layout (Paths → Parameters →
+> Responses → Schemas) even though no `openapi.yaml` exists for it. See **Scope note**.
+
+**Base path:** `/api/auth`
+**Tags:** `Google` · `Apple` · `X (Twitter)` · `LinkedIn` · `Related`
+
+---
 
 ## Scope note
 
@@ -8,42 +15,14 @@ WealthVault does not expose a single conventional JSON endpoint for "create a us
 Instead, a user row is created (or updated, on repeat login) as a side effect of a
 successful OAuth sign-in — the callback route for whichever provider the user signed in
 with performs a Prisma `upsert` directly against the `users` table. This document treats
-those four callback routes as "the API that adds a user to the database," since that is
-the operation that actually inserts rows.
+the eight routes below (four "initiate" + four "callback") as the API surface that
+ultimately adds a user to the database.
 
-If you meant a different endpoint (e.g. `/api/auth/unlock`, which writes the passphrase
-verifier onto an *existing* user row), see the **Related endpoints** section at the bottom
-— that flow is already documented in detail in `screens/02-unlock.md`.
+If you meant a different endpoint, see **Related endpoints** at the bottom.
 
 ---
 
-## File Map
-
-| File | Role |
-|------|------|
-| `src/app/api/auth/google/route.ts` | GET — starts the Google OAuth redirect, sets CSRF `oauth_state` cookie |
-| `src/app/api/auth/google/callback/route.ts` | GET — exchanges code for tokens, **upserts the user row**, starts session |
-| `src/app/api/auth/apple/route.ts` | GET — starts the Apple OAuth redirect |
-| `src/app/api/auth/apple/callback/route.ts` | POST — exchanges code for tokens, **upserts the user row**, starts session |
-| `src/app/api/auth/x/route.ts` | GET — starts the X (Twitter) OAuth redirect, adds PKCE `x_code_verifier` cookie |
-| `src/app/api/auth/x/callback/route.ts` | GET — exchanges code for tokens, **upserts the user row**, starts session |
-| `src/app/api/auth/linkedin/route.ts` | GET — starts the LinkedIn OAuth redirect |
-| `src/app/api/auth/linkedin/callback/route.ts` | GET — exchanges code for tokens, **upserts the user row**, starts session |
-| `src/lib/session.ts` | iron-session config used to set the post-login session cookie |
-| `src/lib/prisma.ts` | Shared `PrismaClient` singleton used by all four callback routes |
-| `prisma/schema.prisma` | Defines the `users` table — see `database/users-table.md` |
-
-All four providers follow the same shape. The four callback routes call
-`prisma.user.upsert(...)` **directly** — none of them go through
-`src/lib/repositories/UserRepository.ts`, even though that class implements the same
-`upsert` operation. `UserRepository` currently has no callers anywhere in the app except
-its own test (`__tests__/repositories/UserRepository.test.ts`); it's effectively dead code
-today. Worth knowing if you're about to "fix a bug" in `UserRepository` expecting it to
-affect login — it won't.
-
----
-
-## How it works (all four providers)
+## Overview
 
 ```
 User clicks "Sign in with <Provider>"
@@ -70,96 +49,203 @@ Provider redirects back to /api/auth/<provider>/callback
 302 redirect to /unlock
 ```
 
-If anything fails at any step (user denies consent, state mismatch, token exchange fails,
-provider returns incomplete profile data, or an unexpected exception), the route redirects
-to `/?error=<code>` instead and **no database write happens**. See the error table below.
+All four providers follow the same shape. The four callback routes call
+`prisma.user.upsert(...)` **directly** — none of them go through
+`src/lib/repositories/UserRepository.ts`, even though that class implements the same
+`upsert` operation. `UserRepository` currently has no callers anywhere in the app except
+its own test (`__tests__/repositories/UserRepository.test.ts`); it's effectively dead code
+today. Worth knowing if you're about to "fix a bug" in `UserRepository` expecting it to
+affect login — it won't.
 
 ---
 
-## Request
+## Paths
 
-### Initiating the flow
+### `GET /api/auth/google`
 
-| Method | Route | Query/Body | Notes |
-|--------|-------|------------|-------|
-| GET | `/api/auth/google` | none | Sets `oauth_state` cookie (httpOnly, 10 min TTL), redirects to Google's consent screen |
-| GET | `/api/auth/apple` | none | Sets `oauth_state` cookie, redirects to Apple's consent screen (`response_mode=form_post`) |
-| GET | `/api/auth/x` | none | Sets `oauth_state` **and** `x_code_verifier` cookies (PKCE, S256), redirects to X's consent screen |
-| GET | `/api/auth/linkedin` | none | Sets `oauth_state` cookie, redirects to LinkedIn's consent screen |
+**Summary:** Start Google OAuth sign-in
+**Tags:** `Google`
 
-### The callback request (what actually triggers the DB write)
+| Parameters | — none — |
+|---|---|
 
-| Provider | Method | Content-Type | Fields the route reads |
-|----------|--------|--------------|-------------------------|
-| Google | GET | query string | `code`, `state`, `error?` |
-| Apple | **POST** | `application/x-www-form-urlencoded` | `code`, `state`, `error?`, `user?` (JSON string, first login only) |
-| X | GET | query string | `code`, `state`, `error?` |
-| LinkedIn | GET | query string | `code`, `state`, `error?` |
+**Responses**
 
-Every route re-verifies the `state` value against the `oauth_state` cookie it set earlier
-(CSRF protection) before doing anything else. X additionally requires the
-`x_code_verifier` cookie (PKCE) to exchange the code.
-
-After the code is exchanged for a token, each route calls the provider's profile endpoint
-to get the identity that becomes the `upsert` input:
-
-| Provider | Profile source | Fields used |
-|----------|----------------|-------------|
-| Google | `GET https://www.googleapis.com/oauth2/v3/userinfo` | `email` (→ `username`), `given_name`/`family_name` (→ `fullName`), `picture` (→ `avatar`) |
-| Apple | Decoded `id_token` JWT + the one-time `user` form field | `email` claim (→ `username`, falls back to `apple_{sub}@apple.com`), `user.name.firstName`/`lastName` (→ `fullName`, first login only) |
-| X | `GET https://api.twitter.com/2/users/me` | `username` handle (→ `username`, no `@`/domain), `name` (→ `fullName`), `profile_image_url` (→ `avatar`) |
-| LinkedIn | `GET https://api.linkedin.com/v2/userinfo` (OIDC) | `email` (→ `username`), `given_name`/`family_name` (→ `fullName`), `picture` (→ `avatar`) |
-
-`username` is the column that identifies a user uniquely across every provider (see
-`database/users-table.md`) — it is always an email address, **except** for X, which uses
-the bare handle since X's API doesn't expose the account's email.
+| Status | Description | Headers |
+|---|---|---|
+| `302` | Redirect to Google's consent screen | `Set-Cookie: oauth_state=<token>; HttpOnly; Max-Age=600` |
 
 ---
 
-## The database write
+### `GET /api/auth/google/callback`
 
-Every callback route makes the same shape of call:
+**Summary:** Complete Google OAuth sign-in and upsert the user row
+**Tags:** `Google`
 
-```typescript
-const user = await prisma.user.upsert({
-  where: { username: <provider-derived identity string> },
-  update: { fullName, platform: "<Provider>", avatar /* Google/LinkedIn/X only */ },
-  create: {
-    username: <provider-derived identity string>,
-    fullName,
-    platform: "<Provider>",     // "Google" | "Apple" | "X" | "LinkedIn"
-    avatar,                     // omitted entirely for Apple
-    subscription: "FREE",       // every new user starts on the Free tier
-  },
-})
-```
+**Parameters**
 
-**On `create`** (new `username`, i.e. first time this identity has signed in) — a new row
-is inserted with:
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `code` | query | string | yes | Authorization code from Google |
+| `state` | query | string | yes | Must match the `oauth_state` cookie (CSRF check) |
+| `error` | query | string | no | Present if the user declined consent |
+| `oauth_state` | cookie | string | yes | Set by `GET /api/auth/google` |
 
-| Column | Value on creation |
-|--------|--------------------|
-| `id` | auto-generated `cuid()` |
-| `fullName` | from the provider profile |
-| `username` | the provider-derived identity string (email, or X handle) |
-| `platform` | the literal string `"Google"` / `"Apple"` / `"X"` / `"LinkedIn"` |
-| `avatar` | provider's profile picture URL, or `undefined` (omitted) — Apple never sets this |
-| `subscription` | always `"FREE"` — no route ever creates a user on a paid tier |
-| `subscriptionStartDate`, `subscriptionEndDate` | not set — remain `NULL` |
-| `verifier` | not set — remains `NULL` (first-time vault setup happens later, in `/api/auth/unlock`) |
-| `createdAt` / `updatedAt` | set automatically by Prisma |
+**Profile fetch (server-side, not client-visible):** `GET https://www.googleapis.com/oauth2/v3/userinfo` → `email` (→ `username`), `given_name`/`family_name` (→ `fullName`), `picture` (→ `avatar`)
 
-**On `update`** (returning user, `username` already exists) — only `fullName`, `platform`,
-and (for Google/LinkedIn/X) `avatar` are refreshed. `subscription` is **not** touched on
-update, so a returning user keeps whatever tier they're on — logging in again never resets
-a paid subscription back to Free.
+**Database effect:** see [`UpsertUserInput`](#upsertuserinput-schema) — `platform: "Google"`, `avatar` set.
+
+**Responses**
+
+| Status | Description | Headers |
+|---|---|---|
+| `302` | Success → redirect to `/unlock` | See [Success response](#success-response-all-callback-routes) |
+| `302` | Failure → redirect to `/?error=<code>` | See [Error codes](#error-codes-all-callback-routes) |
 
 ---
 
-## Response
+### `GET /api/auth/apple`
 
-None of these routes return JSON. On success, the browser receives an HTTP redirect and a
-new session cookie:
+**Summary:** Start Apple OAuth sign-in
+**Tags:** `Apple`
+
+| Parameters | — none — |
+|---|---|
+
+**Responses**
+
+| Status | Description | Headers |
+|---|---|---|
+| `302` | Redirect to Apple's consent screen (`response_mode=form_post`) | `Set-Cookie: oauth_state=<token>; HttpOnly; Max-Age=600` |
+
+---
+
+### `POST /api/auth/apple/callback`
+
+**Summary:** Complete Apple OAuth sign-in and upsert the user row
+**Tags:** `Apple`
+
+> Apple is the one provider that calls its callback with `POST` + form-encoded body
+> instead of a `GET` + query string, per Apple's `response_mode=form_post` requirement.
+
+**Parameters**
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `oauth_state` | cookie | string | yes | Set by `GET /api/auth/apple` |
+
+**Request body** — `application/x-www-form-urlencoded`
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `code` | string | yes | Authorization code from Apple |
+| `state` | string | yes | Must match the `oauth_state` cookie |
+| `error` | string | no | Present if the user declined consent |
+| `user` | string (JSON) | no | Sent **only on the user's first-ever authorization**; contains `name.firstName`/`name.lastName` |
+
+**Profile fetch:** decoded `id_token` JWT `email` claim (→ `username`, falls back to `apple_{sub}@apple.com` since Apple omits `email` on repeat logins) + the one-time `user` field (→ `fullName`, first login only)
+
+**Database effect:** see [`UpsertUserInput`](#upsertuserinput-schema) — `platform: "Apple"`, `avatar` **never** set (Apple exposes no profile picture).
+
+**Responses**
+
+| Status | Description | Headers |
+|---|---|---|
+| `302` | Success → redirect to `/unlock` | See [Success response](#success-response-all-callback-routes) |
+| `302` | Failure → redirect to `/?error=<code>` | See [Error codes](#error-codes-all-callback-routes) |
+
+---
+
+### `GET /api/auth/x`
+
+**Summary:** Start X (Twitter) OAuth sign-in
+**Tags:** `X (Twitter)`
+
+| Parameters | — none — |
+|---|---|
+
+**Responses**
+
+| Status | Description | Headers |
+|---|---|---|
+| `302` | Redirect to X's consent screen | `Set-Cookie: oauth_state=<token>; HttpOnly; Max-Age=600`<br>`Set-Cookie: x_code_verifier=<verifier>; HttpOnly; Max-Age=600` (PKCE, S256) |
+
+---
+
+### `GET /api/auth/x/callback`
+
+**Summary:** Complete X OAuth sign-in and upsert the user row
+**Tags:** `X (Twitter)`
+
+**Parameters**
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `code` | query | string | yes | Authorization code from X |
+| `state` | query | string | yes | Must match the `oauth_state` cookie |
+| `error` | query | string | no | Present if the user declined consent |
+| `oauth_state` | cookie | string | yes | Set by `GET /api/auth/x` |
+| `x_code_verifier` | cookie | string | yes | PKCE verifier; request fails without it |
+
+**Profile fetch:** `GET https://api.twitter.com/2/users/me` → `username` handle (→ `username`, **not** an email), `name` (→ `fullName`), `profile_image_url` (→ `avatar`)
+
+**Database effect:** see [`UpsertUserInput`](#upsertuserinput-schema) — `platform: "X"`, `avatar` set. Note `username` is the bare X handle here, not an email, since X's API doesn't expose the account's email address.
+
+**Responses**
+
+| Status | Description | Headers |
+|---|---|---|
+| `302` | Success → redirect to `/unlock` | See [Success response](#success-response-all-callback-routes) |
+| `302` | Failure → redirect to `/?error=<code>` | See [Error codes](#error-codes-all-callback-routes) |
+
+---
+
+### `GET /api/auth/linkedin`
+
+**Summary:** Start LinkedIn OAuth sign-in
+**Tags:** `LinkedIn`
+
+| Parameters | — none — |
+|---|---|
+
+**Responses**
+
+| Status | Description | Headers |
+|---|---|---|
+| `302` | Redirect to LinkedIn's consent screen | `Set-Cookie: oauth_state=<token>; HttpOnly; Max-Age=600` |
+
+---
+
+### `GET /api/auth/linkedin/callback`
+
+**Summary:** Complete LinkedIn OAuth sign-in and upsert the user row
+**Tags:** `LinkedIn`
+
+**Parameters**
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `code` | query | string | yes | Authorization code from LinkedIn |
+| `state` | query | string | yes | Must match the `oauth_state` cookie |
+| `error` | query | string | no | Present if the user declined consent |
+| `oauth_state` | cookie | string | yes | Set by `GET /api/auth/linkedin` |
+
+**Profile fetch:** `GET https://api.linkedin.com/v2/userinfo` (OIDC) → `email` (→ `username`), `given_name`/`family_name` (→ `fullName`), `picture` (→ `avatar`)
+
+**Database effect:** see [`UpsertUserInput`](#upsertuserinput-schema) — `platform: "LinkedIn"`, `avatar` set.
+
+**Responses**
+
+| Status | Description | Headers |
+|---|---|---|
+| `302` | Success → redirect to `/unlock` | See [Success response](#success-response-all-callback-routes) |
+| `302` | Failure → redirect to `/?error=<code>` | See [Error codes](#error-codes-all-callback-routes) |
+
+---
+
+## Common responses
+
+### Success response (all callback routes)
 
 ```
 HTTP/1.1 302 Found
@@ -180,13 +266,14 @@ The session cookie (via `src/lib/session.ts`) encodes:
 }
 ```
 
-Nothing about `subscription` is placed in the session — the client learns the current
-subscription tier separately, via `GET /api/auth/me` (see `screens/02-unlock.md` and
-`screens/01 Landing Page.md`).
+`subscription` is **not** placed in the session — the client reads the current
+subscription tier separately, via `GET /api/auth/me`.
 
-### Error responses
+### Error codes (all callback routes)
 
-On any failure, the route redirects instead — still a `302`, never a JSON error body:
+On any failure, every callback route redirects — still a `302`, never a JSON error body.
+In every case below, **no row is created or modified**: the `upsert` call is never
+reached, or its result is discarded because the route already returned.
 
 | Redirect target | When |
 |---|---|
@@ -197,18 +284,74 @@ On any failure, the route redirects instead — still a `302`, never a JSON erro
 | `/?error=invalid_user_info` | The provider's profile endpoint didn't return the required fields (Google/X/LinkedIn only — Apple has no equivalent check) |
 | `/?error=server_error` | Any unhandled exception, including a failed `prisma.user.upsert` |
 
-In every error case above, **no row is created or modified** — the `upsert` call is never
-reached, or its result is discarded because the route already returned.
+---
+
+## Schemas
+
+### `UpsertUserInput` schema
+
+Every callback route makes the same shape of call:
+
+```typescript
+const user = await prisma.user.upsert({
+  where: { username: <provider-derived identity string> },
+  update: { fullName, platform: "<Provider>", avatar /* Google/LinkedIn/X only */ },
+  create: {
+    username: <provider-derived identity string>,
+    fullName,
+    platform: "<Provider>",     // "Google" | "Apple" | "X" | "LinkedIn"
+    avatar,                     // omitted entirely for Apple
+    subscription: "FREE",       // every new user starts on the Free tier
+  },
+})
+```
+
+**On `create`** (new `username`, i.e. first time this identity has signed in):
+
+| Column | Value on creation |
+|---|---|
+| `id` | auto-generated `cuid()` |
+| `fullName` | from the provider profile |
+| `username` | the provider-derived identity string (email, or X handle) |
+| `platform` | the literal string `"Google"` / `"Apple"` / `"X"` / `"LinkedIn"` |
+| `avatar` | provider's profile picture URL, or `undefined` (omitted) — Apple never sets this |
+| `subscription` | always `"FREE"` — no route ever creates a user on a paid tier |
+| `subscriptionStartDate`, `subscriptionEndDate` | not set — remain `NULL` |
+| `verifier` | not set — remains `NULL` (first-time vault setup happens later, in `/api/auth/unlock`) |
+| `createdAt` / `updatedAt` | set automatically by Prisma |
+
+**On `update`** (returning user, `username` already exists) — only `fullName`, `platform`,
+and (for Google/LinkedIn/X) `avatar` are refreshed. `subscription` is **not** touched on
+update, so a returning user keeps whatever tier they're on — logging in again never resets
+a paid subscription back to Free.
 
 ---
 
 ## Related endpoints
 
-- **`GET /api/auth/me`** — reads the current user (including `subscription`) for the
-  frontend; does not write to the `users` table. See `frontend/src/app/api/auth/me/route.ts`.
-- **`POST /api/auth/unlock`** — writes the `verifier` column onto an *existing* user row
-  (first-time passphrase setup) or verifies it (returning user). Fully documented in
-  `screens/02-unlock.md`. This is the closest thing in the app to a traditional
-  "set credentials" endpoint, if that's what you were actually looking for.
-- **`PATCH /api/auth/avatar`** — updates `user.avatar` after initial signup.
-- **`POST /api/auth/signout`** — clears the session cookie; no DB write.
+Out of scope for this doc, but adjacent to the flow above:
+
+| Method | Path | Notes |
+|---|---|---|
+| `GET` | `/api/auth/me` | Reads the current user (including `subscription`) for the frontend; does not write to the `users` table. |
+| `POST` | `/api/auth/unlock` | Writes the `verifier` column onto an *existing* user row (first-time passphrase setup) or verifies it (returning user). Fully documented in `screens/02-unlock.md`. Closest thing in the app to a traditional "set credentials" endpoint. |
+| `PATCH` | `/api/auth/avatar` | Updates `user.avatar` after initial signup. |
+| `POST` | `/api/auth/signout` | Clears the session cookie; no DB write. |
+
+---
+
+## Implementation notes
+
+| File | Role |
+|---|---|
+| `src/app/api/auth/google/route.ts` | `GET /api/auth/google` |
+| `src/app/api/auth/google/callback/route.ts` | `GET /api/auth/google/callback` |
+| `src/app/api/auth/apple/route.ts` | `GET /api/auth/apple` |
+| `src/app/api/auth/apple/callback/route.ts` | `POST /api/auth/apple/callback` |
+| `src/app/api/auth/x/route.ts` | `GET /api/auth/x` |
+| `src/app/api/auth/x/callback/route.ts` | `GET /api/auth/x/callback` |
+| `src/app/api/auth/linkedin/route.ts` | `GET /api/auth/linkedin` |
+| `src/app/api/auth/linkedin/callback/route.ts` | `GET /api/auth/linkedin/callback` |
+| `src/lib/session.ts` | iron-session config used to set the post-login session cookie |
+| `src/lib/prisma.ts` | Shared `PrismaClient` singleton used by all four callback routes |
+| `prisma/schema.prisma` | Defines the `users` table — see `database/users-table.md` |
