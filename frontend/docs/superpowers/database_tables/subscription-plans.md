@@ -15,12 +15,6 @@
   pricing reference table, not per-user data. Compare to `users`, which has one row per
   person; this table has a fixed, small number of rows (one per tier) that describe what
   each tier costs.
-- As of 2026-08-26, `users` and `subscription_plans` are the **only two tables** in the
-  database — every other table (17 asset/holdings/config tables: `EquityHolding`,
-  `MutualFund`, `AppConfig`, `NavConfig`, and so on) was intentionally dropped from both
-  the schema and the live database. See
-  `docs/superpowers/specs/2026-08-26-subscription-plan-pricing-table-design.md` for the
-  design rationale behind this table specifically.
 
 ---
 
