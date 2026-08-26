@@ -21,10 +21,11 @@ import { LOCALES, type Locale } from "@/i18n/translations";
 import { COUNTRIES, countryFlag } from "@/i18n/countries";
 import { ICON_MAP, type NavItemDto } from "@/i18n/navConfig";
 
-const PLAN_LABELS: Record<string, string> = {
-  FREE: "freePlan",
-  PRO:  "proPlan",
-  MAX:  "maxPlan",
+const SUBSCRIPTION_LABELS: Record<string, string> = {
+  FREE:      "freeSubscription",
+  MONTHLY:   "monthlySubscription",
+  QUARTERLY: "quarterlySubscription",
+  ANNUAL:    "annualSubscription",
 };
 
 type ActivePopover = "lang" | "country" | null;
@@ -33,7 +34,7 @@ interface UserInfo {
   name: string;
   email: string;
   avatar?: string;
-  plan?: string;
+  subscription?: string;
 }
 
 export function Sidebar() {
@@ -120,8 +121,8 @@ export function Sidebar() {
     ? user.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()
     : "?";
 
-  const planKey   = PLAN_LABELS[user?.plan ?? "FREE"] as keyof typeof t.sidebar;
-  const planLabel = t.sidebar[planKey] ?? t.sidebar.freePlan;
+  const subscriptionKey   = SUBSCRIPTION_LABELS[user?.subscription ?? "FREE"] as keyof typeof t.sidebar;
+  const subscriptionLabel = t.sidebar[subscriptionKey] ?? t.sidebar.freeSubscription;
 
   const selectedCountry = COUNTRIES.find((c) => c.code === country);
 
@@ -210,7 +211,7 @@ export function Sidebar() {
 
               <SheetItem
                 icon={CreditCard}
-                label={t.sidebar.plan}
+                label={t.sidebar.subscription}
                 onClick={() => setSheetOpen(false)}
               />
             </ul>
@@ -320,7 +321,7 @@ export function Sidebar() {
             <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
               {user?.name ?? "Loading…"}
             </p>
-            <p className="truncate text-xs text-slate-400 dark:text-slate-500">{planLabel}</p>
+            <p className="truncate text-xs text-slate-400 dark:text-slate-500">{subscriptionLabel}</p>
           </div>
 
           <ChevronUp className={cn(
