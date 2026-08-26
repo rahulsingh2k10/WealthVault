@@ -8,7 +8,10 @@ export async function GET() {
     return NextResponse.json({ user: null });
   }
 
-  const dbUser = await prisma.user.findUnique({ where: { id: session.userId } });
+  const dbUser = await prisma.user.findUnique({
+    where: { id: session.userId },
+    include: { subscriptionPlan: true },
+  });
   if (!dbUser) {
     return NextResponse.json({ user: null });
   }
@@ -31,7 +34,7 @@ export async function GET() {
       email: dbUser.username,
       avatar,
       platform: dbUser.platform,
-      subscription: dbUser.subscription,
+      subscription: dbUser.subscriptionPlan.tier,
     },
   });
 }

@@ -95,10 +95,13 @@ export async function POST(request: NextRequest) {
     const appleUsername = emailFromToken ?? `apple_${appleId}@apple.com`;
     const fullName = [firstName, lastName].filter(Boolean).join(" ") || "Apple User";
 
+    // New sign-ups start on the FREE plan — looked up by tier since ids aren't stable
+    const freePlan = await prisma.subscriptionPlan.findUniqueOrThrow({ where: { tier: "FREE" } });
+
     const user = await prisma.user.upsert({
       where: { username: appleUsername },
       update: { platform: "Apple", ...(fullName && { fullName }) },
-      create: { username: appleUsername, fullName, platform: "Apple", subscription: "FREE" },
+      create: { username: appleUsername, fullName, platform: "Apple", subscriptionPlanId: freePlan.id },
     });
 
     const session = await getSession();

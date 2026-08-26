@@ -45,10 +45,10 @@ model User {
   username              String           @unique
   platform              String // "Google" | "X" | "LinkedIn" | "Apple"
   avatar                String? // OAuth-provided URL or user-uploaded base64 data URL
-  subscription          Subscription     @default(FREE)
-  // FK to subscription_plans.tier — the same column drives both the user's tier
-  // and its pricing lookup, so there is no separate subscriptionPlanId column.
-  subscriptionPlan      SubscriptionPlan @relation(fields: [subscription], references: [tier])
+  // FK to subscription_plans.id. The tier name (FREE/MONTHLY/...) is read via
+  // this relation (user.subscriptionPlan.tier), not stored redundantly here.
+  subscriptionPlanId    Int
+  subscriptionPlan      SubscriptionPlan @relation(fields: [subscriptionPlanId], references: [id])
   subscriptionStartDate DateTime?
   subscriptionEndDate   DateTime?
   // AES-256-GCM encrypted verifier — encrypt("PORTFOLIO_APP_V1", derivedKey)

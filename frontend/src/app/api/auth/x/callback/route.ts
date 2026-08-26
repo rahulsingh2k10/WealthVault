@@ -87,10 +87,13 @@ export async function GET(request: NextRequest) {
     // Emails always contain @, handles never do, so no clash is possible.
     const xAvatar = profile_image_url?.replace("_normal", "") ?? `https://unavatar.io/twitter/${handle}`;
 
+    // New sign-ups start on the FREE plan — looked up by tier since ids aren't stable
+    const freePlan = await prisma.subscriptionPlan.findUniqueOrThrow({ where: { tier: "FREE" } });
+
     const user = await prisma.user.upsert({
       where: { username: handle },
       update: { fullName: name, platform: "X", avatar: xAvatar },
-      create: { username: handle, fullName: name, platform: "X", avatar: xAvatar, subscription: "FREE" },
+      create: { username: handle, fullName: name, platform: "X", avatar: xAvatar, subscriptionPlanId: freePlan.id },
     });
 
     const session = await getSession();
