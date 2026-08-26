@@ -565,8 +565,11 @@ export default function UnlockPage() {
 
           {/* Footer hint */}
           <div className="mt-8 pt-5" style={{ borderTop: `1px solid ${cardBorder}` }}>
-            <p className="text-xs font-semibold mb-0.5" style={{ color: textSec }}>First time here?</p>
-            <p className="text-xs leading-relaxed" style={{ color: textSec }}>
+            <p className="flex items-center gap-1.5 text-sm font-bold mb-1" style={{ color: accent }}>
+              <Lock className="h-3.5 w-3.5 shrink-0" />
+              First time here?
+            </p>
+            <p className="text-sm leading-relaxed" style={{ color: textSec }}>
               Your passphrase becomes your key—only you can access your vault.
             </p>
           </div>
