@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
 import { Lock, Globe, BarChart3, Shield, RefreshCw, Sparkles } from "lucide-react";
-import { useColorTheme } from "@/context/ColorThemeContext";
+import { WarmBackground } from "@/components/layout/WarmBackground";
 import FeatureCarousel from "@/components/landing/FeatureCarousel";
 
 
@@ -87,64 +86,24 @@ function AppleIcon() {
    Main Page
 ═══════════════════════════════════════════════════════════════════ */
 export default function LandingPage() {
-  const { colorTheme } = useColorTheme();
-
-  // Mirror the color theme onto <body> so overscroll bounce above the page
-  // reveals this theme's gradient instead of the app's plain dark background.
-  // Cleaned up on unmount so other routes aren't affected.
-  useEffect(() => {
-    document.body.setAttribute("data-color-theme", colorTheme);
-    return () => {
-      document.body.removeAttribute("data-color-theme");
-    };
-  }, [colorTheme]);
-
-  /* ── All colour tokens are CSS variables — no JS needed ── */
-  const textPri    = "var(--land-fg)";
-  const textSec    = "var(--land-fg-soft)";
-  const textMuted  = "var(--land-fg-faint)";
-  const accent     = "var(--land-accent-a)";
-  const cardBg     = "var(--land-card-bg)";
-  const cardBorder = "var(--land-card-line)";
-  const divider    = "var(--land-card-line)";
+  /* ── Same shared tokens the unlock screen uses — dark/light only ── */
+  const textPri    = "var(--ui-text-pri)";
+  const textSec    = "var(--ui-text-sec)";
+  const textMuted  = "var(--ui-text-muted)";
+  const accent     = "var(--ui-accent)";
+  const accentWarm = "var(--ui-accent-warm)";
+  const cardBg     = "var(--ui-card-bg)";
+  const cardBorder = "var(--ui-card-border)";
+  const divider    = "var(--ui-card-border)";
 
   return (
     <div
-      data-color-theme={colorTheme}
       className="relative min-h-screen overflow-x-hidden pt-14"
-      style={{ background: "var(--land-bg)", fontFamily: "Georgia, 'Times New Roman', serif" }}
+      style={{ background: "var(--warm-page-bg)", fontFamily: "Georgia, 'Times New Roman', serif" }}
     >
 
-      {/* ── Background ambient orbs ───────────────────────────── */}
-      <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden" style={{ zIndex: 0 }}>
-        <div
-          className="absolute rounded-full animate-float-slow"
-          style={{
-            top: "-15%", right: "-10%",
-            height: "700px", width: "700px",
-            background: "var(--land-blob-1)",
-            filter: "blur(60px)",
-          }}
-        />
-        <div
-          className="absolute rounded-full animate-float-medium"
-          style={{
-            bottom: "-15%", left: "-10%",
-            height: "700px", width: "700px",
-            background: "var(--land-blob-2)",
-            filter: "blur(60px)",
-          }}
-        />
-        <div
-          className="absolute rounded-full animate-float-fast"
-          style={{
-            top: "30%", left: "35%",
-            height: "400px", width: "400px",
-            background: "var(--land-blob-3)",
-            filter: "blur(80px)",
-          }}
-        />
-      </div>
+      {/* ── Background ambient orbs — same component used elsewhere in the app ── */}
+      <WarmBackground />
 
       {/* ── Hero ────────────────────────────────────────────────── */}
       <section className="relative z-10 mx-auto max-w-4xl px-5 pb-16 pt-10 text-center lg:pt-16">
@@ -153,10 +112,9 @@ export default function LandingPage() {
         <div
           className="relative mb-5 inline-flex items-center gap-1.5 overflow-hidden rounded-full px-4 py-2 text-xs font-bold tracking-wide"
           style={{
-            background:
-              "linear-gradient(90deg, color-mix(in srgb, var(--land-accent-a) 38%, transparent), color-mix(in srgb, var(--land-accent-b) 38%, transparent))",
-            border: "1px solid color-mix(in srgb, var(--land-accent-a) 70%, transparent)",
-            boxShadow: "0 0 24px color-mix(in srgb, var(--land-accent-a) 45%, transparent)",
+            background: `linear-gradient(90deg, color-mix(in srgb, ${accent} 38%, transparent), color-mix(in srgb, ${accentWarm} 38%, transparent))`,
+            border: `1px solid color-mix(in srgb, ${accent} 70%, transparent)`,
+            boxShadow: `0 0 24px color-mix(in srgb, ${accent} 45%, transparent)`,
             color: textPri,
           }}
         >
@@ -176,8 +134,8 @@ export default function LandingPage() {
           style={{ color: textPri, fontSize: "clamp(1.6rem, 5.5vw, 2.5rem)" }}
         >
           Your Wealth.{" "}
-          <span style={{ color: "var(--land-accent-a)" }}>Privacy By Design.</span>{" "}
-          <span style={{ color: "var(--land-accent-b)" }}>Visible Only to You.</span>
+          <span style={{ color: accent }}>Privacy By Design.</span>{" "}
+          <span style={{ color: accentWarm }}>Visible Only to You.</span>
         </h1>
 
         {/* Subheadline */}
@@ -201,7 +159,7 @@ export default function LandingPage() {
           <div
             style={{
               height: "4px",
-              background: "linear-gradient(90deg, var(--land-accent-a), var(--land-accent-b))",
+              background: `linear-gradient(90deg, ${accent}, ${accentWarm})`,
             }}
           />
 

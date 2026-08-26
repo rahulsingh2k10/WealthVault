@@ -15,37 +15,42 @@ turn a visitor into a signed-in user.
 | File | Role |
 |------|------|
 | `src/app/page.tsx` | The landing page itself — layout, copy, and the feature list. |
-| `src/app/layout.tsx` | Root layout. Reads the saved color-theme cookie server-side, wraps the tree in `ColorThemeProvider`, and renders `AppBar` above every page. |
-| `src/app/globals.css` | Defines the 9 color themes' CSS custom properties (`--land-*`), plus the shimmer/bob/float animations used on this page. |
-| `src/components/layout/AppBar.tsx` | The fixed, glass navigation bar. Shared across the whole site; shows `ThemePicker` only on `/`. |
-| `src/components/layout/ThemePicker.tsx` | The color-theme dropdown, rendered inside `AppBar` on the landing page. |
+| `src/app/layout.tsx` | Root layout. Wraps the tree in `next-themes`' `ThemeProvider` (dark/light, `class` strategy) and renders `AppBar` above every page. |
+| `src/app/globals.css` | Defines the shared `--warm-*` / `--ui-*` CSS custom properties (light mode on `:root`, dark mode on `.dark`) used by this page, `/unlock`, and the rest of the app, plus the shimmer/bob/float animations used here. |
+| `src/components/layout/WarmBackground.tsx` | The three floating ambient-orb background, shared with the rest of the app (this page renders it directly). |
+| `src/components/layout/AppBar.tsx` | The fixed, glass navigation bar. Shared across the whole site; shows `ThemeTogglePill` on `/` and `/unlock`. |
+| `src/components/layout/ThemeTogglePill.tsx` | The dark/light switch, rendered inside `AppBar` on this page and on `/unlock`. |
 | `src/components/layout/ProfileBadge.tsx` | Account icon rendered inside `AppBar`. |
 | `src/components/landing/FeatureCarousel.tsx` | The responsive feature carousel (fixed row / scroll strip / auto-advancing single card, depending on screen size). |
-| `src/context/ColorThemeContext.tsx` | React context that holds the active color theme and persists changes (cookie + backend). |
-| `src/lib/colorThemes.ts` | The list of valid themes and the default. |
-| `src/lib/savePreference.ts` | Persists preference changes (e.g. color theme) to the backend. |
+| `src/lib/savePreference.ts` | Persists preference changes (e.g. dark/light mode) to the backend. |
 | `src/app/api/auth/google/route.ts`, `apple/route.ts`, `x/route.ts`, `linkedin/route.ts` | OAuth-initiation endpoints the sign-in buttons link to. |
 
 ---
 
-## 3. Color Theming System
+## 3. Background & Theming
 
-The landing page supports **9 selectable color themes**: `warm` (default), `blue`,
-`violet`, `purple`, `red`, `pink`, `teal`, `green`, and `black`.
+As of 2026-08-26, the landing page no longer has its own color-theme system. It was
+previously a **9 selectable color theme** picker (`warm`, `blue`, `violet`, `purple`,
+`red`, `pink`, `teal`, `green`, `black`) scoped via a `data-color-theme` attribute and a
+`ThemePicker` dropdown in the nav bar — all of that (the `ColorThemeContext`,
+`colorThemes.ts`, `ThemePicker.tsx`, and the `--land-*` CSS custom properties in
+`globals.css`) was removed, and the page now matches the rest of the site instead:
 
-- The active theme is applied via a `data-color-theme` attribute, which scopes a set of
-  CSS custom properties (`--land-bg`, `--land-blob-1/2/3`, `--land-fg` /
-  `--land-fg-soft` / `--land-fg-faint`, `--land-card-bg`, `--land-card-line`,
-  `--land-section-bg`, `--land-accent-a` / `--land-accent-b`, `--land-icon-bg`) that
-  drive every color used on the page — background gradient, ambient orbs, card
-  surfaces, text, and accents.
-- Users pick a theme from the **ThemePicker** dropdown in the navigation bar. The
-  choice persists across visits (saved to a cookie and to the user's preferences) and
-  is read server-side on the next load, so there's no flash of the wrong theme.
-- Every themed surface — the eyebrow badge, feature card icons, dot indicators, the
-  page background itself — derives its color from just two values per theme
-  (`--land-accent-a` and `--land-accent-b`), so adding a 10th theme only requires
-  defining those tokens once.
+- **Background:** the same flat `var(--warm-page-bg)` page background and the same
+  `<WarmBackground />` component (three floating ambient orbs using `--warm-orb-1/2/3`)
+  used on `/unlock` and elsewhere in the app — not a page-specific gradient.
+- **Mode:** plain dark/light, driven by `next-themes` (the same `ThemeProvider` wrapping
+  the whole app in `layout.tsx`), not a per-page color choice. The `ThemeTogglePill` in
+  the nav bar — the same component `/unlock` uses — lets a visitor switch modes; the
+  choice is shared site-wide, not scoped to this page.
+- **Text and accents:** the shared `--ui-*` tokens (`--ui-text-pri`, `--ui-text-sec`,
+  `--ui-text-muted`, `--ui-accent`, `--ui-accent-warm`, `--ui-card-bg`,
+  `--ui-card-border`) instead of the old two-accent-per-theme (`--land-accent-a` /
+  `--land-accent-b`) system. Every surface that used to blend between a theme's two
+  accent colors (the eyebrow badge, the sign-in card's gradient strip, the headline's
+  colored words, the feature carousel's icon tints and dot indicators) now blends
+  between `--ui-accent` and `--ui-accent-warm` instead — the same pair `/unlock` uses
+  for its own gradients.
 
 ---
 
@@ -63,12 +68,12 @@ the site over time, not stay specific to any one page.
 The hero is the first thing a visitor sees and consists of three parts:
 
 - **Eyebrow badge** — a small pill reading "Truly One of a Kind," sitting above the
-  headline. It's tinted with a gradient blended from the theme's two accent colors, has
-  a glowing border (soft `box-shadow` in the accent color), a pulsing sparkle icon, and
-  a light shimmer that sweeps across it on a loop.
+  headline. It's tinted with a gradient blended from `--ui-accent` and
+  `--ui-accent-warm`, has a glowing border (soft `box-shadow` in `--ui-accent`), a
+  pulsing sparkle icon, and a light shimmer that sweeps across it on a loop.
 - **Headline** — "Your Wealth. Privacy By Design. Visible Only to You." The first
-  sentence is the primary text color; the second and third are each colored with one
-  of the theme's two accent colors, so the emphasis words change with the theme.
+  sentence is the primary text color; the second and third are colored with
+  `--ui-accent` and `--ui-accent-warm` respectively — the same pair `/unlock` uses.
 - **Subheadline** — two lines summarizing the product's promise ("Your Entire WEALTH.
   One Complete VIEW. Zero COMPROMISE." / "Only you hold the PASSPHRASE. ENCRYPTED
   before it reaches us. SEEN only by you."), using selective capitalization for
@@ -79,8 +84,8 @@ The hero is the first thing a visitor sees and consists of three parts:
 ## 6. Sign-In / Authentication Options
 
 Below the hero copy sits the "Unlock Your Vault" card — a translucent, blurred panel
-with a thin gradient strip across its top (blended from the theme's two accent
-colors) and four sign-in options:
+with a thin gradient strip across its top (blended from `--ui-accent` and
+`--ui-accent-warm`) and four sign-in options:
 
 | Provider | Route | Treatment |
 |----------|-------|-----------|
@@ -114,47 +119,46 @@ adapts to the screen it's shown on:
 **Card design**: every card is a fixed size, so nothing changes shape based on content
 length — a short description just leaves a little empty space, and a long one scrolls
 within its own box rather than being cut off or stretching the card. Titles always
-stay on a single line. Each card's icon panel is tinted by stepping between the
-theme's two accent colors across the five cards, so the set reads as a single
+stay on a single line. Each card's icon panel is tinted by stepping between
+`--ui-accent` and `--ui-accent-warm` across the five cards, so the set reads as a single
 gradient family rather than five unrelated colors. Each icon also gently floats up
-and down on a loop and carries a soft glow in the theme's accent color — matching the
-badge's glow treatment — with both effects staggered slightly per card so they don't
-move in lockstep.
+and down on a loop and carries a soft glow in `--ui-accent` — matching the badge's glow
+treatment — with both effects staggered slightly per card so they don't move in
+lockstep.
 
 ---
 
 ## 8. Navigation Bar & Page Background
 
 The navigation bar is a frosted-glass panel — translucent with a background blur —
-rather than a solid-color bar, so the page's gradient and ambient color show through
+rather than a solid-color bar, so the page background and ambient orbs show through
 it. It stays fixed at the top of the screen at all times, on every page across the
 site, not just the landing page.
 
-The page background itself is the same gradient assigned to the active color theme,
-applied consistently so the whole page — including the area behind the fixed
-navigation bar — reads as one continuous surface rather than a page with a separate
-bar stacked on top of it.
+The page background itself is `var(--warm-page-bg)` plus `<WarmBackground />`'s three
+floating orbs — the same background used on `/unlock` and elsewhere in the app — applied
+consistently so the whole page, including the area behind the fixed navigation bar,
+reads as one continuous surface rather than a page with a separate bar stacked on top
+of it. Dark/light mode (not a page-specific color theme) determines which variant of
+`--warm-page-bg` and `--warm-orb-1/2/3` is in effect.
 
 ---
 
 ## 9. Data Flow Diagram
 
-How the active color theme flows from a saved cookie down to every pixel on the page,
-and back out again when the visitor changes it:
+How dark/light mode flows down to the landing page, and back out again when the
+visitor changes it — the same flow as every other page, not something specific to `/`:
 
 ```mermaid
 flowchart TD
-    A[Cookie: preferred-color-theme] -->|read server-side| B["layout.tsx\nreadInitialColorTheme()"]
-    B --> C["ColorThemeProvider\n(initialTheme)"]
-    C --> D["LandingPage\nuseColorTheme()"]
-    D -->|"data-color-theme=...\non root element"| E["globals.css\nscoped --land-* tokens"]
-    E --> F[Hero, Sign-in card,\nFeature Carousel, AppBar]
+    A["layout.tsx\nThemeProvider (next-themes)"] -->|"class=dark on <html>\n(or absent for light)"| B["globals.css\n:root vs .dark tokens"]
+    B --> C["--warm-page-bg, --warm-orb-1/2/3,\n--ui-* tokens"]
+    C --> D[LandingPage: page background,\nWarmBackground orbs, hero, sign-in card,\nFeature Carousel]
 
-    G[User opens ThemePicker\nand selects a theme] --> H["setColorTheme(next)"]
-    H --> I[React state updates\n→ re-render with new data-color-theme]
-    H --> J[Cookie written]
-    H --> K["savePreference()\n→ backend"]
-    I --> E
+    E[User clicks ThemeTogglePill\nin AppBar] --> F["setTheme(next)"]
+    F --> G["next-themes updates\n<html> class → re-render"]
+    F --> H["savePreference('theme', next)\n→ backend"]
+    G --> B
 ```
 
 ---
@@ -174,9 +178,8 @@ sequenceDiagram
 
     U->>B: Navigate to /
     B->>S: GET /
-    S->>S: Read preferred-color-theme cookie
-    S-->>B: SSR HTML (correct theme already applied)
-    B->>B: Hydrate — ColorThemeProvider,\nFeatureCarousel mount
+    S-->>B: SSR HTML (dark/light class from next-themes)
+    B->>B: Hydrate — FeatureCarousel mounts
 
     U->>B: Click "Continue with Google"
     B->>S: GET /api/auth/google

@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/prisma'
 
-const DEFAULTS = { country: 'US', locale: 'en-US', theme: 'dark', colorTheme: 'warm' }
-const ALLOWED = ['country', 'locale', 'theme', 'colorTheme']
+const DEFAULTS = { country: 'US', locale: 'en-US', theme: 'dark' }
+const ALLOWED = ['country', 'locale', 'theme']
 
 export async function GET() {
   const session = await getSession()

@@ -21,10 +21,10 @@ interface FeatureCarouselProps {
 const AUTOPLAY_MS = 4000;
 const RESUME_DELAY_MS = 5000;
 
-/** Tints each card by stepping between the active theme's two accent colors. */
+/** Tints each card by stepping between the two shared UI accent colors. */
 function iconPanelStyle(index: number, total: number): React.CSSProperties {
   const pct = total > 1 ? (index / (total - 1)) * 100 : 0;
-  const tint = `color-mix(in srgb, var(--land-accent-a) ${100 - pct}%, var(--land-accent-b) ${pct}%)`;
+  const tint = `color-mix(in srgb, var(--ui-accent) ${100 - pct}%, var(--ui-accent-warm) ${pct}%)`;
   return {
     background: `linear-gradient(160deg, color-mix(in srgb, ${tint} 32%, transparent), color-mix(in srgb, ${tint} 14%, transparent))`,
   };
@@ -77,7 +77,7 @@ function FeatureCard({
           style={{
             color: accent,
             animationDelay: `${index * 0.15}s`,
-            filter: "drop-shadow(0 0 6px color-mix(in srgb, var(--land-accent-a) 55%, transparent))",
+            filter: "drop-shadow(0 0 6px color-mix(in srgb, var(--ui-accent) 55%, transparent))",
           }}
         />
       </div>
@@ -209,7 +209,7 @@ export default function FeatureCarousel({
               className="h-1.5 rounded-full transition-all"
               style={{
                 width: active === i ? 18 : 6,
-                background: active === i ? accent : "var(--land-card-line)",
+                background: active === i ? accent : "var(--ui-card-border)",
               }}
             />
           ))}

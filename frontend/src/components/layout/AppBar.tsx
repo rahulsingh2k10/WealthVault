@@ -3,13 +3,11 @@
 import { usePathname } from "next/navigation";
 import { ProfileBadge } from "./ProfileBadge";
 import { ThemeTogglePill } from "./ThemeTogglePill";
-import { ThemePicker } from "./ThemePicker";
 
 export function AppBar() {
   const pathname = usePathname();
   const isLandingPage = pathname === "/";
-  const showThemePicker = isLandingPage;
-  const showThemeToggle = pathname === "/unlock";
+  const showThemeToggle = pathname === "/unlock" || isLandingPage;
 
   return (
     <header
@@ -41,7 +39,6 @@ export function AppBar() {
 
       {/* ── Right: Theme toggle + Profile badge ── */}
       <div className="flex items-center gap-4">
-        {showThemePicker && <ThemePicker />}
         {showThemeToggle && <ThemeTogglePill />}
         <ProfileBadge />
       </div>
