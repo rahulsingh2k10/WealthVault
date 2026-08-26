@@ -26,9 +26,9 @@
 | `username` | `String` | No | — | **Unique.** The cross-provider identity key. An email address for Google/Apple/LinkedIn; a bare handle (no `@`) for X. See **Identity key design** below. |
 | `platform` | `String` | No | — | Which provider the account was created/last used with: `"Google"`, `"Apple"`, `"X"`, or `"LinkedIn"`. Not a Prisma enum — a free-form string, so nothing at the DB level stops a typo'd value. |
 | `avatar` | `String?` | Yes | — | Either the OAuth provider's profile picture URL, or a user-uploaded base64 JPEG data URL (set via `PATCH /api/auth/avatar`). `NULL` for Apple sign-ins that never uploaded a photo. |
-| `subscription` | `Subscription` (enum) | No | `FREE` | The user's current billing tier. **Foreign key** into `subscription_plans.tier` as of 2026-08-26 — see **`Subscription` enum** below and `database/subscription-plans-table.md`. |
-| `subscriptionStartDate` | `DateTime?` | Yes | — | When the current `subscription` period began. Currently unused by any code — no route reads or writes it yet. Reserved for the billing work that comes after this. |
-| `subscriptionEndDate` | `DateTime?` | Yes | — | When the current `subscription` period ends/renews. Same status as above — schema-only, not yet wired to any logic. |
+| `subscriptionPlanId` | `Int` | No | — | **Foreign key** into `subscription_plans.id`. Replaced the old `subscription` enum column on 2026-08-26 — the tier name is now read via the relation (`user.subscriptionPlan.tier`), not stored directly on `User`. See **Relationships** below and `subscription-plans.md`. |
+| `subscriptionStartDate` | `DateTime?` | Yes | — | When the current subscription period began. Currently unused by any code — no route reads or writes it yet. Reserved for the billing work that comes after this. |
+| `subscriptionEndDate` | `DateTime?` | Yes | — | When the current subscription period ends/renews. Same status as above — schema-only, not yet wired to any logic. |
 | `verifier` | `String?` | Yes | — | AES-256-GCM–encrypted verifier blob, derived from the user's vault passphrase (`encrypt("PORTFOLIO_APP_V1", derivedKey)`). `NULL` means the user has never set a passphrase (first-time vault setup pending). **The passphrase itself is never stored** — only this verifier, which can confirm a correct passphrase without revealing it. Written by `POST /api/auth/unlock`. |
 | `createdAt` | `DateTime` | No | `now()` | Row creation timestamp, set once. |
 | `updatedAt` | `DateTime` | No | auto | Updated automatically by Prisma on every write to the row (`@updatedAt`). |
@@ -49,8 +49,8 @@ model User {
   username              String           @unique
   platform              String
   avatar                String?
-  subscription          Subscription     @default(FREE)
-  subscriptionPlan      SubscriptionPlan @relation(fields: [subscription], references: [tier])
+  subscriptionPlanId    Int
+  subscriptionPlan      SubscriptionPlan @relation(fields: [subscriptionPlanId], references: [id])
   subscriptionStartDate DateTime?
   subscriptionEndDate   DateTime?
   verifier              String?
@@ -65,23 +65,26 @@ model User {
 
 ## `Subscription` enum
 
+This enum no longer lives directly on `User` — it only appears on `SubscriptionPlan.tier`
+(see `subscription-plans.md`) now. A user's tier is read by joining through
+`subscriptionPlanId` (`user.subscriptionPlan.tier`), not stored redundantly on `User`.
+
 | Value | Meaning | Set by |
 |---|---|---|
-| `FREE` | Default tier for every new sign-up. Intended limit (not yet enforced in code): 2 items per portfolio section. | Every OAuth callback route, on first-time account creation |
+| `FREE` | Default tier for every new sign-up. Intended limit (not yet enforced in code): 2 items per portfolio section. | Every OAuth callback route, on first-time account creation — via `subscriptionPlanId: freePlan.id`, looked up by `tier: "FREE"` |
 | `MONTHLY` | Paid, billed monthly. | Not yet — no billing integration exists yet |
 | `QUARTERLY` | Paid, billed quarterly. | Not yet |
 | `ANNUAL` | Paid, billed annually. | Not yet |
 
 No code path currently sets a user to anything other than `FREE`, and no code path
-currently *reads* `subscription` to gate or limit behavior — the Sidebar UI displays it
-(see `frontend/src/components/layout/Sidebar.tsx`), but nothing enforces item limits or
-checks `subscriptionEndDate` for expiry yet. This table is groundwork for that future work,
+currently reads the tier to gate or limit behavior — `GET /api/auth/me` joins through
+`subscriptionPlan` and returns the tier as `subscription: "FREE"` in its JSON response
+(preserving the old contract for the frontend), and the Sidebar UI displays that (see
+`frontend/src/components/layout/Sidebar.tsx`), but nothing enforces item limits or checks
+`subscriptionEndDate` for expiry yet. This table is groundwork for that future work,
 tracked in `docs/superpowers/specs/2026-08-26-subscription-tiers-design.md`.
 
-As of 2026-08-26, each value here also corresponds to a row in `subscription_plans` (see
-`database/subscription-plans-table.md`) holding that tier's price — `users.subscription` is
-now a foreign key into `subscription_plans.tier`, not just a bare enum column. See
-**Relationships** below.
+See **Relationships** below for the full `subscriptionPlanId` foreign key design.
 
 ---
 
@@ -92,8 +95,8 @@ now a foreign key into `subscription_plans.tier`, not just a bare enum column. S
   routes keys off of (`where: { username: ... }`), so two different providers can never
   silently collide into the same row unless they'd resolve to the identical `username`
   string (which the identity-key design below is built to prevent).
-- **Foreign key:** `subscription` → `subscription_plans.tier` (constraint
-  `users_subscription_fkey`, added 2026-08-26) — see **Relationships** below.
+- **Foreign key:** `subscriptionPlanId` → `subscription_plans.id` (constraint
+  `users_subscriptionPlanId_fkey`) — see **Relationships** below.
 - No other indexes are defined.
 
 ---
@@ -117,13 +120,17 @@ doesn't need to be part of the uniqueness constraint.
 
 ## Relationships
 
-**`users.subscription` → `subscription_plans.tier`** (foreign key, added 2026-08-26): every
-user's `subscription` value must match an existing `tier` row in `subscription_plans`.
-Postgres enforces this at the database level (constraint name `users_subscription_fkey`),
-not just at the application/type level. No `onDelete`/`onUpdate` modifier was set, so
-Postgres's default (`NO ACTION`) applies — a `subscription_plans` row can't be deleted while
-any user still references its `tier`. See `database/subscription-plans-table.md` for the
-full relationship writeup, including the reverse `SubscriptionPlan.users User[]` accessor.
+**`users.subscriptionPlanId` → `subscription_plans.id`** (foreign key): every user's
+`subscriptionPlanId` must match an existing row's `id` in `subscription_plans`. Postgres
+enforces this at the database level (constraint name `users_subscriptionPlanId_fkey`), not
+just at the application/type level. This replaced an earlier design where `subscription`
+(the enum column itself) was the FK, referencing `subscription_plans.tier` — that was
+changed to a conventional id-based reference instead, since the enum-as-FK approach meant
+`users.subscription` was storing free-form-adjacent tier text rather than a normalized
+pointer. No `onDelete`/`onUpdate` modifier was set, so Postgres's default (`NO ACTION`)
+applies — a `subscription_plans` row can't be deleted while any user still references its
+`id`. See `subscription-plans.md` for the full relationship writeup, including the reverse
+`SubscriptionPlan.users User[]` accessor.
 
 **Historical note:** until 2026-08-26, `users.id` was also referenced *by convention* (not a
 real foreign key) from ~17 asset/holding tables (`EquityHolding`, `MutualFund`,
