@@ -188,7 +188,6 @@ model GovernmentScheme {
   @@map("government_schemes")
 }
 
-
 enum Subscription {
   FREE
   MONTHLY
@@ -197,24 +196,24 @@ enum Subscription {
 }
 
 model User {
-  id                     String       @id @default(cuid())
-  fullName               String
+  id                    String       @id @default(cuid())
+  fullName              String
   // Unique identity key across all providers:
   //   Google / LinkedIn / Apple → actual email      (e.g. rahul@gmail.com)
   //   X                         → handle only       (e.g. rahulsingh2k10)
   //   No clash possible: emails always contain @, X handles never do.
-  username               String       @unique
-  platform               String       // "Google" | "X" | "LinkedIn" | "Apple"
-  avatar                 String?      // OAuth-provided URL or user-uploaded base64 data URL
-  subscription           Subscription @default(FREE)
-  subscriptionStartedAt  DateTime?
-  subscriptionExpiresAt  DateTime?
+  username              String       @unique
+  platform              String // "Google" | "X" | "LinkedIn" | "Apple"
+  avatar                String? // OAuth-provided URL or user-uploaded base64 data URL
+  subscription          Subscription @default(FREE)
+  subscriptionStartedAt DateTime?
+  subscriptionExpiresAt DateTime?
   // AES-256-GCM encrypted verifier — encrypt("PORTFOLIO_APP_V1", derivedKey)
   // null  → first-time setup; non-null → passphrase already established
   // The passphrase itself is NEVER stored anywhere.
-  verifier               String?
-  createdAt              DateTime     @default(now())
-  updatedAt              DateTime     @updatedAt
+  verifier              String?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
 
   @@map("users")
 }
