@@ -31,7 +31,7 @@ export async function GET() {
       email: dbUser.username,
       avatar,
       platform: dbUser.platform,
-      plan: dbUser.plan,
+      subscription: dbUser.subscription,
     },
   });
 }
