@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
     const user = await prisma.user.upsert({
       where: { username: appleUsername },
       update: { platform: "Apple", ...(fullName && { fullName }) },
-      create: { username: appleUsername, fullName, platform: "Apple", plan: "FREE" },
+      create: { username: appleUsername, fullName, platform: "Apple", subscription: "FREE" },
     });
 
     const session = await getSession();
