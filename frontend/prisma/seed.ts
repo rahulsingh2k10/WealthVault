@@ -16,6 +16,7 @@ async function main() {
 
   // Clear all existing data
   await prisma.navConfig.deleteMany();
+  await prisma.subscriptionPlan.deleteMany();
   await prisma.appConfig.deleteMany();
   await prisma.bankAccount.deleteMany();
   await prisma.otherInvestment.deleteMany();
@@ -45,6 +46,17 @@ async function main() {
     ],
   });
   console.log("✅ Nav config seeded");
+
+  // Seed subscription plan pricing — placeholder values, real pricing not finalized yet
+  await prisma.subscriptionPlan.createMany({
+    data: [
+      { tier: 'FREE',      price: 0, offerPrice: null, currency: 'INR', isActive: true },
+      { tier: 'MONTHLY',   price: 0, offerPrice: null, currency: 'INR', isActive: true },
+      { tier: 'QUARTERLY', price: 0, offerPrice: null, currency: 'INR', isActive: true },
+      { tier: 'ANNUAL',    price: 0, offerPrice: null, currency: 'INR', isActive: true },
+    ],
+  });
+  console.log("✅ Subscription plans seeded (placeholder pricing)");
 
   // Store passphrase verifier
   await prisma.appConfig.create({
