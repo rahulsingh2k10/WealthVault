@@ -20,18 +20,31 @@
 
 ## Column reference
 
-| Column | Type | Nullable | Default | Notes |
-|---|---|---|---|---|
-| `id` | `Int` | No | auto-increment | Primary key. Plain integer ID rather than the `cuid()` used by `User`. |
-| `tier` | `Subscription` (enum) | No | — | **Unique.** Which tier this row prices — `FREE`, `MONTHLY`, `QUARTERLY`, or `ANNUAL`. Not a foreign key target — see **Relationships** below; `users.subscriptionPlanId` references `id`, not this column. |
-| `price` | `Decimal` | No | — | The tier's list price. `Decimal` (Postgres `numeric`) was chosen over `Float` specifically to avoid binary floating-point rounding error for money. No `@db.Decimal(p, s)` precision/scale is pinned yet, so Postgres defaults to unbounded precision. |
-| `offerPrice` | `Decimal?` | Yes | — | A discounted price, when a promotion is active. `NULL` means no offer — the tier is sold at `price`. |
-| `currency` | `String` | No | `"INR"` | ISO-ish currency code as free text (not a Prisma enum), e.g. `"INR"`. The default is a placeholder based on the app's existing India-specific instruments (NPS, PPF, Post Office schemes); nothing stops a per-row override. |
-| `offerStartDate` | `DateTime?` | Yes | — | When `offerPrice` starts applying. `NULL` alongside a non-null `offerPrice` currently has no defined meaning — nothing in code reads or enforces this relationship yet (see **Data integrity caveats**). |
-| `offerEndDate` | `DateTime?` | Yes | — | When `offerPrice` stops applying and the tier reverts to `price`. Same caveat as above — schema-only, not yet wired to any logic. |
-| `isActive` | `Boolean` | No | `true` | Lets a plan be hidden from a future pricing page without deleting its row (and without losing the `@unique` slot for that `tier`). Not read by any code yet. |
-| `createdAt` | `DateTime` | No | `now()` | Row creation timestamp, set once. |
-| `updatedAt` | `DateTime` | No | auto | Updated automatically by Prisma on every write to the row (`@updatedAt`). |
+| Column           | Type           | Nullable | Default        | Notes                                                  |
+|------------------|----------------|----------|----------------|--------------------------------------------------------|
+| `id`             | `Int`          | No       | auto-increment | Primary key                                            |
+| `tier`           | `Subscription` | No       | —              | Unique tier identifier (FREE/MONTHLY/QUARTERLY/ANNUAL) |
+| `price`          | `Decimal`      | No       | —              | List price for the tier                                |
+| `offerPrice`     | `Decimal?`     | Yes      | —              | Discounted price when a promotion is active            |
+| `currency`       | `String`       | No       | `"INR"`        | Currency code, e.g. `"INR"`                            |
+| `offerStartDate` | `DateTime?`    | Yes      | —              | Offer price start date                                 |
+| `offerEndDate`   | `DateTime?`    | Yes      | —              | Offer price end date                                   |
+| `isActive`       | `Boolean`      | No       | `true`         | Hides a plan without deleting it                       |
+| `createdAt`      | `DateTime`     | No       | `now()`        | Row creation timestamp                                 |
+| `updatedAt`      | `DateTime`     | No       | auto           | Auto-updated on write                                  |
+
+### Column details
+
+- **`id`** — Plain integer ID rather than the `cuid()` used by `User`.
+- **`tier`** — `Subscription` enum (`FREE`, `MONTHLY`, `QUARTERLY`, `ANNUAL`). Not a foreign key target — see **Relationships** below; `users.subscriptionPlanId` references `id`, not this column.
+- **`price`** — `Decimal` (Postgres `numeric`) was chosen over `Float` specifically to avoid binary floating-point rounding error for money. No `@db.Decimal(p, s)` precision/scale is pinned, so Postgres defaults to unbounded precision.
+- **`offerPrice`** — `NULL` means no offer — the tier is sold at `price`.
+- **`currency`** — ISO-ish currency code as free text (not a Prisma enum). The default is a placeholder based on the app's existing India-specific instruments (NPS, PPF, Post Office schemes); nothing stops a per-row override.
+- **`offerStartDate`** — When `offerPrice` starts applying. `NULL` alongside a non-null `offerPrice` has no defined meaning — nothing in code reads or enforces this relationship (see **Data integrity caveats**).
+- **`offerEndDate`** — When `offerPrice` stops applying and the tier reverts to `price`. Same caveat as above — schema-only, not wired to any logic.
+- **`isActive`** — Hides a plan from a future pricing page without deleting its row (and without losing the `@unique` slot for that `tier`). Not read by any code yet.
+- **`createdAt`** — Set once, at row creation.
+- **`updatedAt`** — Updated automatically by Prisma on every write to the row (`@updatedAt`).
 
 ### Full current model (for reference)
 

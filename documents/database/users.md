@@ -19,19 +19,33 @@
 
 ## Column reference
 
-| Column | Type | Nullable | Default | Notes |
-|---|---|---|---|---|
-| `id` | `String` | No | `cuid()` | Primary key. Not referenced as a foreign key from any other table. |
-| `fullName` | `String` | No | — | Display name, sourced from the OAuth provider's profile. Refreshed on every login. |
-| `username` | `String` | No | — | **Unique.** The cross-provider identity key. An email address for Google/Apple/LinkedIn; a bare handle (no `@`) for X. See **Identity key design** below. |
-| `platform` | `String` | No | — | Which provider the account was created/last used with: `"Google"`, `"Apple"`, `"X"`, or `"LinkedIn"`. Not a Prisma enum — a free-form string, so nothing at the DB level stops a typo'd value. |
-| `avatar` | `String?` | Yes | — | Either the OAuth provider's profile picture URL, or a user-uploaded base64 JPEG data URL (set via `PATCH /api/auth/avatar`). `NULL` for Apple sign-ins that never uploaded a photo. |
-| `subscriptionPlanId` | `Int` | No | — | **Foreign key** into `subscription_plans.id`. The tier name is read via the relation (`user.subscriptionPlan.tier`), not stored directly on `User`. See **Relationships** below and `subscription-plans.md`. |
-| `subscriptionStartDate` | `DateTime?` | Yes | — | When the current subscription period began. Currently unused by any code — no route reads or writes it yet. Reserved for the billing work that comes after this. |
-| `subscriptionEndDate` | `DateTime?` | Yes | — | When the current subscription period ends/renews. Same status as above — schema-only, not yet wired to any logic. |
-| `verifier` | `String?` | Yes | — | AES-256-GCM–encrypted verifier blob, derived from the user's vault passphrase (`encrypt("PORTFOLIO_APP_V1", derivedKey)`). `NULL` means the user has never set a passphrase (first-time vault setup pending). **The passphrase itself is never stored** — only this verifier, which can confirm a correct passphrase without revealing it. Written by `POST /api/auth/unlock` on first-time setup only; read (never rewritten) on every subsequent unlock. Full request/response details in `../api/unlock-api.md`. |
-| `createdAt` | `DateTime` | No | `now()` | Row creation timestamp, set once. |
-| `updatedAt` | `DateTime` | No | auto | Updated automatically by Prisma on every write to the row (`@updatedAt`). |
+| Column                  | Type        | Nullable | Default  | Notes                                  |
+|-------------------------|-------------|----------|----------|---------------------------------------|
+| `id`                    | `String`    | No       | `cuid()` | Primary key                            |
+| `fullName`              | `String`    | No       | —        | Display name from the OAuth provider   |
+| `username`              | `String`    | No       | —        | Unique cross-provider identity key     |
+| `platform`              | `String`    | No       | —        | OAuth provider name                    |
+| `avatar`                | `String?`   | Yes      | —        | Provider photo URL or uploaded image   |
+| `subscriptionPlanId`    | `Int`       | No       | —        | Foreign key to `subscription_plans.id` |
+| `subscriptionStartDate` | `DateTime?` | Yes      | —        | Subscription period start (unused)     |
+| `subscriptionEndDate`   | `DateTime?` | Yes      | —        | Subscription period end (unused)       |
+| `verifier`              | `String?`   | Yes      | —        | Encrypted passphrase verifier          |
+| `createdAt`             | `DateTime`  | No       | `now()`  | Row creation timestamp                 |
+| `updatedAt`             | `DateTime`  | No       | auto     | Auto-updated on write                  |
+
+### Column details
+
+- **`id`** — Not referenced as a foreign key from any other table.
+- **`fullName`** — Sourced from the OAuth provider's profile. Refreshed on every login.
+- **`username`** — The cross-provider identity key. An email address for Google/Apple/LinkedIn; a bare handle (no `@`) for X. See **Identity key design** below.
+- **`platform`** — `"Google"`, `"Apple"`, `"X"`, or `"LinkedIn"`. Not a Prisma enum — a free-form string, so nothing at the DB level stops a typo'd value.
+- **`avatar`** — Either the OAuth provider's profile picture URL, or a user-uploaded base64 JPEG data URL (set via `PATCH /api/auth/avatar`). `NULL` for Apple sign-ins that never uploaded a photo.
+- **`subscriptionPlanId`** — The tier name is read via the relation (`user.subscriptionPlan.tier`), not stored directly on `User`. See **Relationships** below and `subscription-plans.md`.
+- **`subscriptionStartDate`** — When the current subscription period began. Unused by any code — no route reads or writes it yet. Reserved for the billing work that comes after this.
+- **`subscriptionEndDate`** — When the current subscription period ends/renews. Same status as above — schema-only, not wired to any logic.
+- **`verifier`** — AES-256-GCM–encrypted verifier blob, derived from the user's vault passphrase (`encrypt("PORTFOLIO_APP_V1", derivedKey)`). `NULL` means the user has never set a passphrase (first-time vault setup pending). **The passphrase itself is never stored** — only this verifier, which can confirm a correct passphrase without revealing it. Written by `POST /api/auth/unlock` on first-time setup only; read (never rewritten) on every subsequent unlock. Full request/response details in `../api/unlock-api.md`.
+- **`createdAt`** — Set once, at row creation.
+- **`updatedAt`** — Updated automatically by Prisma on every write to the row (`@updatedAt`).
 
 ### Full current model (for reference)
 
