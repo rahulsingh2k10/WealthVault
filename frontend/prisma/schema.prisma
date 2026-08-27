@@ -22,8 +22,7 @@ enum Platform {
 }
 
 model AuthPlatform {
-  // Random 16-digit id (not sequential) — see the `dbgenerated` expression.
-  id        BigInt   @id @default(dbgenerated("floor(random() * 9000000000000000 + 1000000000000000)::bigint"))
+  id        String   @id @default(uuid())
   platform  Platform @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -33,8 +32,7 @@ model AuthPlatform {
 }
 
 model SubscriptionPeriod {
-  // Random 16-digit id (not sequential) — see the `dbgenerated` expression.
-  id        BigInt    @id @default(dbgenerated("floor(random() * 9000000000000000 + 1000000000000000)::bigint"))
+  id        String    @id @default(uuid())
   userId    String
   user      User      @relation(fields: [userId], references: [id])
   startDate DateTime?
@@ -46,8 +44,7 @@ model SubscriptionPeriod {
 }
 
 model SubscriptionPlan {
-  // Random 16-digit id (not sequential) — see the `dbgenerated` expression.
-  id             BigInt       @id @default(dbgenerated("floor(random() * 9000000000000000 + 1000000000000000)::bigint"))
+  id             String       @id @default(uuid())
   tier           Subscription @unique
   price          Decimal
   offerPrice     Decimal?
@@ -63,7 +60,7 @@ model SubscriptionPlan {
 }
 
 model User {
-  id                  String               @id @default(cuid())
+  id                  String               @id @default(uuid())
   fullName            String
   // Unique identity key across all providers:
   //   Google / LinkedIn / Apple → actual email      (e.g. rahul@gmail.com)
@@ -72,12 +69,12 @@ model User {
   username            String               @unique
   // FK to auth_platforms.id. The provider name (GOOGLE/APPLE/X/LINKEDIN) is
   // read via this relation (user.authPlatform.platform), not stored here.
-  platformId          BigInt
+  platformId          String
   authPlatform        AuthPlatform         @relation(fields: [platformId], references: [id])
   avatar              String? // OAuth-provided URL or user-uploaded base64 data URL
   // FK to subscription_plans.id. The tier name (FREE/MONTHLY/...) is read via
   // this relation (user.subscriptionPlan.tier), not stored redundantly here.
-  subscriptionPlanId  BigInt
+  subscriptionPlanId  String
   subscriptionPlan    SubscriptionPlan     @relation(fields: [subscriptionPlanId], references: [id])
   subscriptionPeriods SubscriptionPeriod[]
   // AES-256-GCM encrypted verifier — encrypt("PORTFOLIO_APP_V1", derivedKey)
