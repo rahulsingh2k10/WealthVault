@@ -314,7 +314,7 @@ const user = await prisma.user.upsert({
 
 | Column | Value on creation |
 |---|---|
-| `id` | auto-generated `cuid()` |
+| `id` | auto-generated `uuid()` |
 | `fullName` | from the provider profile |
 | `username` | the provider-derived identity string (email, or X handle) |
 | `platformId` | FK to `auth_platforms.id`, resolved from `"GOOGLE"` / `"APPLE"` / `"X"` / `"LINKEDIN"` |
