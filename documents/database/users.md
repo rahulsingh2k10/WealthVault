@@ -24,9 +24,9 @@
 | `id`                 | `String`   | No       | `cuid()` | Primary key                            |
 | `fullName`           | `String`   | No       | —        | Display name from the OAuth provider   |
 | `username`           | `String`   | No       | —        | Unique cross-provider identity key     |
-| `platformId`         | `Int`      | No       | —        | Foreign key to `auth_platforms.id`     |
+| `platformId`         | `BigInt`   | No       | —        | Foreign key to `auth_platforms.id`     |
 | `avatar`             | `String?`  | Yes      | —        | Provider photo URL or uploaded image   |
-| `subscriptionPlanId` | `Int`      | No       | —        | Foreign key to `subscription_plans.id` |
+| `subscriptionPlanId` | `BigInt`   | No       | —        | Foreign key to `subscription_plans.id` |
 | `verifier`           | `String?`  | Yes      | —        | Encrypted passphrase verifier          |
 | `createdAt`          | `DateTime` | No       | `now()`  | Row creation timestamp                 |
 | `updatedAt`          | `DateTime` | No       | auto     | Auto-updated on write                  |
@@ -64,10 +64,10 @@ model User {
   id                  String               @id @default(cuid())
   fullName            String
   username            String               @unique
-  platformId          Int
+  platformId          BigInt
   authPlatform        AuthPlatform         @relation(fields: [platformId], references: [id])
   avatar              String?
-  subscriptionPlanId  Int
+  subscriptionPlanId  BigInt
   subscriptionPlan    SubscriptionPlan     @relation(fields: [subscriptionPlanId], references: [id])
   subscriptionPeriods SubscriptionPeriod[]
   verifier            String?
@@ -161,16 +161,16 @@ string collision between an email-based identity and an X handle — this is why
 
 **`users.platformId` → `auth_platforms.id`** (foreign key): every user's `platformId` must
 match an existing row's `id` in `auth_platforms`. Postgres enforces this at the database
-level (constraint name `users_platformId_fkey`). No `onDelete`/`onUpdate` modifier is set,
-so Postgres's default (`NO ACTION`) applies. See `auth-platforms.md` for the full
-relationship writeup, including the reverse `AuthPlatform.users User[]` accessor.
+level (constraint name `users_platformId_fkey`, `ON DELETE RESTRICT`, `ON UPDATE CASCADE`
+— verified via `pg_constraint`). See `auth-platforms.md` for the full relationship
+writeup, including the reverse `AuthPlatform.users User[]` accessor.
 
 **`users.subscriptionPlanId` → `subscription_plans.id`** (foreign key): every user's
 `subscriptionPlanId` must match an existing row's `id` in `subscription_plans`. Postgres
-enforces this at the database level (constraint name `users_subscriptionPlanId_fkey`). No
-`onDelete`/`onUpdate` modifier is set, so Postgres's default (`NO ACTION`) applies — a
-`subscription_plans` row can't be deleted while any user still references its `id`. See
-`subscription-plans.md` for the full relationship writeup, including the reverse
+enforces this at the database level (constraint name `users_subscriptionPlanId_fkey`,
+`ON DELETE RESTRICT`, `ON UPDATE CASCADE`) — a `subscription_plans` row can't be deleted
+while any user still references its `id`, but updating its `id` cascades automatically.
+See `subscription-plans.md` for the full relationship writeup, including the reverse
 `SubscriptionPlan.users User[]` accessor.
 
 **`subscription_periods.userId` → `users.id`** (foreign key, reverse direction): each
