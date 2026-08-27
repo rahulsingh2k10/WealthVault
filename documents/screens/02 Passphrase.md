@@ -1,8 +1,6 @@
 # Screen: Unlock Page (`/unlock`)
 
-> Read `00-global-architecture.md` first.
-
-This is the most complex single-page component in the app. It has two panels, five distinct sub-states, avatar upload with canvas resizing, passphrase strength validation, a first-time confirmation modal, and a reset vault flow. This doc is the authoritative reference, verified against the code as of 2026-08-27.
+This is the most complex single-page component in the app. It has two panels, five distinct sub-states, avatar upload with canvas resizing, passphrase strength validation, a first-time confirmation modal, and a reset vault flow. This doc is the authoritative reference for this screen.
 
 ---
 
@@ -33,7 +31,7 @@ Its job is to accept a passphrase, POST it to `/api/auth/unlock`, and — if val
 | `src/lib/savePreference.ts` | `savePreference(key, value)` — fire-and-forget PATCH to `/api/preferences`; silently swallows network-level errors, but not HTTP error responses (see Known Issues) |
 | `src/lib/session.ts` | iron-session config — `getSession()`, `SessionData` shape |
 
-There is no separate "SessionService" or "UserRepository" class involved in this route — `POST /api/auth/unlock` calls `getSession()` and `prisma.user.*` directly.
+`POST /api/auth/unlock` calls `getSession()` and `prisma.user.*` directly.
 
 ---
 
@@ -320,39 +318,35 @@ No other table or column is touched by this route. It does not write to `Subscri
 
 ---
 
-## Known Issues (as of 2026-08-27)
+## Known Issues
 
-Two flows that this screen depends on were broken by the 2026-08-26 change that dropped
-17 asset/holding tables plus `AppConfig` and `NavConfig` from the schema (see
-`docs/superpowers/specs/2026-08-26-subscription-plan-pricing-table-design.md` and the
-commit that removed them). Neither breakage is in the unlock endpoint itself — both are
-in routes this screen *calls in addition to* `/api/auth/unlock`:
+Two routes this screen depends on are non-functional. Neither is in the unlock endpoint
+itself — both are in routes this screen *calls in addition to* `/api/auth/unlock`:
 
-- **`GET`/`PATCH /api/preferences`** (`src/app/api/preferences/route.ts`) still calls
-  `prisma.appConfig.findMany` / `prisma.appConfig.upsert` — `appConfig` no longer exists
-  on the generated Prisma client, so both handlers throw and Next.js returns a 500.
+- **`GET`/`PATCH /api/preferences`** (`src/app/api/preferences/route.ts`) calls
+  `prisma.appConfig.findMany` / `prisma.appConfig.upsert` — `appConfig` does not exist on
+  the generated Prisma client, so both handlers throw and Next.js returns a 500.
   Effect on this screen: the first-time path's three `savePreference()` calls resolve
   without throwing (a non-2xx HTTP response doesn't reject `fetch`, and `savePreference`
   only catches network-level failures) so the UI proceeds normally, but nothing is
   actually saved — country/locale/theme choices from first-time setup are lost. The
   returning-user path's `GET /api/preferences` fails the same way, so `prefsRes.ok` is
   `false` and saved preferences are never restored; the user always lands on `/dashboard`
-  with default locale/country/theme instead of what they'd previously set.
+  with default locale/country/theme.
 - **`POST /api/auth/reset-vault`** (`src/app/api/auth/reset-vault/route.ts`) builds a
   `Promise.all([...])` array that includes `prisma.equityHolding.deleteMany(...)` and
-  eight other now-nonexistent models. Accessing `.deleteMany` on `undefined` throws
-  synchronously while the array literal is being constructed — **before** `Promise.all`
-  ever runs — so the `prisma.user.update({ verifier: null })` call in the same array is
-  never reached either. Effect on this screen: clicking "Yes, delete everything" always
-  fails server-side (500), but the client doesn't check `response.ok` here — it clears
-  `passphrase`/`error`/`showReset` regardless, so the UI *looks* like the reset worked
-  while the verifier was never actually cleared. A user who clicks this will see the form
-  reset but their old passphrase is still active.
+  eight other calls on models that do not exist on the generated Prisma client. Accessing
+  `.deleteMany` on `undefined` throws synchronously while the array literal is being
+  constructed — **before** `Promise.all` ever runs — so the `prisma.user.update({
+  verifier: null })` call in the same array is never reached either. Effect on this
+  screen: clicking "Yes, delete everything" always fails server-side (500), but the
+  client doesn't check `response.ok` here — it clears `passphrase`/`error`/`showReset`
+  regardless, so the UI *looks* like the reset worked while the verifier was never
+  actually cleared. A user who clicks this will see the form reset but their old
+  passphrase is still active.
 
-Neither issue was introduced by anything specific to the unlock flow — both are
-collateral damage from the unrelated table-drop, surfaced here because this is the
-first place they were traced end-to-end. `POST /api/auth/unlock`, `PATCH
-/api/auth/avatar`, and `POST /api/auth/signout` are unaffected and work as documented.
+`POST /api/auth/unlock`, `PATCH /api/auth/avatar`, and `POST /api/auth/signout` are
+unaffected and function as documented.
 
 ---
 

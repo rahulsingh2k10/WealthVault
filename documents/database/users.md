@@ -21,12 +21,12 @@
 
 | Column | Type | Nullable | Default | Notes |
 |---|---|---|---|---|
-| `id` | `String` | No | `cuid()` | Primary key. Not referenced as a foreign key from anywhere today — see **Relationships** below for the tables that referenced it by convention until they were dropped. |
+| `id` | `String` | No | `cuid()` | Primary key. Not referenced as a foreign key from any other table. |
 | `fullName` | `String` | No | — | Display name, sourced from the OAuth provider's profile. Refreshed on every login. |
 | `username` | `String` | No | — | **Unique.** The cross-provider identity key. An email address for Google/Apple/LinkedIn; a bare handle (no `@`) for X. See **Identity key design** below. |
 | `platform` | `String` | No | — | Which provider the account was created/last used with: `"Google"`, `"Apple"`, `"X"`, or `"LinkedIn"`. Not a Prisma enum — a free-form string, so nothing at the DB level stops a typo'd value. |
 | `avatar` | `String?` | Yes | — | Either the OAuth provider's profile picture URL, or a user-uploaded base64 JPEG data URL (set via `PATCH /api/auth/avatar`). `NULL` for Apple sign-ins that never uploaded a photo. |
-| `subscriptionPlanId` | `Int` | No | — | **Foreign key** into `subscription_plans.id`. Replaced the old `subscription` enum column on 2026-08-26 — the tier name is now read via the relation (`user.subscriptionPlan.tier`), not stored directly on `User`. See **Relationships** below and `subscription-plans.md`. |
+| `subscriptionPlanId` | `Int` | No | — | **Foreign key** into `subscription_plans.id`. The tier name is read via the relation (`user.subscriptionPlan.tier`), not stored directly on `User`. See **Relationships** below and `subscription-plans.md`. |
 | `subscriptionStartDate` | `DateTime?` | Yes | — | When the current subscription period began. Currently unused by any code — no route reads or writes it yet. Reserved for the billing work that comes after this. |
 | `subscriptionEndDate` | `DateTime?` | Yes | — | When the current subscription period ends/renews. Same status as above — schema-only, not yet wired to any logic. |
 | `verifier` | `String?` | Yes | — | AES-256-GCM–encrypted verifier blob, derived from the user's vault passphrase (`encrypt("PORTFOLIO_APP_V1", derivedKey)`). `NULL` means the user has never set a passphrase (first-time vault setup pending). **The passphrase itself is never stored** — only this verifier, which can confirm a correct passphrase without revealing it. Written by `POST /api/auth/unlock` on first-time setup only; read (never rewritten) on every subsequent unlock. Full request/response details in `../api/unlock-api.md`. |
@@ -65,9 +65,9 @@ model User {
 
 ## `Subscription` enum
 
-This enum no longer lives directly on `User` — it only appears on `SubscriptionPlan.tier`
-(see `subscription-plans.md`) now. A user's tier is read by joining through
-`subscriptionPlanId` (`user.subscriptionPlan.tier`), not stored redundantly on `User`.
+This enum appears on `SubscriptionPlan.tier` (see `subscription-plans.md`). A user's
+tier is read by joining through `subscriptionPlanId` (`user.subscriptionPlan.tier`), not
+stored on `User` directly.
 
 | Value | Meaning | Set by |
 |---|---|---|
@@ -77,12 +77,10 @@ This enum no longer lives directly on `User` — it only appears on `Subscriptio
 | `ANNUAL` | Paid, billed annually. | Not yet |
 
 No code path currently sets a user to anything other than `FREE`, and no code path
-currently reads the tier to gate or limit behavior — `GET /api/auth/me` joins through
-`subscriptionPlan` and returns the tier as `subscription: "FREE"` in its JSON response
-(preserving the old contract for the frontend), and the Sidebar UI displays that (see
-`frontend/src/components/layout/Sidebar.tsx`), but nothing enforces item limits or checks
-`subscriptionEndDate` for expiry yet. This table is groundwork for that future work,
-tracked in `docs/superpowers/specs/2026-08-26-subscription-tiers-design.md`.
+reads the tier to gate or limit behavior — `GET /api/auth/me` joins through
+`subscriptionPlan` and returns the tier as `subscription: "FREE"` in its JSON response,
+and the Sidebar UI displays that (see `frontend/src/components/layout/Sidebar.tsx`), but
+nothing enforces item limits or checks `subscriptionEndDate` for expiry.
 
 See **Relationships** below for the full `subscriptionPlanId` foreign key design.
 
@@ -122,22 +120,14 @@ doesn't need to be part of the uniqueness constraint.
 
 **`users.subscriptionPlanId` → `subscription_plans.id`** (foreign key): every user's
 `subscriptionPlanId` must match an existing row's `id` in `subscription_plans`. Postgres
-enforces this at the database level (constraint name `users_subscriptionPlanId_fkey`), not
-just at the application/type level. This replaced an earlier design where `subscription`
-(the enum column itself) was the FK, referencing `subscription_plans.tier` — that was
-changed to a conventional id-based reference instead, since the enum-as-FK approach meant
-`users.subscription` was storing free-form-adjacent tier text rather than a normalized
-pointer. No `onDelete`/`onUpdate` modifier was set, so Postgres's default (`NO ACTION`)
-applies — a `subscription_plans` row can't be deleted while any user still references its
-`id`. See `subscription-plans.md` for the full relationship writeup, including the reverse
+enforces this at the database level (constraint name `users_subscriptionPlanId_fkey`). No
+`onDelete`/`onUpdate` modifier is set, so Postgres's default (`NO ACTION`) applies — a
+`subscription_plans` row can't be deleted while any user still references its `id`. See
+`subscription-plans.md` for the full relationship writeup, including the reverse
 `SubscriptionPlan.users User[]` accessor.
 
-**Historical note:** until 2026-08-26, `users.id` was also referenced *by convention* (not a
-real foreign key) from ~17 asset/holding tables (`EquityHolding`, `MutualFund`,
-`CryptoHolding`, `BankAccount`, `Liability`, and so on), each via its own `userId String`
-column with no `@relation`. All of those tables — along with `AppConfig` and `NavConfig` —
-were subsequently dropped from both the schema and the live database, leaving `users` and
-`subscription_plans` as the only two tables. The application code that referenced those
-models (~16 API routes under `frontend/src/app/api/*`, the dashboard page, `seed.ts`, and
-`UserRepository`) was intentionally left in place and is currently broken
-(`tsc --noEmit` fails) — it has not been updated or removed to match.
+`users` and `subscription_plans` are the only two tables in the database. Several
+application files (~16 API routes under `frontend/src/app/api/*`, the dashboard page,
+`seed.ts`, and `UserRepository`) reference Prisma models that do not exist in the current
+schema (e.g. `EquityHolding`, `MutualFund`, `AppConfig`) and fail to type-check
+(`tsc --noEmit`); they are non-functional.

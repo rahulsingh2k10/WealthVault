@@ -1,6 +1,5 @@
 # User Creation API (OAuth Sign-In)
 
-> Read `screens/00-global-architecture.md` first for overall app context.
 > Reference format: this doc mirrors an OpenAPI/Swagger UI layout (Paths → Parameters →
 > Responses → Schemas) even though no `openapi.yaml` exists for it. See **Scope note**.
 
@@ -334,7 +333,7 @@ Out of scope for this doc, but adjacent to the flow above:
 | Method | Path | Notes |
 |---|---|---|
 | `GET` | `/api/auth/me` | Reads the current user (including `subscription`) for the frontend; does not write to the `users` table. |
-| `POST` | `/api/auth/unlock` | Writes the `verifier` column onto an *existing* user row (first-time passphrase setup) or verifies it (returning user). Fully documented in `screens/02-unlock.md`. Closest thing in the app to a traditional "set credentials" endpoint. |
+| `POST` | `/api/auth/unlock` | Writes the `verifier` column onto an *existing* user row (first-time passphrase setup) or verifies it (returning user). Fully documented in `api/unlock-api.md` and `screens/02 Passphrase.md`. Closest thing in the app to a traditional "set credentials" endpoint. |
 | `PATCH` | `/api/auth/avatar` | Updates `user.avatar` after initial signup. |
 | `POST` | `/api/auth/signout` | Clears the session cookie; no DB write. |
 
@@ -354,4 +353,4 @@ Out of scope for this doc, but adjacent to the flow above:
 | `src/app/api/auth/linkedin/callback/route.ts` | `GET /api/auth/linkedin/callback` |
 | `src/lib/session.ts` | iron-session config used to set the post-login session cookie |
 | `src/lib/prisma.ts` | Shared `PrismaClient` singleton used by all four callback routes |
-| `prisma/schema.prisma` | Defines the `users` table — see `database/users-table.md` |
+| `prisma/schema.prisma` | Defines the `users` table — see `database/users.md` |

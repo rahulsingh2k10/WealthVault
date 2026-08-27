@@ -22,8 +22,8 @@
 
 | Column | Type | Nullable | Default | Notes |
 |---|---|---|---|---|
-| `id` | `Int` | No | auto-increment | Primary key. Plain integer ID, matching the convention used by other global config tables (`AppConfig`/`NavConfig` — both now dropped) rather than the `cuid()` used by `User`. |
-| `tier` | `Subscription` (enum) | No | — | **Unique.** Which tier this row prices — `FREE`, `MONTHLY`, `QUARTERLY`, or `ANNUAL`. Not itself a foreign key target anymore — see **Relationships** below, `users.subscriptionPlanId` references `id`, not this column. |
+| `id` | `Int` | No | auto-increment | Primary key. Plain integer ID rather than the `cuid()` used by `User`. |
+| `tier` | `Subscription` (enum) | No | — | **Unique.** Which tier this row prices — `FREE`, `MONTHLY`, `QUARTERLY`, or `ANNUAL`. Not a foreign key target — see **Relationships** below; `users.subscriptionPlanId` references `id`, not this column. |
 | `price` | `Decimal` | No | — | The tier's list price. `Decimal` (Postgres `numeric`) was chosen over `Float` specifically to avoid binary floating-point rounding error for money. No `@db.Decimal(p, s)` precision/scale is pinned yet, so Postgres defaults to unbounded precision. |
 | `offerPrice` | `Decimal?` | Yes | — | A discounted price, when a promotion is active. `NULL` means no offer — the tier is sold at `price`. |
 | `currency` | `String` | No | `"INR"` | ISO-ish currency code as free text (not a Prisma enum), e.g. `"INR"`. The default is a placeholder based on the app's existing India-specific instruments (NPS, PPF, Post Office schemes); nothing stops a per-row override. |
@@ -113,8 +113,7 @@ nothing writes to or reads from this table except the one-off placeholder seed.
 
 ## Relationships
 
-`users.subscriptionPlanId` is a real foreign key into `subscription_plans.id` — a normal
-normalized reference by primary key, not by the `tier` enum:
+`users.subscriptionPlanId` is a foreign key into `subscription_plans.id`:
 
 ```prisma
 model User {
@@ -125,20 +124,18 @@ model User {
 }
 ```
 
-There is no `subscription` column on `User` anymore — the tier name (`FREE`/`MONTHLY`/...)
-is read via this relation (`user.subscriptionPlan.tier`), not stored redundantly on `User`.
-`GET /api/auth/me` does this join and still returns a `subscription: "FREE"` string in its
-JSON response for backwards compatibility with the frontend (see `Sidebar.tsx`), even
-though the underlying column is gone.
+There is no `subscription` column on `User` — the tier name (`FREE`/`MONTHLY`/...) is read
+via this relation (`user.subscriptionPlan.tier`), not stored on `User`. `GET /api/auth/me`
+performs this join and returns the tier as `subscription: "FREE"` in its JSON response
+(see `Sidebar.tsx`).
 
-The constraint is named `users_subscriptionPlanId_fkey` at the database level (verified via
-`pg_constraint` against the live Railway database). Practical implications:
+The constraint is named `users_subscriptionPlanId_fkey` at the database level. Practical
+implications:
 
 - **Referential integrity is enforced by Postgres.** A `users.subscriptionPlanId` value
   must match an existing `subscription_plans.id` row — the database itself rejects a write
   otherwise. The four OAuth callback routes look up the `FREE` plan's `id` by `tier` at
-  signup time (`prisma.subscriptionPlan.findUniqueOrThrow({ where: { tier: "FREE" } })`)
-  rather than hardcoding an id, since ids aren't guaranteed stable across reseeds.
+  signup time (`prisma.subscriptionPlan.findUniqueOrThrow({ where: { tier: "FREE" } })`).
 - **You cannot delete a `subscription_plans` row while any user still references its
   `id`** — the default foreign key behavior (`ON DELETE NO ACTION`) blocks it. No
   `onDelete`/`onUpdate` modifier was specified, so Prisma leaves Postgres's default in

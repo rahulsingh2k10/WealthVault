@@ -29,28 +29,21 @@ turn a visitor into a signed-in user.
 
 ## 3. Background & Theming
 
-As of 2026-08-26, the landing page no longer has its own color-theme system. It was
-previously a **9 selectable color theme** picker (`warm`, `blue`, `violet`, `purple`,
-`red`, `pink`, `teal`, `green`, `black`) scoped via a `data-color-theme` attribute and a
-`ThemePicker` dropdown in the nav bar — all of that (the `ColorThemeContext`,
-`colorThemes.ts`, `ThemePicker.tsx`, and the `--land-*` CSS custom properties in
-`globals.css`) was removed, and the page now matches the rest of the site instead:
+The landing page has no page-specific color theme — it uses the same background and
+theming system as the rest of the app:
 
-- **Background:** the same flat `var(--warm-page-bg)` page background and the same
-  `<WarmBackground />` component (three floating ambient orbs using `--warm-orb-1/2/3`)
-  used on `/unlock` and elsewhere in the app — not a page-specific gradient.
-- **Mode:** plain dark/light, driven by `next-themes` (the same `ThemeProvider` wrapping
-  the whole app in `layout.tsx`), not a per-page color choice. The `ThemeTogglePill` in
-  the nav bar — the same component `/unlock` uses — lets a visitor switch modes; the
-  choice is shared site-wide, not scoped to this page.
+- **Background:** the flat `var(--warm-page-bg)` page background and the
+  `<WarmBackground />` component (three floating ambient orbs using `--warm-orb-1/2/3`),
+  the same background used on `/unlock` and elsewhere in the app.
+- **Mode:** plain dark/light, driven by `next-themes` (the `ThemeProvider` wrapping the
+  whole app in `layout.tsx`). The `ThemeTogglePill` in the nav bar — the same component
+  `/unlock` uses — lets a visitor switch modes; the choice is shared site-wide.
 - **Text and accents:** the shared `--ui-*` tokens (`--ui-text-pri`, `--ui-text-sec`,
   `--ui-text-muted`, `--ui-accent`, `--ui-accent-warm`, `--ui-card-bg`,
-  `--ui-card-border`) instead of the old two-accent-per-theme (`--land-accent-a` /
-  `--land-accent-b`) system. Every surface that used to blend between a theme's two
-  accent colors (the eyebrow badge, the sign-in card's gradient strip, the headline's
-  colored words, the feature carousel's icon tints and dot indicators) now blends
-  between `--ui-accent` and `--ui-accent-warm` instead — the same pair `/unlock` uses
-  for its own gradients.
+  `--ui-card-border`). The eyebrow badge, the sign-in card's gradient strip, the
+  headline's colored words, and the feature carousel's icon tints and dot indicators all
+  blend between `--ui-accent` and `--ui-accent-warm` — the same pair `/unlock` uses for
+  its own gradients.
 
 ---
 

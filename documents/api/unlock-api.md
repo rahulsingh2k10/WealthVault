@@ -1,7 +1,7 @@
 # Unlock / Passphrase API
 
-> Read `screens/02-unlock.md` for the full UI flow this endpoint drives. This doc covers
-> the API surface only, in the same Swagger-UI-style layout as `user-creation-api.md`.
+> Read `screens/02 Passphrase.md` for the full UI flow this endpoint drives. This doc
+> covers the API surface only, in the same Swagger-UI-style layout as `user-creation-api.md`.
 
 **Base path:** `/api/auth`
 **Tags:** `Unlock`
@@ -75,7 +75,7 @@ The client-side UI (`src/app/unlock/page.tsx`) enforces the identical five rules
 the user types and disables the submit button until all pass — so in normal use this
 `400` is unreachable through the UI. It only fires if something bypasses the client check
 (a direct API call, or a client/server validation-logic drift, since the two are
-maintained as separate parallel implementations — see `screens/02-unlock.md`).
+maintained as separate parallel implementations — see `screens/02 Passphrase.md`).
 
 ---
 
@@ -149,10 +149,10 @@ of this endpoint itself:
 |---|---|---|---|
 | `GET` | `/api/auth/me` | Called on page load, before any unlock attempt, to render the left panel | Working |
 | `PATCH` | `/api/auth/avatar` | Independent of unlock; can be called before or after | Working |
-| `GET` | `/api/preferences` | Called **after** a successful *returning-user* unlock, to restore saved locale/country/theme | **Broken** — `prisma.appConfig` no longer exists (table dropped 2026-08-26); always returns `500`. Client silently ignores the failure and proceeds with defaults. |
+| `GET` | `/api/preferences` | Called **after** a successful *returning-user* unlock, to restore saved locale/country/theme | **Broken** — `prisma.appConfig` does not exist on the generated Prisma client; always returns `500`. Client silently ignores the failure and proceeds with defaults. |
 | `PATCH` | `/api/preferences` | Called 3× **after** a successful *first-time* unlock, to persist IP-detected country + locale + current theme | **Broken** — same cause as above; the fetches resolve without throwing (a `500` isn't a network error) so the UI proceeds normally, but nothing is actually saved |
-| `POST` | `/api/auth/reset-vault` | Alternate path when a returning user has forgotten their passphrase — clears `verifier` so they can set a new one | **Broken** — throws before running any query, because it also tries to delete rows from 9 asset tables dropped in the same 2026-08-26 change. `verifier` is never actually cleared, but the client resets its own UI state regardless, making the reset look successful when it silently did nothing |
+| `POST` | `/api/auth/reset-vault` | Alternate path when a returning user has forgotten their passphrase — clears `verifier` so they can set a new one | **Broken** — throws before running any query, because it also tries to delete rows from 9 asset-holding models that do not exist on the generated Prisma client. `verifier` is never actually cleared, but the client resets its own UI state regardless, making the reset look successful when it silently did nothing |
 | `POST` | `/api/auth/signout` | Clears the session (including `encryptionKey`), forcing a fresh unlock next time | Working |
 
-See `screens/02-unlock.md` → **Known Issues** for the full trace on the three broken
+See `screens/02 Passphrase.md` → **Known Issues** for the full trace on the three broken
 routes above.
