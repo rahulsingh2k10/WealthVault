@@ -82,12 +82,13 @@ export async function GET(request: NextRequest) {
 
     // New sign-ups start on the FREE plan — looked up by tier since ids aren't stable
     const freePlan = await prisma.subscriptionPlan.findUniqueOrThrow({ where: { tier: "FREE" } });
+    const linkedinPlatform = await prisma.authPlatform.findUniqueOrThrow({ where: { platform: "LINKEDIN" } });
 
     // username = actual LinkedIn email (globally unique)
     const user = await prisma.user.upsert({
       where: { username: userInfo.email },
-      update: { fullName, platform: "LinkedIn", avatar: userInfo.picture || undefined },
-      create: { username: userInfo.email, fullName, platform: "LinkedIn", avatar: userInfo.picture || undefined, subscriptionPlanId: freePlan.id },
+      update: { fullName, platformId: linkedinPlatform.id, avatar: userInfo.picture || undefined },
+      create: { username: userInfo.email, fullName, platformId: linkedinPlatform.id, avatar: userInfo.picture || undefined, subscriptionPlanId: freePlan.id },
     });
 
     const session = await getSession();

@@ -10,7 +10,7 @@ export async function GET() {
 
   const dbUser = await prisma.user.findUnique({
     where: { id: session.userId },
-    include: { subscriptionPlan: true },
+    include: { subscriptionPlan: true, authPlatform: true },
   });
   if (!dbUser) {
     return NextResponse.json({ user: null });
@@ -33,7 +33,7 @@ export async function GET() {
       name: dbUser.fullName,
       email: dbUser.username,
       avatar,
-      platform: dbUser.platform,
+      platform: dbUser.authPlatform.platform,
       subscription: dbUser.subscriptionPlan.tier,
     },
   });

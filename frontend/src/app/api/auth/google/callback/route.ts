@@ -85,12 +85,13 @@ export async function GET(request: NextRequest) {
 
     // New sign-ups start on the FREE plan — looked up by tier since ids aren't stable
     const freePlan = await prisma.subscriptionPlan.findUniqueOrThrow({ where: { tier: "FREE" } });
+    const googlePlatform = await prisma.authPlatform.findUniqueOrThrow({ where: { platform: "GOOGLE" } });
 
     // username = actual Google email (globally unique)
     const user = await prisma.user.upsert({
       where: { username: userInfo.email },
-      update: { fullName, platform: "Google", avatar: userInfo.picture || undefined },
-      create: { username: userInfo.email, fullName, platform: "Google", avatar: userInfo.picture || undefined, subscriptionPlanId: freePlan.id },
+      update: { fullName, platformId: googlePlatform.id, avatar: userInfo.picture || undefined },
+      create: { username: userInfo.email, fullName, platformId: googlePlatform.id, avatar: userInfo.picture || undefined, subscriptionPlanId: freePlan.id },
     });
 
     console.log("[google-oauth] saving session for user:", user.username);

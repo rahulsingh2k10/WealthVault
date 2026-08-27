@@ -89,11 +89,12 @@ export async function GET(request: NextRequest) {
 
     // New sign-ups start on the FREE plan — looked up by tier since ids aren't stable
     const freePlan = await prisma.subscriptionPlan.findUniqueOrThrow({ where: { tier: "FREE" } });
+    const xPlatform = await prisma.authPlatform.findUniqueOrThrow({ where: { platform: "X" } });
 
     const user = await prisma.user.upsert({
       where: { username: handle },
-      update: { fullName: name, platform: "X", avatar: xAvatar },
-      create: { username: handle, fullName: name, platform: "X", avatar: xAvatar, subscriptionPlanId: freePlan.id },
+      update: { fullName: name, platformId: xPlatform.id, avatar: xAvatar },
+      create: { username: handle, fullName: name, platformId: xPlatform.id, avatar: xAvatar, subscriptionPlanId: freePlan.id },
     });
 
     const session = await getSession();
