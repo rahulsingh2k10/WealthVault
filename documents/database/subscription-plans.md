@@ -80,12 +80,12 @@ model SubscriptionPlan {
 Seeded once, directly against the live database, with placeholder values (real pricing not
 yet finalized):
 
-| `tier` | `price` | `offerPrice` | `currency` | `isActive` |
-|---|---|---|---|---|
-| `FREE` | `0` | `NULL` | `INR` | `true` |
-| `MONTHLY` | `0` | `NULL` | `INR` | `true` |
-| `QUARTERLY` | `0` | `NULL` | `INR` | `true` |
-| `ANNUAL` | `0` | `NULL` | `INR` | `true` |
+| `tier`      | `price` | `offerPrice` | `currency` | `isActive` |
+|-------------|---------|--------------|------------|------------|
+| `FREE`      | `0`     | `NULL`       | `INR`      | `true`     |
+| `MONTHLY`   | `0`     | `NULL`       | `INR`      | `true`     |
+| `QUARTERLY` | `0`     | `NULL`       | `INR`      | `true`     |
+| `ANNUAL`    | `0`     | `NULL`       | `INR`      | `true`     |
 
 No code path currently *reads* from this table — no pricing page, no checkout flow, no API
 route touches `subscription_plans` yet. It exists purely as groundwork, the same way
