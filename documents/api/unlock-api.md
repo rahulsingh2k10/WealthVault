@@ -133,10 +133,10 @@ change": **yes, it touches the database, and no, the schema does not need to cha
 | Any error path (401/404/500) | None |
 
 No other column on `users`, and no other table, is touched by this route. In particular:
-it does **not** touch `subscriptionPlanId`, `subscriptionStartDate`/`subscriptionEndDate`,
-or `subscription_plans` — those are unrelated to passphrase/vault state. There is no
-database transaction wrapping this route; the only write (`verifier`) is a single
-statement, so there's no partial-write case to worry about.
+it does **not** touch `platformId`, `subscriptionPlanId`, `subscription_plans`,
+`auth_platforms`, or `subscription_periods` — those are unrelated to passphrase/vault
+state. There is no database transaction wrapping this route; the only write (`verifier`)
+is a single statement, so there's no partial-write case to worry about.
 
 ---
 

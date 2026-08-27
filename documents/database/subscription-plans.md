@@ -89,8 +89,7 @@ yet finalized):
 
 No code path currently *reads* from this table — no pricing page, no checkout flow, no API
 route touches `subscription_plans` yet. It exists purely as groundwork, the same way
-`users.subscriptionStartDate`/`subscriptionEndDate` were added ahead of any code that uses
-them.
+`subscription_periods` exists ahead of any code that uses it.
 
 ---
 
