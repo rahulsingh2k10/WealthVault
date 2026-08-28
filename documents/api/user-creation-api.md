@@ -41,8 +41,11 @@ Provider redirects back to /api/auth/<provider>/callback
 2. Exchange the authorization code for an access/id token
 3. Fetch the user's profile from the provider
 4. prisma.user.upsert(...)           ← THE operation that adds/updates the users row
-5. Write session.userId / userName / userEmail / userAvatar, session.save()
-6. Delete the oauth_state (and x_code_verifier) cookie
+5. logSubscriptionPeriodIfChanged(user.id, user.subscriptionPlanId)
+   — logs a subscription_periods row if this is the user's first login,
+     or if their plan differs from the last one logged (see Related endpoints)
+6. Write session.userId / userName / userEmail / userAvatar, session.save()
+7. Delete the oauth_state (and x_code_verifier) cookie
   │
   ▼
 302 redirect to /unlock
@@ -327,6 +330,18 @@ const user = await prisma.user.upsert({
 and (for Google/LinkedIn/X) `avatar` are refreshed. `subscriptionPlanId` is **not** touched
 on update, so a returning user keeps whatever tier they're on — logging in again never
 resets a paid subscription back to Free.
+
+---
+
+## Subscription period logging
+
+Immediately after the `upsert`, every callback route calls
+`logSubscriptionPeriodIfChanged(user.id, user.subscriptionPlanId)`
+(`src/lib/services/SubscriptionPeriodService.ts`). This inserts a `subscription_periods`
+row only if the user has none yet, or if their current `subscriptionPlanId` differs from
+the one their most recent row recorded — so a brand-new signup always logs their initial
+`FREE` plan, and a returning user on an unchanged plan logs nothing on every subsequent
+login. Full table design in `database/subscription-periods.md`.
 
 ---
 

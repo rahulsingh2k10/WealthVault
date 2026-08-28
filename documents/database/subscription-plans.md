@@ -57,17 +57,18 @@ enum Subscription {
 }
 
 model SubscriptionPlan {
-  id             String       @id @default(uuid())
-  tier           Subscription @unique
-  price          Decimal
-  offerPrice     Decimal?
-  currency       String       @default("INR")
-  offerStartDate DateTime?
-  offerEndDate   DateTime?
-  isActive       Boolean      @default(true)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  users          User[]
+  id                  String               @id @default(uuid())
+  tier                Subscription         @unique
+  price               Decimal
+  offerPrice          Decimal?
+  currency            String               @default("INR")
+  offerStartDate      DateTime?
+  offerEndDate        DateTime?
+  isActive            Boolean              @default(true)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  users               User[]
+  subscriptionPeriods SubscriptionPeriod[]
 
   @@map("subscription_plans")
 }
@@ -87,9 +88,10 @@ yet finalized):
 | `QUARTERLY` | `0`     | `NULL`       | `INR`      | `true`     |
 | `ANNUAL`    | `0`     | `NULL`       | `INR`      | `true`     |
 
-No code path currently *reads* from this table — no pricing page, no checkout flow, no API
-route touches `subscription_plans` yet. It exists purely as groundwork, the same way
-`subscription_periods` exists ahead of any code that uses it.
+No pricing page or checkout flow touches this table yet. The one thing that does read it
+today is the OAuth sign-in flow, which looks up the `FREE` row by `tier` to assign new
+users their starting plan, and `logSubscriptionPeriodIfChanged()` (see
+`subscription-periods.md`), which references a row's `id` when logging a plan change.
 
 ---
 
@@ -159,3 +161,8 @@ via `pg_constraint.confupdtype`/`confdeltype`). Practical implications:
 - Changing a `subscription_plans` row's `price`/`offerPrice` still has no automatic effect
   on any `User` row — the relation enforces which plan `id` values are valid, it doesn't
   copy pricing data onto `User` in any way.
+
+`subscription_plans.id` is also referenced by `subscription_periods.subscriptionPlanId` —
+see `subscription-periods.md`. The reverse relation
+`SubscriptionPlan.subscriptionPeriods SubscriptionPeriod[]` lets application code list
+every period ever logged for a given tier.
