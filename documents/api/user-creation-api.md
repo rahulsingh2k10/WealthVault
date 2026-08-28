@@ -92,7 +92,7 @@ affect login — it won't.
 
 **Profile fetch (server-side, not client-visible):** `GET https://www.googleapis.com/oauth2/v3/userinfo` → `email` (→ `username`), `given_name`/`family_name` (→ `fullName`), `picture` (→ `avatar`)
 
-**Database effect:** see [`UpsertUserInput`](#upsertuserinput-schema) — `platformId` set to the `GOOGLE` row's id, `avatar` set.
+**Database effect:** see [`UpsertUserInput`](#upsertuserinput-schema) — `auth_platformId` set to the `GOOGLE` row's id, `avatar` set.
 
 **Responses**
 
@@ -144,7 +144,7 @@ affect login — it won't.
 
 **Profile fetch:** decoded `id_token` JWT `email` claim (→ `username`, falls back to `apple_{sub}@apple.com` since Apple omits `email` on repeat logins) + the one-time `user` field (→ `fullName`, first login only)
 
-**Database effect:** see [`UpsertUserInput`](#upsertuserinput-schema) — `platformId` set to the `APPLE` row's id, `avatar` **never** set (Apple exposes no profile picture).
+**Database effect:** see [`UpsertUserInput`](#upsertuserinput-schema) — `auth_platformId` set to the `APPLE` row's id, `avatar` **never** set (Apple exposes no profile picture).
 
 **Responses**
 
@@ -188,7 +188,7 @@ affect login — it won't.
 
 **Profile fetch:** `GET https://api.twitter.com/2/users/me` → `username` handle (→ `username`, **not** an email), `name` (→ `fullName`), `profile_image_url` (→ `avatar`)
 
-**Database effect:** see [`UpsertUserInput`](#upsertuserinput-schema) — `platformId` set to the `X` row's id, `avatar` set. Note `username` is the bare X handle here, not an email, since X's API doesn't expose the account's email address.
+**Database effect:** see [`UpsertUserInput`](#upsertuserinput-schema) — `auth_platformId` set to the `X` row's id, `avatar` set. Note `username` is the bare X handle here, not an email, since X's API doesn't expose the account's email address.
 
 **Responses**
 
@@ -231,7 +231,7 @@ affect login — it won't.
 
 **Profile fetch:** `GET https://api.linkedin.com/v2/userinfo` (OIDC) → `email` (→ `username`), `given_name`/`family_name` (→ `fullName`), `picture` (→ `avatar`)
 
-**Database effect:** see [`UpsertUserInput`](#upsertuserinput-schema) — `platformId` set to the `LINKEDIN` row's id, `avatar` set.
+**Database effect:** see [`UpsertUserInput`](#upsertuserinput-schema) — `auth_platformId` set to the `LINKEDIN` row's id, `avatar` set.
 
 **Responses**
 
@@ -299,11 +299,11 @@ const platform = await prisma.authPlatform.findUniqueOrThrow({ where: { platform
 
 const user = await prisma.user.upsert({
   where: { username: <provider-derived identity string> },
-  update: { fullName, platformId: platform.id, avatar /* Google/LinkedIn/X only */ },
+  update: { fullName, auth_platformId: platform.id, avatar /* Google/LinkedIn/X only */ },
   create: {
     username: <provider-derived identity string>,
     fullName,
-    platformId: platform.id,         // FK to auth_platforms.id
+    auth_platformId: platform.id,         // FK to auth_platforms.id
     avatar,                          // omitted entirely for Apple
     subscriptionPlanId: freePlan.id, // every new user starts on the Free tier
   },
@@ -317,13 +317,13 @@ const user = await prisma.user.upsert({
 | `id` | auto-generated `uuid()` |
 | `fullName` | from the provider profile |
 | `username` | the provider-derived identity string (email, or X handle) |
-| `platformId` | FK to `auth_platforms.id`, resolved from `"GOOGLE"` / `"APPLE"` / `"X"` / `"LINKEDIN"` |
+| `auth_platformId` | FK to `auth_platforms.id`, resolved from `"GOOGLE"` / `"APPLE"` / `"X"` / `"LINKEDIN"` |
 | `avatar` | provider's profile picture URL, or `undefined` (omitted) — Apple never sets this |
 | `subscriptionPlanId` | FK to `subscription_plans.id`, always the `FREE` row — no route ever creates a user on a paid tier |
 | `verifier` | not set — remains `NULL` (first-time vault setup happens later, in `/api/auth/unlock`) |
 | `createdAt` / `updatedAt` | set automatically by Prisma |
 
-**On `update`** (returning user, `username` already exists) — only `fullName`, `platformId`,
+**On `update`** (returning user, `username` already exists) — only `fullName`, `auth_platformId`,
 and (for Google/LinkedIn/X) `avatar` are refreshed. `subscriptionPlanId` is **not** touched
 on update, so a returning user keeps whatever tier they're on — logging in again never
 resets a paid subscription back to Free.

@@ -24,7 +24,7 @@
 | `id`                 | `String`   | No       | `uuid()` | Primary key                            |
 | `fullName`           | `String`   | No       | —        | Display name from the OAuth provider   |
 | `username`           | `String`   | No       | —        | Unique cross-provider identity key     |
-| `platformId`         | `String`   | No       | —        | Foreign key to `auth_platforms.id`     |
+| `auth_platformId`    | `String`   | No       | —        | Foreign key to `auth_platforms.id`     |
 | `avatar`             | `String?`  | Yes      | —        | Provider photo URL or uploaded image   |
 | `subscriptionPlanId` | `String`   | No       | —        | Foreign key to `subscription_plans.id` |
 | `verifier`           | `String?`  | Yes      | —        | Encrypted passphrase verifier          |
@@ -36,7 +36,7 @@
 - **`id`** — Not referenced as a foreign key from any other table.
 - **`fullName`** — Sourced from the OAuth provider's profile. Refreshed on every login.
 - **`username`** — The cross-provider identity key. An email address for Google/Apple/LinkedIn; a bare handle (no `@`) for X. See **Identity key design** below.
-- **`platformId`** — The provider name is read via the relation (`user.authPlatform.platform`), not stored directly on `User`. See **Relationships** below and `auth-platforms.md`.
+- **`auth_platformId`** — The provider name is read via the relation (`user.authPlatform.platform`), not stored directly on `User`. See **Relationships** below and `auth-platforms.md`.
 - **`avatar`** — Either the OAuth provider's profile picture URL, or a user-uploaded base64 JPEG data URL (set via `PATCH /api/auth/avatar`). `NULL` for Apple sign-ins that never uploaded a photo.
 - **`subscriptionPlanId`** — The tier name is read via the relation (`user.subscriptionPlan.tier`), not stored directly on `User`. See **Relationships** below and `subscription-plans.md`.
 - **`verifier`** — AES-256-GCM–encrypted verifier blob, derived from the user's vault passphrase (`encrypt("PORTFOLIO_APP_V1", derivedKey)`). `NULL` means the user has never set a passphrase (first-time vault setup pending). **The passphrase itself is never stored** — only this verifier, which can confirm a correct passphrase without revealing it. Written by `POST /api/auth/unlock` on first-time setup only; read (never rewritten) on every subsequent unlock. Full request/response details in `../api/unlock-api.md`.
@@ -64,8 +64,8 @@ model User {
   id                  String               @id @default(uuid())
   fullName            String
   username            String               @unique
-  platformId          String
-  authPlatform        AuthPlatform         @relation(fields: [platformId], references: [id])
+  auth_platformId     String
+  authPlatform        AuthPlatform         @relation(fields: [auth_platformId], references: [id])
   avatar              String?
   subscriptionPlanId  String
   subscriptionPlan    SubscriptionPlan     @relation(fields: [subscriptionPlanId], references: [id])
@@ -107,12 +107,12 @@ See **Relationships** below for the full `subscriptionPlanId` foreign key design
 ## `Platform` enum
 
 This enum appears on `AuthPlatform.platform` (see `auth-platforms.md`). A user's sign-in
-provider is read by joining through `platformId` (`user.authPlatform.platform`), not
+provider is read by joining through `auth_platformId` (`user.authPlatform.platform`), not
 stored on `User` directly.
 
 | Value | Meaning | Set by |
 |---|---|---|
-| `GOOGLE` | Signed in via Google OAuth | `google/callback/route.ts`, via `platformId: googlePlatform.id`, looked up by `platform: "GOOGLE"` |
+| `GOOGLE` | Signed in via Google OAuth | `google/callback/route.ts`, via `auth_platformId: googlePlatform.id`, looked up by `platform: "GOOGLE"` |
 | `APPLE` | Signed in via Apple OAuth | `apple/callback/route.ts`, same pattern |
 | `X` | Signed in via X (Twitter) OAuth | `x/callback/route.ts`, same pattern |
 | `LINKEDIN` | Signed in via LinkedIn OAuth | `linkedin/callback/route.ts`, same pattern |
@@ -121,7 +121,7 @@ stored on `User` directly.
 `platform: "GOOGLE"` (etc.) in its JSON response. Nothing currently reads this value
 beyond that pass-through — no UI component displays it.
 
-See **Relationships** below for the full `platformId` foreign key design.
+See **Relationships** below for the full `auth_platformId` foreign key design.
 
 ---
 
@@ -132,8 +132,8 @@ See **Relationships** below for the full `platformId` foreign key design.
   routes keys off of (`where: { username: ... }`), so two different providers can never
   silently collide into the same row unless they'd resolve to the identical `username`
   string (which the identity-key design below is built to prevent).
-- **Foreign key:** `platformId` → `auth_platforms.id` (constraint
-  `users_platformId_fkey`) — see **Relationships** below.
+- **Foreign key:** `auth_platformId` → `auth_platforms.id` (constraint
+  `users_auth_platformId_fkey`) — see **Relationships** below.
 - **Foreign key:** `subscriptionPlanId` → `subscription_plans.id` (constraint
   `users_subscriptionPlanId_fkey`) — see **Relationships** below.
 - No other indexes are defined.
@@ -153,15 +153,15 @@ designed so that different providers can never accidentally collide on the same
 
 Since email addresses always contain `@` and X handles never do, there's no possible
 string collision between an email-based identity and an X handle — this is why
-`platformId` doesn't need to be part of the uniqueness constraint.
+`auth_platformId` doesn't need to be part of the uniqueness constraint.
 
 ---
 
 ## Relationships
 
-**`users.platformId` → `auth_platforms.id`** (foreign key): every user's `platformId` must
+**`users.auth_platformId` → `auth_platforms.id`** (foreign key): every user's `auth_platformId` must
 match an existing row's `id` in `auth_platforms`. Postgres enforces this at the database
-level (constraint name `users_platformId_fkey`, `ON DELETE RESTRICT`, `ON UPDATE CASCADE`
+level (constraint name `users_auth_platformId_fkey`, `ON DELETE RESTRICT`, `ON UPDATE CASCADE`
 — verified via `pg_constraint`). See `auth-platforms.md` for the full relationship
 writeup, including the reverse `AuthPlatform.users User[]` accessor.
 
