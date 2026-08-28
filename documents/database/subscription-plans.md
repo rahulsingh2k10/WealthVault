@@ -139,9 +139,7 @@ model User {
 ```
 
 There is no `subscription` column on `User` — the tier name (`FREE`/`MONTHLY`/...) is read
-via this relation (`user.subscriptionPlan.tier`), not stored on `User`. `GET /api/auth/me`
-performs this join and returns the tier as `subscription: "FREE"` in its JSON response
-(see `Sidebar.tsx`).
+via this relation (`user.subscriptionPlan.tier`), not stored on `User` directly.
 
 The constraint is named `users_subscriptionPlanId_fkey` at the database level (verified
 via `pg_constraint.confupdtype`/`confdeltype`). Practical implications:

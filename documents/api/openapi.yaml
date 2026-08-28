@@ -1,0 +1,515 @@
+openapi: 3.0.3
+info:
+  title: WealthVault API
+  version: "1.0.0"
+  description: |
+    OAuth sign-in, vault-unlock, and profile routes for WealthVault, generated from
+    `user-creation-api.md` and `unlock-api.md`.
+
+    Scope: this spec covers the four OAuth providers' initiate + callback routes,
+    `POST /api/auth/unlock`, and `PATCH /api/auth/avatar`.
+
+    WealthVault has no dedicated "create a user" endpoint: a `users` row is created
+    or updated as a side effect of a successful OAuth callback (a Prisma `upsert`),
+    detailed below. There is also no generic "edit profile" endpoint — `fullName` and
+    `username` are only ever refreshed via that same OAuth login upsert; `avatar` is
+    the one user detail with its own dedicated update route (`PATCH /api/auth/avatar`).
+
+    ### What every OAuth callback writes to `users` (the upsert)
+
+    | Column | On create (new `username`) | On update (returning user) |
+    |---|---|---|
+    | `id` | auto-generated `uuid()` | unchanged |
+    | `fullName` | from the provider profile | refreshed from the provider profile |
+    | `username` | provider-derived identity string (email, or bare handle for X) — this is the upsert key | unchanged |
+    | `auth_platformId` | FK to `auth_platforms.id`, resolved from the provider | refreshed |
+    | `avatar` | provider's photo URL, or omitted entirely for Apple | refreshed (Google/LinkedIn/X only — never for Apple) |
+    | `subscriptionPlanId` | FK to `subscription_plans.id`, always the `FREE` row's id | **never touched** — a returning user keeps whatever tier they're on |
+    | `verifier` | left `NULL` (set later by `POST /api/auth/unlock`) | untouched |
+    | `createdAt` / `updatedAt` | set automatically by Prisma | `updatedAt` refreshed |
+
+    ### What a successful callback writes to the session cookie
+
+    Every callback seals a `portfolio_session` cookie (see the `SessionCookie` security
+    scheme below) containing:
+
+    | Field | Value |
+    |---|---|
+    | `userId` | the `User.id` of the row just created/updated |
+    | `userName` | `User.fullName` |
+    | `userEmail` | `User.username` |
+    | `userAvatar` | provider avatar URL, or `""` for Apple/X-without-image |
+
+    `subscription` is deliberately not included in this cookie.
+
+    ### Failure redirect codes (`/?error=<code>`)
+
+    On any of these, no row is created or modified in `users` — the upsert is either
+    never reached, or its result is discarded because the route already returned:
+
+    | Code | When |
+    |---|---|
+    | `access_denied` (or whatever code the provider sent) | User declined consent on the provider's screen |
+    | `missing_params` | Callback arrived without `code` or `state` |
+    | `invalid_state` | CSRF check failed, or (X only) the PKCE `x_code_verifier` cookie was missing |
+    | `token_exchange_failed` | The provider rejected the authorization code |
+    | `invalid_user_info` | Provider's profile endpoint didn't return the required fields (Google/X/LinkedIn only — Apple has no equivalent check) |
+    | `server_error` | Any unhandled exception, including a failed upsert |
+servers:
+  - url: http://localhost:3000
+    description: Local development
+
+tags:
+  - name: Google
+    description: Google OAuth sign-in
+  - name: Apple
+    description: Apple OAuth sign-in
+  - name: X (Twitter)
+    description: X (Twitter) OAuth sign-in
+  - name: LinkedIn
+    description: LinkedIn OAuth sign-in
+  - name: Unlock
+    description: Vault passphrase setup/verification, run after OAuth sign-in
+  - name: Profile
+    description: Updating an existing user's own details
+  - name: Session
+    description: Ending an existing session
+
+x-tagGroups:
+  - name: Authentication
+    tags: [Google, Apple, X (Twitter), LinkedIn]
+  - name: Vault
+    tags: [Unlock]
+  - name: Profile
+    tags: [Profile]
+  - name: Session
+    tags: [Session]
+
+security: []
+
+paths:
+  /api/auth/google:
+    get:
+      summary: Start Google OAuth sign-in
+      operationId: startGoogleSignIn
+      tags: [Google]
+      responses:
+        "302":
+          description: Redirect to Google's consent screen.
+          headers:
+            Location:
+              schema: { type: string }
+              description: Google's OAuth 2.0 authorization URL.
+            Set-Cookie:
+              schema: { type: string }
+              example: "oauth_state=<token>; HttpOnly; Max-Age=600"
+
+  /api/auth/google/callback:
+    get:
+      summary: Complete Google OAuth sign-in and upsert the user row
+      operationId: completeGoogleSignIn
+      tags: [Google]
+      parameters:
+        - $ref: "#/components/parameters/OAuthCode"
+        - $ref: "#/components/parameters/OAuthState"
+        - $ref: "#/components/parameters/OAuthError"
+        - $ref: "#/components/parameters/OAuthStateCookie"
+      description: |
+        Profile fetch (server-side): `GET https://www.googleapis.com/oauth2/v3/userinfo`
+        → `email` (→ `username`), `given_name`/`family_name` (→ `fullName`), `picture` (→ `avatar`).
+
+        Database effect on `users` (full table in the Info section above):
+        `auth_platformId` set to the `GOOGLE` row's id, `avatar` set.
+      responses:
+        "302":
+          description: |
+            Success → redirect to `/unlock` with a sealed `portfolio_session` cookie (fields
+            listed in the Info section above), or failure → redirect to `/?error=<code>`
+            (full list of codes in the Info section above).
+          headers:
+            Location: { schema: { type: string } }
+            Set-Cookie: { schema: { type: string } }
+
+  /api/auth/apple:
+    get:
+      summary: Start Apple OAuth sign-in
+      operationId: startAppleSignIn
+      tags: [Apple]
+      responses:
+        "302":
+          description: Redirect to Apple's consent screen (`response_mode=form_post`).
+          headers:
+            Location:
+              schema: { type: string }
+              description: Apple's OAuth 2.0 authorization URL.
+            Set-Cookie:
+              schema: { type: string }
+              example: "oauth_state=<token>; HttpOnly; Max-Age=600"
+
+  /api/auth/apple/callback:
+    post:
+      summary: Complete Apple OAuth sign-in and upsert the user row
+      operationId: completeAppleSignIn
+      tags: [Apple]
+      description: |
+        Apple is the one provider that calls its callback with `POST` + a form-encoded
+        body instead of `GET` + a query string, per Apple's `response_mode=form_post`.
+
+        Profile fetch: decoded `id_token` JWT `email` claim (→ `username`, falls back to
+        `apple_{sub}@apple.com` since Apple omits `email` on repeat logins) + the one-time
+        `user` field (→ `fullName`, first login only).
+
+        Database effect on `users` (full table in the Info section above):
+        `auth_platformId` set to the `APPLE` row's id, `avatar` **never** set (Apple exposes
+        no profile picture).
+      parameters:
+        - $ref: "#/components/parameters/OAuthStateCookie"
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [code, state]
+              properties:
+                code:
+                  type: string
+                  description: Authorization code from Apple
+                state:
+                  type: string
+                  description: Must match the `oauth_state` cookie
+                error:
+                  type: string
+                  description: Present if the user declined consent
+                user:
+                  type: string
+                  description: >-
+                    JSON string, sent only on the user's first-ever authorization;
+                    contains `name.firstName`/`name.lastName`
+      responses:
+        "302":
+          description: |
+            Success → redirect to `/unlock` with a sealed `portfolio_session` cookie (fields
+            listed in the Info section above), or failure → redirect to `/?error=<code>`
+            (full list of codes in the Info section above).
+          headers:
+            Location: { schema: { type: string } }
+            Set-Cookie: { schema: { type: string } }
+
+  /api/auth/x:
+    get:
+      summary: Start X (Twitter) OAuth sign-in
+      operationId: startXSignIn
+      tags: [X (Twitter)]
+      responses:
+        "302":
+          description: Redirect to X's consent screen.
+          headers:
+            Location:
+              schema: { type: string }
+              description: X's OAuth 2.0 authorization URL.
+            Set-Cookie:
+              schema: { type: string }
+              example: |
+                oauth_state=<token>; HttpOnly; Max-Age=600
+                x_code_verifier=<verifier>; HttpOnly; Max-Age=600
+              description: Two cookies are set — `oauth_state`, and the PKCE (S256) `x_code_verifier`.
+
+  /api/auth/x/callback:
+    get:
+      summary: Complete X OAuth sign-in and upsert the user row
+      operationId: completeXSignIn
+      tags: [X (Twitter)]
+      parameters:
+        - $ref: "#/components/parameters/OAuthCode"
+        - $ref: "#/components/parameters/OAuthState"
+        - $ref: "#/components/parameters/OAuthError"
+        - $ref: "#/components/parameters/OAuthStateCookie"
+        - $ref: "#/components/parameters/XCodeVerifierCookie"
+      description: |
+        Profile fetch: `GET https://api.twitter.com/2/users/me` → `username` handle
+        (→ `username`, **not** an email), `name` (→ `fullName`), `profile_image_url` (→ `avatar`).
+
+        Database effect on `users` (full table in the Info section above):
+        `auth_platformId` set to the `X` row's id, `avatar` set. `username` is the bare X
+        handle here, not an email, since X's API doesn't expose the account's email address.
+      responses:
+        "302":
+          description: |
+            Success → redirect to `/unlock` with a sealed `portfolio_session` cookie (fields
+            listed in the Info section above), or failure → redirect to `/?error=<code>`
+            (full list of codes in the Info section above).
+          headers:
+            Location: { schema: { type: string } }
+            Set-Cookie: { schema: { type: string } }
+
+  /api/auth/linkedin:
+    get:
+      summary: Start LinkedIn OAuth sign-in
+      operationId: startLinkedInSignIn
+      tags: [LinkedIn]
+      responses:
+        "302":
+          description: Redirect to LinkedIn's consent screen.
+          headers:
+            Location:
+              schema: { type: string }
+              description: LinkedIn's OAuth 2.0 authorization URL.
+            Set-Cookie:
+              schema: { type: string }
+              example: "oauth_state=<token>; HttpOnly; Max-Age=600"
+
+  /api/auth/linkedin/callback:
+    get:
+      summary: Complete LinkedIn OAuth sign-in and upsert the user row
+      operationId: completeLinkedInSignIn
+      tags: [LinkedIn]
+      parameters:
+        - $ref: "#/components/parameters/OAuthCode"
+        - $ref: "#/components/parameters/OAuthState"
+        - $ref: "#/components/parameters/OAuthError"
+        - $ref: "#/components/parameters/OAuthStateCookie"
+      description: |
+        Profile fetch: `GET https://api.linkedin.com/v2/userinfo` (OIDC) → `email`
+        (→ `username`), `given_name`/`family_name` (→ `fullName`), `picture` (→ `avatar`).
+
+        Database effect on `users` (full table in the Info section above):
+        `auth_platformId` set to the `LINKEDIN` row's id, `avatar` set.
+      responses:
+        "302":
+          description: |
+            Success → redirect to `/unlock` with a sealed `portfolio_session` cookie (fields
+            listed in the Info section above), or failure → redirect to `/?error=<code>`
+            (full list of codes in the Info section above).
+          headers:
+            Location: { schema: { type: string } }
+            Set-Cookie: { schema: { type: string } }
+
+  /api/auth/unlock:
+    post:
+      summary: Verify a returning user's passphrase, or establish a first-time user's passphrase
+      operationId: unlockVault
+      tags: [Unlock]
+      security:
+        - SessionCookie: []
+      description: |
+        There is exactly one route for both signup and login of the vault passphrase —
+        it silently branches into a first-time (create) or returning (verify) path based
+        on whether the signed-in user's `verifier` column is currently `NULL`. Requires an
+        existing OAuth session (`session.userId`); this is the second of two distinct
+        authentication steps (OAuth proves *who you are*, this proves *you know the vault
+        passphrase*).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [passphrase]
+              properties:
+                passphrase:
+                  type: string
+                  description: >-
+                    The vault passphrase, plaintext, sent once over HTTPS.
+                    Never persisted as plaintext anywhere — see the `UnlockResult` schema.
+      responses:
+        "200":
+          description: Passphrase accepted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnlockResult"
+        "400":
+          description: >-
+            Missing passphrase, or (first-time only) the passphrase failed
+            server-side strength validation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                passphraseRequired:
+                  summary: Request body had no passphrase field
+                  value: { error: "Passphrase required" }
+                tooShort:
+                  summary: First-time only — failed strength validation
+                  value: { error: "Passphrase must be at least 12 characters" }
+        "401":
+          description: No valid session, or (returning user only) the passphrase didn't match.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                unauthorized:
+                  summary: No valid session
+                  value: { error: "Unauthorized" }
+                invalidPassphrase:
+                  summary: Returning user — derived key didn't match the stored verifier
+                  value: { error: "Invalid passphrase" }
+        "404":
+          description: session.userId doesn't correspond to any row in users (stale session after account deletion).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example: { error: "User not found" }
+        "500":
+          description: Any unhandled exception.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example: { error: "Failed to unlock" }
+
+  /api/auth/avatar:
+    patch:
+      summary: Update the current user's avatar
+      operationId: updateAvatar
+      tags: [Profile]
+      security:
+        - SessionCookie: []
+      description: |
+        Overwrites `users.avatar` with a client-uploaded image and keeps the session's
+        `userAvatar` in sync, replacing whatever avatar the OAuth provider originally
+        supplied. Independent of the unlock flow — can be called before or after
+        `POST /api/auth/unlock`.
+
+        Database effect: `UPDATE users SET avatar = <data URL> WHERE id = :userId`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [avatar]
+              properties:
+                avatar:
+                  type: string
+                  description: >-
+                    A base64 data URL (`data:image/...;base64,...`). Must be under
+                    ~500,000 characters (~350 KB of image data).
+      responses:
+        "200":
+          description: Avatar saved.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success]
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+        "400":
+          description: Missing/malformed avatar data, or the image exceeds the size limit.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                invalidData:
+                  summary: Missing, or doesn't start with data:image/
+                  value: { error: "Invalid avatar data" }
+                tooLarge:
+                  summary: Exceeds the ~350 KB limit
+                  value: { error: "Image too large (max ~350 KB)" }
+        "401":
+          description: No valid session.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example: { error: "Unauthorized" }
+
+  /api/auth/signout:
+    post:
+      summary: End the current session
+      operationId: signOut
+      tags: [Session]
+      description: |
+        Destroys the `portfolio_session` cookie's contents — `userId`, `userEmail`,
+        `userAvatar`, and (if the vault was unlocked) `encryptionKey` — in one call.
+        No request body. Idempotent: calling this with no session, an expired session,
+        or an already-cleared session all succeed identically; there's no session state
+        to check beforehand, so this route never returns 401.
+      responses:
+        "200":
+          description: Session cleared.
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+              example: "portfolio_session=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success]
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+
+components:
+  parameters:
+    OAuthCode:
+      name: code
+      in: query
+      required: true
+      schema: { type: string }
+      description: Authorization code from the provider.
+    OAuthState:
+      name: state
+      in: query
+      required: true
+      schema: { type: string }
+      description: Must match the `oauth_state` cookie (CSRF check).
+    OAuthError:
+      name: error
+      in: query
+      required: false
+      schema: { type: string }
+      description: Present if the user declined consent.
+    OAuthStateCookie:
+      name: oauth_state
+      in: cookie
+      required: true
+      schema: { type: string }
+      description: Set by the corresponding `GET /api/auth/<provider>` initiate route.
+    XCodeVerifierCookie:
+      name: x_code_verifier
+      in: cookie
+      required: true
+      schema: { type: string }
+      description: PKCE verifier cookie set by `GET /api/auth/x`; the callback fails without it.
+
+  securitySchemes:
+    SessionCookie:
+      type: apiKey
+      in: cookie
+      name: portfolio_session
+      description: >-
+        Sealed iron-session cookie set by any OAuth callback route; must contain
+        userId. Missing or expired → 401 Unauthorized.
+
+  schemas:
+    UnlockResult:
+      type: object
+      required: [success, firstTime]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        firstTime:
+          type: boolean
+          description: >-
+            Reflects the state of user.verifier before this request. True exactly once
+            per user — the very first successful unlock — false on every subsequent
+            unlock.
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string

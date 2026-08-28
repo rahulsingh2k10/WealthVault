@@ -89,8 +89,7 @@ model User {
 ```
 
 There is no `platform` column on `User` — the provider name is read via this relation
-(`user.authPlatform.platform`), not stored on `User`. `GET /api/auth/me` performs this
-join and returns the provider as `platform: "GOOGLE"` (etc.) in its JSON response.
+(`user.authPlatform.platform`), not stored on `User` directly.
 
 The constraint is named `users_auth_platformId_fkey` at the database level (verified via
 `pg_constraint.confupdtype`/`confdeltype`). Practical implications:

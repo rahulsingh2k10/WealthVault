@@ -87,17 +87,12 @@ stored on `User` directly.
 
 | Value | Meaning | Set by |
 |---|---|---|
-| `FREE` | Default tier for every new sign-up. Intended limit (not yet enforced in code): 2 items per portfolio section. | Every OAuth callback route, on first-time account creation — via `subscriptionPlanId: freePlan.id`, looked up by `tier: "FREE"` |
-| `MONTHLY` | Paid, billed monthly. | Not yet — no billing integration exists yet |
-| `QUARTERLY` | Paid, billed quarterly. | Not yet |
-| `ANNUAL` | Paid, billed annually. | Not yet |
+| `FREE` | Default tier for every new sign-up. | Every OAuth callback route, on first-time account creation — via `subscriptionPlanId: freePlan.id`, looked up by `tier: "FREE"` |
+| `MONTHLY` | Paid tier, billed monthly. | — |
+| `QUARTERLY` | Paid tier, billed quarterly. | — |
+| `ANNUAL` | Paid tier, billed annually. | — |
 
-No code path currently sets a user to anything other than `FREE`, and no code path
-reads the tier to gate or limit behavior — `GET /api/auth/me` joins through
-`subscriptionPlan` and returns the tier as `subscription: "FREE"` in its JSON response,
-and the Sidebar UI displays that (see `frontend/src/components/layout/Sidebar.tsx`), but
-nothing enforces item limits. Subscription period tracking lives in `subscription_periods`
-— see `subscription-periods.md`.
+Subscription period tracking lives in `subscription_periods` — see `subscription-periods.md`.
 
 See **Relationships** below for the full `subscriptionPlanId` foreign key design.
 
@@ -115,10 +110,6 @@ stored on `User` directly.
 | `APPLE` | Signed in via Apple OAuth | `apple/callback/route.ts`, same pattern |
 | `X` | Signed in via X (Twitter) OAuth | `x/callback/route.ts`, same pattern |
 | `LINKEDIN` | Signed in via LinkedIn OAuth | `linkedin/callback/route.ts`, same pattern |
-
-`GET /api/auth/me` joins through `authPlatform` and returns the provider as
-`platform: "GOOGLE"` (etc.) in its JSON response. Nothing currently reads this value
-beyond that pass-through — no UI component displays it.
 
 See **Relationships** below for the full `auth_platformId` foreign key design.
 
@@ -176,8 +167,4 @@ See `subscription-plans.md` for the full relationship writeup, including the rev
 `subscription_periods` row belongs to one user. See `subscription-periods.md`.
 
 `users`, `subscription_plans`, `auth_platforms`, and `subscription_periods` are the four
-tables in the database. Several application files (~16 API routes under
-`frontend/src/app/api/*`, the dashboard page, `seed.ts`, and `UserRepository`) reference
-Prisma models that do not exist in the current schema (e.g. `EquityHolding`,
-`MutualFund`, `AppConfig`) and fail to type-check (`tsc --noEmit`); they are
-non-functional.
+tables in the database.

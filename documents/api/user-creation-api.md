@@ -4,7 +4,7 @@
 > Responses → Schemas) even though no `openapi.yaml` exists for it. See **Scope note**.
 
 **Base path:** `/api/auth`
-**Tags:** `Google` · `Apple` · `X (Twitter)` · `LinkedIn` · `Related`
+**Tags:** `Google` · `Apple` · `X (Twitter)` · `LinkedIn`
 
 ---
 
@@ -16,8 +16,6 @@ successful OAuth sign-in — the callback route for whichever provider the user 
 with performs a Prisma `upsert` directly against the `users` table. This document treats
 the eight routes below (four "initiate" + four "callback") as the API surface that
 ultimately adds a user to the database.
-
-If you meant a different endpoint, see **Related endpoints** at the bottom.
 
 ---
 
@@ -43,7 +41,7 @@ Provider redirects back to /api/auth/<provider>/callback
 4. prisma.user.upsert(...)           ← THE operation that adds/updates the users row
 5. logSubscriptionPeriodIfChanged(user.id, user.subscriptionPlanId)
    — logs a subscription_periods row if this is the user's first login,
-     or if their plan differs from the last one logged (see Related endpoints)
+     or if their plan differs from the last one logged (see Subscription period logging below)
 6. Write session.userId / userName / userEmail / userAvatar, session.save()
 7. Delete the oauth_state (and x_code_verifier) cookie
   │
@@ -51,13 +49,8 @@ Provider redirects back to /api/auth/<provider>/callback
 302 redirect to /unlock
 ```
 
-All four providers follow the same shape. The four callback routes call
-`prisma.user.upsert(...)` **directly** — none of them go through
-`src/lib/repositories/UserRepository.ts`, even though that class implements the same
-`upsert` operation. `UserRepository` currently has no callers anywhere in the app except
-its own test (`__tests__/repositories/UserRepository.test.ts`); it's effectively dead code
-today. Worth knowing if you're about to "fix a bug" in `UserRepository` expecting it to
-affect login — it won't.
+All four providers follow the same shape — each callback route calls
+`prisma.user.upsert(...)` directly.
 
 ---
 
@@ -268,8 +261,7 @@ The session cookie (via `src/lib/session.ts`) encodes:
 }
 ```
 
-`subscription` is **not** placed in the session — the client reads the current
-subscription tier separately, via `GET /api/auth/me`.
+`subscription` is **not** placed in the session.
 
 ### Error codes (all callback routes)
 
@@ -342,19 +334,6 @@ row only if the user has none yet, or if their current `subscriptionPlanId` diff
 the one their most recent row recorded — so a brand-new signup always logs their initial
 `FREE` plan, and a returning user on an unchanged plan logs nothing on every subsequent
 login. Full table design in `../database/subscription-periods.md`.
-
----
-
-## Related endpoints
-
-Out of scope for this doc, but adjacent to the flow above:
-
-| Method | Path | Notes |
-|---|---|---|
-| `GET` | `/api/auth/me` | Reads the current user (including `subscription`) for the frontend; does not write to the `users` table. |
-| `POST` | `/api/auth/unlock` | Writes the `verifier` column onto an *existing* user row (first-time passphrase setup) or verifies it (returning user). Fully documented in `unlock-api.md` and `../screens/02 Passphrase.md`. Closest thing in the app to a traditional "set credentials" endpoint. |
-| `PATCH` | `/api/auth/avatar` | Updates `user.avatar` after initial signup. |
-| `POST` | `/api/auth/signout` | Clears the session cookie; no DB write. |
 
 ---
 

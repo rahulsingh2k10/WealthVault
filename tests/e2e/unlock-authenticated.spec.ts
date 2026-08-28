@@ -1,5 +1,6 @@
+import path from "path";
 import { test, expect } from "@playwright/test";
-import { hasTestDb, disconnectTestPrisma } from "../helpers/testDb";
+import { hasTestDb, disconnectTestPrisma, getTestPrisma } from "../helpers/testDb";
 import { ensureReferenceData } from "../helpers/seedReferenceData";
 import { createTestUser, deleteTestUser } from "../helpers/testUser";
 import { sealSessionCookie, SESSION_COOKIE_NAME } from "../helpers/session";
@@ -61,6 +62,56 @@ test.describe("Authenticated unlock flow (seeded session, no real OAuth)", () =>
 
       await expect(page.getByText("Invalid passphrase")).toBeVisible({ timeout: 10000 });
       expect(page.url()).toContain("/unlock");
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
+  test("clicking Sign out clears the session and redirects to the landing page", async ({ page }) => {
+    const user = await createTestUser();
+    try {
+      await signInAs(page, user.id);
+      await page.goto("/unlock");
+
+      await page.getByRole("button", { name: "Sign out" }).click();
+      await page.waitForURL("http://localhost:3100/", { timeout: 10000 });
+      expect(page.url()).toBe("http://localhost:3100/");
+
+      const cookies = await page.context().cookies();
+      const sessionCookie = cookies.find((c) => c.name === SESSION_COOKIE_NAME);
+      expect(sessionCookie).toBeUndefined();
+
+      // The session is gone server-side too, not just client-side — revisiting
+      // /unlock now bounces back to "/" per the middleware's auth check.
+      await page.goto("/unlock");
+      await page.waitForURL("http://localhost:3100/", { timeout: 10000 });
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
+  test("uploading an avatar replaces the initials placeholder and persists to the database", async ({ page }) => {
+    const user = await createTestUser();
+    try {
+      await signInAs(page, user.id);
+      await page.goto("/unlock");
+
+      // No avatar yet — the initials-only placeholder and the upload prompt are showing.
+      await expect(page.getByRole("button", { name: "+ Add profile photo" })).toBeVisible();
+      await expect(page.getByAltText(user.fullName)).not.toBeVisible();
+
+      const fileInput = page.locator('input[type="file"]');
+      await fileInput.setInputFiles(path.join(__dirname, "fixtures", "test-avatar.png"));
+
+      const avatarImg = page.getByAltText(user.fullName);
+      await expect(avatarImg).toBeVisible({ timeout: 10000 });
+      const src = await avatarImg.getAttribute("src");
+      // resizeImage() always re-encodes to JPEG, regardless of the source file's format.
+      expect(src).toMatch(/^data:image\/jpeg;base64,/);
+
+      const prisma = getTestPrisma();
+      const updated = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+      expect(updated.avatar).toBe(src);
     } finally {
       await deleteTestUser(user.id);
     }

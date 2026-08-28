@@ -91,8 +91,7 @@ maintained as separate parallel implementations — see `../screens/02 Passphras
 `firstTime` reflects the state of `user.verifier` **before** this request (`!user.verifier`
 evaluated on the row fetched at the start of the handler) — not whether the row was *just*
 created. It is `true` exactly once per user: the very first successful unlock. Every
-subsequent unlock for that user returns `firstTime: false`, forever (barring a
-`reset-vault` call, which sets `verifier` back to `NULL`).
+subsequent unlock for that user returns `firstTime: false`.
 
 ### Key derivation and verifier mechanics
 
@@ -137,22 +136,3 @@ it does **not** touch `auth_platformId`, `subscriptionPlanId`, `subscription_pla
 `auth_platforms`, or `subscription_periods` — those are unrelated to passphrase/vault
 state. There is no database transaction wrapping this route; the only write (`verifier`)
 is a single statement, so there's no partial-write case to worry about.
-
----
-
-## Related endpoints
-
-Called by the same screen, immediately before or after `/api/auth/unlock`, but not part
-of this endpoint itself:
-
-| Method | Path | Relationship to unlock | Status |
-|---|---|---|---|
-| `GET` | `/api/auth/me` | Called on page load, before any unlock attempt, to render the left panel | Working |
-| `PATCH` | `/api/auth/avatar` | Independent of unlock; can be called before or after | Working |
-| `GET` | `/api/preferences` | Called **after** a successful *returning-user* unlock, to restore saved locale/country/theme | **Broken** — `prisma.appConfig` does not exist on the generated Prisma client; always returns `500`. Client silently ignores the failure and proceeds with defaults. |
-| `PATCH` | `/api/preferences` | Called 3× **after** a successful *first-time* unlock, to persist IP-detected country + locale + current theme | **Broken** — same cause as above; the fetches resolve without throwing (a `500` isn't a network error) so the UI proceeds normally, but nothing is actually saved |
-| `POST` | `/api/auth/reset-vault` | Alternate path when a returning user has forgotten their passphrase — clears `verifier` so they can set a new one | **Broken** — throws before running any query, because it also tries to delete rows from 9 asset-holding models that do not exist on the generated Prisma client. `verifier` is never actually cleared, but the client resets its own UI state regardless, making the reset look successful when it silently did nothing |
-| `POST` | `/api/auth/signout` | Clears the session (including `encryptionKey`), forcing a fresh unlock next time | Working |
-
-See `../screens/02 Passphrase.md` → **Known Issues** for the full trace on the three broken
-routes above.
