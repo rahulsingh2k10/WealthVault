@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { logSubscriptionPeriodIfChanged } from "@/lib/services/SubscriptionPeriodService";
 
 interface LinkedInTokenResponse {
   access_token: string;
@@ -90,6 +91,7 @@ export async function GET(request: NextRequest) {
       update: { fullName, auth_platformId: linkedinPlatform.id, avatar: userInfo.picture || undefined },
       create: { username: userInfo.email, fullName, auth_platformId: linkedinPlatform.id, avatar: userInfo.picture || undefined, subscriptionPlanId: freePlan.id },
     });
+    await logSubscriptionPeriodIfChanged(user.id, user.subscriptionPlanId);
 
     const session = await getSession();
     session.userId    = user.id;

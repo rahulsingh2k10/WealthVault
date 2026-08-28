@@ -37,29 +37,33 @@ model AuthPlatform {
 }
 
 model SubscriptionPeriod {
-  id        String    @id @default(uuid())
-  userId    String
-  user      User      @relation(fields: [userId], references: [id])
-  startDate DateTime?
-  endDate   DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id                 String           @id @default(uuid())
+  userId             String
+  user               User             @relation(fields: [userId], references: [id])
+  // Which plan this period represents. A new row is inserted only when a
+  // user's plan changes from what their most recent row recorded — rows are
+  // never updated. createdAt is the period's start; the next row (if any)
+  // for the same user marks its implicit end.
+  subscriptionPlanId String
+  subscriptionPlan   SubscriptionPlan @relation(fields: [subscriptionPlanId], references: [id])
+  createdAt          DateTime         @default(now())
 
   @@map("subscription_periods")
 }
 
 model SubscriptionPlan {
-  id             String       @id @default(uuid())
-  tier           Subscription @unique
-  price          Decimal
-  offerPrice     Decimal?
-  currency       String       @default("INR")
-  offerStartDate DateTime?
-  offerEndDate   DateTime?
-  isActive       Boolean      @default(true)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  users          User[]
+  id                  String               @id @default(uuid())
+  tier                Subscription         @unique
+  price               Decimal
+  offerPrice          Decimal?
+  currency            String               @default("INR")
+  offerStartDate      DateTime?
+  offerEndDate        DateTime?
+  isActive            Boolean              @default(true)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  users               User[]
+  subscriptionPeriods SubscriptionPeriod[]
 
   @@map("subscription_plans")
 }

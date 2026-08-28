@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { logSubscriptionPeriodIfChanged } from "@/lib/services/SubscriptionPeriodService";
 
 interface GoogleTokenResponse {
   access_token: string;
@@ -93,6 +94,7 @@ export async function GET(request: NextRequest) {
       update: { fullName, auth_platformId: googlePlatform.id, avatar: userInfo.picture || undefined },
       create: { username: userInfo.email, fullName, auth_platformId: googlePlatform.id, avatar: userInfo.picture || undefined, subscriptionPlanId: freePlan.id },
     });
+    await logSubscriptionPeriodIfChanged(user.id, user.subscriptionPlanId);
 
     console.log("[google-oauth] saving session for user:", user.username);
     const session = await getSession();

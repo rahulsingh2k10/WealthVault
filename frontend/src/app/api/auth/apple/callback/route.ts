@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { SignJWT, importPKCS8, decodeJwt } from "jose";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { logSubscriptionPeriodIfChanged } from "@/lib/services/SubscriptionPeriodService";
 
 interface AppleTokenResponse {
   access_token: string;
@@ -104,6 +105,7 @@ export async function POST(request: NextRequest) {
       update: { auth_platformId: applePlatform.id, ...(fullName && { fullName }) },
       create: { username: appleUsername, fullName, auth_platformId: applePlatform.id, subscriptionPlanId: freePlan.id },
     });
+    await logSubscriptionPeriodIfChanged(user.id, user.subscriptionPlanId);
 
     const session = await getSession();
     session.userId    = user.id;
