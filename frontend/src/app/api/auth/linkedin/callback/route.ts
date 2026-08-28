@@ -87,8 +87,8 @@ export async function GET(request: NextRequest) {
     // username = actual LinkedIn email (globally unique)
     const user = await prisma.user.upsert({
       where: { username: userInfo.email },
-      update: { fullName, platformId: linkedinPlatform.id, avatar: userInfo.picture || undefined },
-      create: { username: userInfo.email, fullName, platformId: linkedinPlatform.id, avatar: userInfo.picture || undefined, subscriptionPlanId: freePlan.id },
+      update: { fullName, auth_platformId: linkedinPlatform.id, avatar: userInfo.picture || undefined },
+      create: { username: userInfo.email, fullName, auth_platformId: linkedinPlatform.id, avatar: userInfo.picture || undefined, subscriptionPlanId: freePlan.id },
     });
 
     const session = await getSession();

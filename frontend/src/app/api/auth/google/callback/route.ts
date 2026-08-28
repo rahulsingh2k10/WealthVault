@@ -90,8 +90,8 @@ export async function GET(request: NextRequest) {
     // username = actual Google email (globally unique)
     const user = await prisma.user.upsert({
       where: { username: userInfo.email },
-      update: { fullName, platformId: googlePlatform.id, avatar: userInfo.picture || undefined },
-      create: { username: userInfo.email, fullName, platformId: googlePlatform.id, avatar: userInfo.picture || undefined, subscriptionPlanId: freePlan.id },
+      update: { fullName, auth_platformId: googlePlatform.id, avatar: userInfo.picture || undefined },
+      create: { username: userInfo.email, fullName, auth_platformId: googlePlatform.id, avatar: userInfo.picture || undefined, subscriptionPlanId: freePlan.id },
     });
 
     console.log("[google-oauth] saving session for user:", user.username);

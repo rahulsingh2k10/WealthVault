@@ -101,8 +101,8 @@ export async function POST(request: NextRequest) {
 
     const user = await prisma.user.upsert({
       where: { username: appleUsername },
-      update: { platformId: applePlatform.id, ...(fullName && { fullName }) },
-      create: { username: appleUsername, fullName, platformId: applePlatform.id, subscriptionPlanId: freePlan.id },
+      update: { auth_platformId: applePlatform.id, ...(fullName && { fullName }) },
+      create: { username: appleUsername, fullName, auth_platformId: applePlatform.id, subscriptionPlanId: freePlan.id },
     });
 
     const session = await getSession();
