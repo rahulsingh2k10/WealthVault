@@ -24,8 +24,8 @@
 | `id`                 | `String`   | No       | `uuid()` | Primary key                            |
 | `fullName`           | `String`   | No       | —        | Display name from the OAuth provider   |
 | `username`           | `String`   | No       | —        | Unique cross-provider identity key     |
-| `auth_platformId`    | `String`   | No       | —        | Foreign key to `auth_platforms.id`     |
 | `avatar`             | `String?`  | Yes      | —        | Provider photo URL or uploaded image   |
+| `auth_platformId`    | `String`   | No       | —        | Foreign key to `auth_platforms.id`     |
 | `subscriptionPlanId` | `String`   | No       | —        | Foreign key to `subscription_plans.id` |
 | `verifier`           | `String?`  | Yes      | —        | Encrypted passphrase verifier          |
 | `createdAt`          | `DateTime` | No       | `now()`  | Row creation timestamp                 |
@@ -36,8 +36,8 @@
 - **`id`** — Not referenced as a foreign key from any other table.
 - **`fullName`** — Sourced from the OAuth provider's profile. Refreshed on every login.
 - **`username`** — The cross-provider identity key. An email address for Google/Apple/LinkedIn; a bare handle (no `@`) for X. See **Identity key design** below.
-- **`auth_platformId`** — The provider name is read via the relation (`user.authPlatform.platform`), not stored directly on `User`. See **Relationships** below and `auth-platforms.md`.
 - **`avatar`** — Either the OAuth provider's profile picture URL, or a user-uploaded base64 JPEG data URL (set via `PATCH /api/auth/avatar`). `NULL` for Apple sign-ins that never uploaded a photo.
+- **`auth_platformId`** — The provider name is read via the relation (`user.authPlatform.platform`), not stored directly on `User`. See **Relationships** below and `auth-platforms.md`.
 - **`subscriptionPlanId`** — The tier name is read via the relation (`user.subscriptionPlan.tier`), not stored directly on `User`. See **Relationships** below and `subscription-plans.md`.
 - **`verifier`** — AES-256-GCM–encrypted verifier blob, derived from the user's vault passphrase (`encrypt("PORTFOLIO_APP_V1", derivedKey)`). `NULL` means the user has never set a passphrase (first-time vault setup pending). **The passphrase itself is never stored** — only this verifier, which can confirm a correct passphrase without revealing it. Written by `POST /api/auth/unlock` on first-time setup only; read (never rewritten) on every subsequent unlock. Full request/response details in `../api/unlock-api.md`.
 - **`createdAt`** — Set once, at row creation.
@@ -64,9 +64,9 @@ model User {
   id                  String               @id @default(uuid())
   fullName            String
   username            String               @unique
+  avatar              String?
   auth_platformId     String
   authPlatform        AuthPlatform         @relation(fields: [auth_platformId], references: [id])
-  avatar              String?
   subscriptionPlanId  String
   subscriptionPlan    SubscriptionPlan     @relation(fields: [subscriptionPlanId], references: [id])
   subscriptionPeriods SubscriptionPeriod[]
