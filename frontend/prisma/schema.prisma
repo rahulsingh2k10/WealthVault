@@ -71,11 +71,11 @@ model User {
   //   X                         → handle only       (e.g. rahulsingh2k10)
   //   No clash possible: emails always contain @, X handles never do.
   username            String               @unique
+  avatar              String? // OAuth-provided URL or user-uploaded base64 data URL
   // FK to auth_platforms.id. The provider name (GOOGLE/APPLE/X/LINKEDIN) is
   // read via this relation (user.authPlatform.platform), not stored here.
   auth_platformId     String
   authPlatform        AuthPlatform         @relation(fields: [auth_platformId], references: [id])
-  avatar              String? // OAuth-provided URL or user-uploaded base64 data URL
   // FK to subscription_plans.id. The tier name (FREE/MONTHLY/...) is read via
   // this relation (user.subscriptionPlan.tier), not stored redundantly here.
   subscriptionPlanId  String
