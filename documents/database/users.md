@@ -10,8 +10,7 @@
 - **Table name:** `users` (via `@@map("users")`)
 - **Database:** PostgreSQL, hosted on Railway (`DATABASE_URL` in `frontend/.env`)
 - **Migration strategy:** no `prisma/migrations` history exists for this project — schema
-  changes are applied directly with `prisma db push`. There is currently no production
-  user data, which is why this has been safe to do.
+  changes are applied directly with `prisma db push`.
 - One row per person who has ever signed in, across any of the four supported OAuth
   providers (Google, Apple, X, LinkedIn).
 

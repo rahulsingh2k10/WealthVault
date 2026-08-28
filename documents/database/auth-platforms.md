@@ -12,8 +12,8 @@
 - **Migration strategy:** no `prisma/migrations` history exists for this project — schema
   changes are applied directly with `prisma db push`.
 - One row per OAuth sign-in provider (`GOOGLE`, `APPLE`, `X`, `LINKEDIN`) — a global
-  reference table, not per-user data. Normalizes what was previously a free-form string
-  column on `User` into an enum-backed, referentially-integral lookup.
+  reference table, not per-user data. Each `users` row references exactly one of these
+  rows via `auth_platformId`.
 
 ---
 

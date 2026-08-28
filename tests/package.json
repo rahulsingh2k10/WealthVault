@@ -1,0 +1,23 @@
+{
+  "name": "wealthvault-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Standalone test suite for WealthVault auth + unlock, independent of frontend's own test setup",
+  "scripts": {
+    "test:auth": "ts-node run-tests.ts auth",
+    "test:unlock": "ts-node run-tests.ts unlock",
+    "test:database": "ts-node run-tests.ts database",
+    "test:playwright": "ts-node run-tests.ts playwright",
+    "test:all": "ts-node run-tests.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^20",
+    "iron-session": "^8.0.4",
+    "jest": "^30.3.0",
+    "ts-jest": "^29.4.9",
+    "ts-node": "^10.9.2",
+    "typescript": "^5"
+  }
+}
