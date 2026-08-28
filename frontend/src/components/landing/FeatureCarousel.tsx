@@ -157,17 +157,25 @@ export default function FeatureCarousel({
 
   return (
     <div>
-      {/* Large screens: fixed, all visible, nothing scrolls. Every card is a fixed
-          MIN_CARD_WIDTH — the smallest size that still fits the longest title
-          ("Real-Time Performance Tracking") on one line — so cards never stretch
-          to fill leftover row space. Row count adapts to the real window width;
-          whatever doesn't fit wraps to another row instead of being squeezed. */}
-      <div className="hidden flex-wrap justify-center gap-16 lg:flex">
-        {features.map((f, i) => (
-          <div key={f.title} style={{ width: MIN_CARD_WIDTH, height: CARD_HEIGHT }} className="shrink-0">
-            <FeatureCard {...f} {...cardProps} index={i} total={total} className="transition hover:scale-[1.02]" />
-          </div>
-        ))}
+      {/* Large screens: always a single row — never wraps to a second line.
+          Every card is a fixed MIN_CARD_WIDTH — the smallest size that still fits
+          the longest title ("Real-Time Performance Tracking") on one line. The
+          scroll container is block-level (not itself a flex box); the flex row
+          inside is width:fit-content and centered via margin:auto, so it stays
+          centered with no scrollbar when it's narrower than the viewport, and
+          when it's wider, auto-margin clamps to 0 and it scrolls horizontally
+          (snap-per-card, hidden scrollbar) starting flush from the first card
+          — using justify-content:center directly on the scrolling flex box
+          instead would leave the first card at a negative, unreachable scroll
+          position. */}
+      <div className="hidden snap-x overflow-x-auto pb-2 lg:block [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
+        <div className="mx-auto flex w-fit gap-16">
+          {features.map((f, i) => (
+            <div key={f.title} style={{ width: MIN_CARD_WIDTH, height: CARD_HEIGHT }} className="shrink-0 snap-start">
+              <FeatureCard {...f} {...cardProps} index={i} total={total} className="transition hover:scale-[1.02]" />
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Medium screens: manual horizontal scroll, snaps per card */}
