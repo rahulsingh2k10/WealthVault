@@ -26,7 +26,7 @@ test.describe("Dashboard upgrade prompt", () => {
     const user = await createTestUser(); // FREE
     try {
       await signIn(page, user.id);
-      await page.goto("/dashboard");
+      await page.goto("/dashboard?wvUpgradePromptDelayMs=150");
 
       const dialog = page.getByRole("dialog", { name: /your wealth, fully unlocked/i });
       await expect(dialog).toBeVisible({ timeout: 5000 });
@@ -44,7 +44,7 @@ test.describe("Dashboard upgrade prompt", () => {
     const user = await createTestUser();
     try {
       await signIn(page, user.id);
-      await page.goto("/dashboard");
+      await page.goto("/dashboard?wvUpgradePromptDelayMs=150");
 
       const dialog = page.getByRole("dialog", { name: /your wealth, fully unlocked/i });
       await expect(dialog).toBeVisible({ timeout: 5000 });
@@ -53,7 +53,7 @@ test.describe("Dashboard upgrade prompt", () => {
 
       await page.reload();
       // Wait longer than the test delay, then assert it did not reappear.
-      await page.waitForTimeout(1200);
+      await page.waitForTimeout(1000);
       await expect(dialog).toHaveCount(0);
     } finally {
       await deleteTestUser(user.id);
@@ -64,8 +64,8 @@ test.describe("Dashboard upgrade prompt", () => {
     const user = await createTestUser({ tier: "ANNUAL" });
     try {
       await signIn(page, user.id);
-      await page.goto("/dashboard");
-      await page.waitForTimeout(1200); // > test delay
+      await page.goto("/dashboard?wvUpgradePromptDelayMs=150");
+      await page.waitForTimeout(1000); // > test delay
       await expect(page.getByRole("dialog", { name: /your wealth, fully unlocked/i })).toHaveCount(0);
     } finally {
       await deleteTestUser(user.id);
@@ -76,7 +76,7 @@ test.describe("Dashboard upgrade prompt", () => {
     const user = await createTestUser();
     try {
       await signIn(page, user.id);
-      await page.goto("/dashboard");
+      await page.goto("/dashboard?wvUpgradePromptDelayMs=150");
       await expect(page.getByRole("dialog", { name: /your wealth, fully unlocked/i })).toBeVisible({ timeout: 5000 });
 
       const reserveRadio = page.getByRole("radio", { name: /reserve/i });

@@ -5,7 +5,17 @@ import { UpgradeModal } from "./UpgradeModal";
 import type { UpgradePromptData } from "@/lib/services/UpgradePromptService";
 
 const DISMISS_KEY = "wv:upgrade-prompt:dismissed";
-const DELAY_MS = Number(process.env.NEXT_PUBLIC_UPGRADE_PROMPT_DELAY_MS) || 6000;
+const DEFAULT_DELAY_MS = Number(process.env.NEXT_PUBLIC_UPGRADE_PROMPT_DELAY_MS) || 6000;
+
+/** Delay before the modal opens. A `?wvUpgradePromptDelayMs=<n>` query param overrides
+ *  it (used by e2e tests so they don't depend on a build-time env var). */
+function resolveDelayMs(): number {
+  if (typeof window !== "undefined") {
+    const raw = new URLSearchParams(window.location.search).get("wvUpgradePromptDelayMs");
+    if (raw !== null && /^\d+$/.test(raw)) return Number(raw);
+  }
+  return DEFAULT_DELAY_MS;
+}
 
 /**
  * Owns the "when does the upgrade modal appear" logic and nothing visual.
@@ -22,7 +32,7 @@ export function UpgradePrompt({ plans, memberCount }: UpgradePromptData) {
     } catch {
       // sessionStorage unavailable (privacy mode) — just proceed to show it.
     }
-    const id = setTimeout(() => setOpen(true), DELAY_MS);
+    const id = setTimeout(() => setOpen(true), resolveDelayMs());
     return () => clearTimeout(id);
   }, []);
 
