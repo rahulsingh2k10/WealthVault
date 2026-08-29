@@ -1,6 +1,6 @@
 # Dashboard Upgrade Prompt Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Show `FREE`-tier users a centered "upgrade your plan" modal 6 seconds after the dashboard loads, once per browser session, presenting the three paid plans (Reserve / Treasury / Sovereign) with offer-aware pricing and an animated border beam on the selected card. Presentational only — no checkout.
 
@@ -11,6 +11,21 @@
 **Spec:** `docs/superpowers/specs/2026-08-30-dashboard-upgrade-prompt-design.md`
 **Visual reference:** `.superpowers/brainstorm/mockup-upgrade-sheet-v10.html`
 **Branch:** `feature/dashboard-upgrade-prompt` (already created; the spec is already committed there).
+
+---
+
+## STATUS: IMPLEMENTED ✅ (2026-08-30)
+
+All 13 tasks implemented on `feature/dashboard-upgrade-prompt`, each through spec + code-quality review. Full suite green: **API** (Auth 23, Unlock 7, Dashboard 3, Upgrade Prompt 15), **Database** 20, **Playwright E2E** 13.
+
+Notable changes made during implementation / review that differ from the task text below:
+
+- **89-error tsc baseline** — the frontend has 89 pre-existing `tsc` errors (stale Prisma client vs a reduced 4-model schema, unrelated). Verification checks the count doesn't grow + feature files stay clean; `next build` is not run (see Conventions).
+- **Task 3** — added an inclusive-window boundary test; `buildPlanCardView` JSDoc notes the paid-tier precondition. Test import path is `../../../frontend/...` (3 dirs deep).
+- **Task 9** — after code review: added `--ui-on-accent` token to `globals.css` (white in light / `#1a1400` in dark) for text on the accent background (dark-mode contrast); the plan selector is a `role="radiogroup"` / `role="radio"` with `aria-checked` + roving `tabIndex` + arrow-key nav, **and the segmented control is now shown on all breakpoints** (it is the single keyboard-operable selector; the cards are mouse/touch select affordances only); focus moves into the dialog on open and returns on close; decorative glyphs are `aria-hidden`. Deferred: `aria-label="Close"` / `"Choose a plan"` are still English (move to i18n later).
+- **Task 10 / 12** — the open delay is resolved at runtime: `?wvUpgradePromptDelayMs=<n>` query param overrides `NEXT_PUBLIC_UPGRADE_PROMPT_DELAY_MS` / the 6000 ms default. The e2e passes `?wvUpgradePromptDelayMs=150` so it works regardless of which dev server serves the bundle (`reuseExistingServer: true` made the build-time env approach fragile). `playwright.config.ts` `webServer.env` is unchanged from upstream (just `DATABASE_URL`).
+
+Known follow-ups (not blocking): real prices + offer window (placeholders); native review of the AI-translated i18n strings; the e2e `₹1,200` / `20% off` assertions break after the seeded offer window (`2026-09-30`); real checkout wiring; move the two `aria-label`s to i18n.
 
 ---
 
@@ -67,7 +82,7 @@
 
 `formatINR` in `utils.ts` always renders 2 decimal places; subscription prices are whole rupees. `formatMoney` is a small locale-aware, currency-generic, zero-decimal formatter.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/api/upgrade-prompt/format-money.test.ts`:
 
@@ -91,12 +106,12 @@ describe("formatMoney", () => {
 });
 ```
 
-- [ ] **Step 2: Run it — expect failure**
+- [x] **Step 2: Run it — expect failure**
 
 Run: `cd tests && npx jest --config jest.config.js api/upgrade-prompt/format-money --runInBand`
 Expected: FAIL — `formatMoney is not a function` (or a module-resolution error for the missing export).
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Append to `frontend/src/lib/utils.ts`:
 
@@ -117,12 +132,12 @@ export function formatMoney(amount: number, currency: string, locale = "en-IN"):
 }
 ```
 
-- [ ] **Step 4: Run it — expect pass**
+- [x] **Step 4: Run it — expect pass**
 
 Run: `cd tests && npx jest --config jest.config.js api/upgrade-prompt/format-money --runInBand`
 Expected: PASS (3 tests). If the `en-IN` grouping assertion fails because the CI Node lacks full ICU, replace `"₹18,00,000"` with the value the runtime produces and note it — Node 20 ships full ICU so this should pass as written.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add frontend/src/lib/utils.ts tests/api/upgrade-prompt/format-money.test.ts
@@ -138,7 +153,7 @@ git commit -m "$(printf 'Add formatMoney helper for whole-unit currency display\
 
 The component from the task depends only on `@/lib/utils` `cn` and React — no shadcn primitives, no new dependencies. It goes in the existing `components/ui/` folder unchanged. `demo.tsx` is **not** copied (it is usage documentation only).
 
-- [ ] **Step 1: Create the file**
+- [x] **Step 1: Create the file**
 
 Create `frontend/src/components/ui/border-beam.tsx` with **exactly** this content:
 
@@ -259,12 +274,12 @@ export function BorderBeam({
 export default BorderBeam;
 ```
 
-- [ ] **Step 2: Type-check**
+- [x] **Step 2: Type-check**
 
 Run: `cd frontend && npx tsc --noEmit`
 Expected: no errors. (`cornerShape` is not in React's `CSSProperties` — the file already casts through `as React.CSSProperties`, so it compiles.)
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add frontend/src/components/ui/border-beam.tsx
@@ -281,7 +296,7 @@ git commit -m "$(printf 'Add BorderBeam component (animated gradient border)\n\n
 
 `buildPlanCardView` turns a `SubscriptionPlan` row into the view model the modal renders. It is pure — `now` is injected — so offer-window logic is unit-testable without a clock.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/api/upgrade-prompt/plan-card-view.test.ts`:
 
@@ -391,12 +406,12 @@ describe("buildPlanCardView", () => {
 });
 ```
 
-- [ ] **Step 2: Run it — expect failure**
+- [x] **Step 2: Run it — expect failure**
 
 Run: `cd tests && npx jest --config jest.config.js api/upgrade-prompt/plan-card-view --runInBand`
 Expected: FAIL — cannot find module `@/lib/services/UpgradePromptService` / `buildPlanCardView` undefined.
 
-- [ ] **Step 3: Implement the service file**
+- [x] **Step 3: Implement the service file**
 
 Create `frontend/src/lib/services/UpgradePromptService.ts`:
 
@@ -495,17 +510,17 @@ export async function getUpgradePromptData(
 }
 ```
 
-- [ ] **Step 4: Run it — expect pass**
+- [x] **Step 4: Run it — expect pass**
 
 Run: `cd tests && npx jest --config jest.config.js api/upgrade-prompt/plan-card-view --runInBand`
 Expected: PASS (7 tests).
 
-- [ ] **Step 5: Type-check the frontend (against the 89-error baseline — see Conventions)**
+- [x] **Step 5: Type-check the frontend (against the 89-error baseline — see Conventions)**
 
 Run: `cd frontend && npx tsc --noEmit 2>&1 | grep -c "error TS"` → must still be `89`.
 Run: `cd frontend && npx tsc --noEmit 2>&1 | grep "UpgradePromptService"` → must be empty.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add frontend/src/lib/services/UpgradePromptService.ts tests/api/upgrade-prompt/plan-card-view.test.ts
@@ -522,7 +537,7 @@ git commit -m "$(printf 'Add UpgradePromptService: buildPlanCardView + view-mode
 
 `createTestUser` currently always uses the FREE plan; the service tests (Task 5) and e2e (Task 12) need paid users too. `ensureReferenceData` also needs the new pricing/offer fields so integration + e2e see the same numbers as the seed, and it must actually **update** existing rows (the test DB already holds the old 199/499/1999 rows).
 
-- [ ] **Step 1: Update `seedReferenceData.ts`**
+- [x] **Step 1: Update `seedReferenceData.ts`**
 
 Replace the whole file contents of `tests/helpers/seedReferenceData.ts` with:
 
@@ -586,7 +601,7 @@ export async function getPlatformId(platform: (typeof PLATFORMS)[number]): Promi
 }
 ```
 
-- [ ] **Step 2: Update `testUser.ts`**
+- [x] **Step 2: Update `testUser.ts`**
 
 Replace the whole file contents of `tests/helpers/testUser.ts` with:
 
@@ -628,12 +643,12 @@ export async function deleteTestUser(userId: string): Promise<void> {
 }
 ```
 
-- [ ] **Step 3: Run the existing DB suites to confirm no regression**
+- [x] **Step 3: Run the existing DB suites to confirm no regression**
 
 Run: `cd tests && npx jest --config jest.config.js database --runInBand`
 Expected: PASS — all of `tests/database/schema.test.ts` and `tests/database/subscription-period-service.test.ts` still green (they import `getFreePlanId`, which now delegates; `ensureReferenceData` now upserts the new prices, which those tests don't assert on). If `TEST_DATABASE_URL` is unset the suites skip — that is acceptable, note it and move on.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add tests/helpers/seedReferenceData.ts tests/helpers/testUser.ts
@@ -649,7 +664,7 @@ git commit -m "$(printf 'test helpers: getPlanId(tier), createTestUser({tier}), 
 
 Follows the pattern of `tests/database/subscription-period-service.test.ts`: skip when `TEST_DATABASE_URL` is unset, refuse to run if `DATABASE_URL` and `TEST_DATABASE_URL` diverge (the service uses the app's `@/lib/prisma` singleton), and `require()` the service lazily so that check runs first.
 
-- [ ] **Step 1: Write the test**
+- [x] **Step 1: Write the test**
 
 Create `tests/api/upgrade-prompt/service.test.ts`:
 
@@ -731,12 +746,12 @@ describeOrSkip("getUpgradePromptData", () => {
 
 > Note on the ANNUAL offer assertions: they assume "now" is on or before 2026-09-30 (the seeded `OFFER_END`). If this plan is executed after that date, change `ensureReferenceData`'s `OFFER_END` (and `frontend/prisma/seed.ts`) to a future date first, keeping both in lockstep, and update the caption/date expectations here and in Task 12 accordingly.
 
-- [ ] **Step 2: Run it**
+- [x] **Step 2: Run it**
 
 Run: `cd tests && npx jest --config jest.config.js api/upgrade-prompt/service --runInBand`
 Expected: PASS (5 tests) when `TEST_DATABASE_URL` is set and equals `DATABASE_URL`; otherwise the `describeOrSkip` block is skipped (0 failures) — acceptable, note it.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add tests/api/upgrade-prompt/service.test.ts
@@ -751,7 +766,7 @@ git commit -m "$(printf 'Add getUpgradePromptData integration tests\n\nClaude-Se
 - Modify: `tests/run-tests.ts`
 - Modify: `run-tests.sh`
 
-- [ ] **Step 1: Update `tests/run-tests.ts`**
+- [x] **Step 1: Update `tests/run-tests.ts`**
 
 Change the `Suite` type and `ALL_SUITES` (lines 4-5):
 
@@ -769,7 +784,7 @@ In `runSuite`, add a case after the `"dashboard"` case:
       return runJest("api/upgrade-prompt");
 ```
 
-- [ ] **Step 2: Update `run-tests.sh`**
+- [x] **Step 2: Update `run-tests.sh`**
 
 Change the `API_SUITES` array (currently defined just before the `case` block):
 
@@ -779,12 +794,12 @@ API_SUITES=("Auth API Tests:auth" "Unlock API Tests:unlock" "Dashboard API Tests
 
 Nothing else in `run-tests.sh` changes — `run_group` derives the suite count from the array length, and both the `""` and `api` branches already expand `"${API_SUITES[@]}"`.
 
-- [ ] **Step 3: Run the API group**
+- [x] **Step 3: Run the API group**
 
 Run: `./run-tests.sh api`
 Expected: four suites run under the "API Testing" header — `SUITE 1 of 4 — Auth API Tests` … `SUITE 4 of 4 — Upgrade Prompt Tests`. Every suite passes (Upgrade Prompt: `plan-card-view` + `format-money` always pass; `service` passes or skips depending on `TEST_DATABASE_URL`). The per-test-case list prints for each.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add tests/run-tests.ts run-tests.sh
@@ -798,7 +813,7 @@ git commit -m "$(printf 'Register the upgrade-prompt suite in the test orchestra
 **Files:**
 - Modify: `frontend/prisma/seed.ts`
 
-- [ ] **Step 1: Replace the pricing block**
+- [x] **Step 1: Replace the pricing block**
 
 In `frontend/prisma/seed.ts`, find this block:
 
@@ -835,16 +850,16 @@ Replace it with:
   console.log("✅ Subscription plans seeded (placeholder pricing + launch offer)");
 ```
 
-- [ ] **Step 2: Type-check the seed**
+- [x] **Step 2: Type-check the seed**
 
 Run: `cd frontend && npx tsc --noEmit 2>&1 | grep -c "error TS"` → must still be `89` (`seed.ts` already has ~22 of those baseline errors from missing asset models; your change touches only `subscriptionPlan.createMany`, and `offerStartDate` / `offerEndDate` are `DateTime?` in the schema + present in the generated client, so no NEW error). Run `... | grep "seed.ts"` and eyeball: the seed errors should be the same asset-model ones as before, none about `subscriptionPlan` / `offerStartDate` / `offerEndDate`.
 
-- [ ] **Step 3: (If a dev database + `SEED_PASSPHRASE` are available) run the seed**
+- [x] **Step 3: (If a dev database + `SEED_PASSPHRASE` are available) run the seed**
 
 Run: `cd frontend && npm run db:seed`
 Expected: "✅ Subscription plans seeded (placeholder pricing + launch offer)" and a successful finish. If no dev DB / passphrase is configured, skip this step and note it — the integration + e2e tests use `ensureReferenceData` (Task 4), not this seed.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add frontend/prisma/seed.ts
@@ -865,7 +880,7 @@ Add one `upgrade` namespace to the `Translations` interface and an `upgrade: { �
 > above the `upgrade` block in the interface, and after the plan lands, file a follow-up task
 > for native review (matches spec §8).
 
-- [ ] **Step 1: Add to the `Translations` interface**
+- [x] **Step 1: Add to the `Translations` interface**
 
 In `frontend/src/i18n/translations.ts`, inside `export interface Translations { … }`, after the `language` block, add:
 
@@ -903,7 +918,7 @@ In `frontend/src/i18n/translations.ts`, inside `export interface Translations { 
   };
 ```
 
-- [ ] **Step 2: Add the `upgrade` block to each locale**
+- [x] **Step 2: Add the `upgrade` block to each locale**
 
 For each locale object in the `translations` map, add an `upgrade: { … }` entry as a sibling of that locale's `sidebar` / `language` entries. Use the exact strings below (locale codes match the file's `Locale` union).
 
@@ -1281,12 +1296,12 @@ For each locale object in the `translations` map, add an `upgrade: { … }` entr
     },
 ```
 
-- [ ] **Step 3: Type-check**
+- [x] **Step 3: Type-check**
 
 Run: `cd frontend && npx tsc --noEmit 2>&1 | grep -c "error TS"` → must still be `89`.
 Run: `cd frontend && npx tsc --noEmit 2>&1 | grep "translations.ts"` → must be empty. If a locale object is missing the `upgrade` key, tsc reports it here (`translations.ts(NNN): ... is missing the following properties ... upgrade`) — add the block to that locale. This is the check that all 11 are present and complete.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add frontend/src/i18n/translations.ts
@@ -1313,7 +1328,7 @@ The visual component. No Jest unit test — the test infra is node-env with no R
 >
 > The Step 1 code block below is the ORIGINAL; the committed file (`0ed4a46`) includes the four changes above.
 
-- [ ] **Step 1: Create the file**
+- [x] **Step 1: Create the file**
 
 Create `frontend/src/components/dashboard/UpgradeModal.tsx`:
 
@@ -1692,12 +1707,12 @@ export function UpgradeModal({ open, plans, memberCount, onClose }: UpgradeModal
 }
 ```
 
-- [ ] **Step 2: Type-check**
+- [x] **Step 2: Type-check**
 
 Run: `cd frontend && npx tsc --noEmit 2>&1 | grep -c "error TS"` → must still be `89`.
 Run: `cd frontend && npx tsc --noEmit 2>&1 | grep "UpgradeModal"` → must be empty. If `t.upgrade[key]` indexing errors, the union `"everyMonth" | "everyQuarter" | "everyYear"` isn't narrowing — annotate the local: `const key = (...) as "everyMonth" | "everyQuarter" | "everyYear";`.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add frontend/src/components/dashboard/UpgradeModal.tsx
@@ -1711,7 +1726,7 @@ git commit -m "$(printf 'Add UpgradeModal component\n\nClaude-Session: https://c
 **Files:**
 - Create: `frontend/src/components/dashboard/UpgradePrompt.tsx`
 
-- [ ] **Step 1: Create the file**
+- [x] **Step 1: Create the file**
 
 Create `frontend/src/components/dashboard/UpgradePrompt.tsx`:
 
@@ -1757,12 +1772,12 @@ export function UpgradePrompt({ plans, memberCount }: UpgradePromptData) {
 }
 ```
 
-- [ ] **Step 2: Type-check (against the 89-error baseline — see Conventions)**
+- [x] **Step 2: Type-check (against the 89-error baseline — see Conventions)**
 
 Run: `cd frontend && npx tsc --noEmit 2>&1 | grep -c "error TS"` → must still be `89`.
 Run: `cd frontend && npx tsc --noEmit 2>&1 | grep "UpgradePrompt"` → must be empty.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add frontend/src/components/dashboard/UpgradePrompt.tsx
@@ -1776,7 +1791,7 @@ git commit -m "$(printf 'Add UpgradePrompt controller (6s timer + session suppre
 **Files:**
 - Modify: `frontend/src/app/dashboard/page.tsx`
 
-- [ ] **Step 1: Replace the file**
+- [x] **Step 1: Replace the file**
 
 Replace the whole contents of `frontend/src/app/dashboard/page.tsx` with:
 
@@ -1801,20 +1816,20 @@ export default async function DashboardPage() {
 }
 ```
 
-- [ ] **Step 2: Type-check (against the 89-error baseline — see Conventions)**
+- [x] **Step 2: Type-check (against the 89-error baseline — see Conventions)**
 
 Run: `cd frontend && npx tsc --noEmit 2>&1 | grep -c "error TS"` → must still be `89`.
 Run: `cd frontend && npx tsc --noEmit 2>&1 | grep -E "dashboard/page|UpgradePrompt|UpgradeModal|UpgradePromptService|border-beam"` → must be empty.
 (`plans` / `memberCount` are plain serialisable data, so there is no "Cannot pass a function to a Client Component" RSC boundary issue. `next build` is NOT run — it cannot pass on this codebase; the e2e in Task 12 exercises the real render path via `next dev`.)
 
-- [ ] **Step 3: Regression — existing dashboard API tests still pass**
+- [x] **Step 3: Regression — existing dashboard API tests still pass**
 
 Run: `cd tests && npx jest --config jest.config.js api/dashboard --runInBand`
 Expected: PASS (3 tests). The "200 when both userId and encryptionKey present" case uses a non-existent userId — `getUpgradePromptData` returns `null` (user lookup fails) and the page still returns `200`.
 
 > This suite needs the dev server (`ensureDevServer`). If `TEST_DATABASE_URL`/env isn't set up for that, note the skip; Task 13 runs the full suite.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add frontend/src/app/dashboard/page.tsx
@@ -1829,7 +1844,7 @@ git commit -m "$(printf 'Show the upgrade prompt on the dashboard for FREE-tier 
 - Modify: `tests/playwright.config.ts`
 - Create: `tests/e2e/upgrade-prompt.spec.ts`
 
-- [ ] **Step 1: Add the delay env var to the Playwright web server**
+- [x] **Step 1: Add the delay env var to the Playwright web server**
 
 In `tests/playwright.config.ts`, change the `webServer.env` line:
 
@@ -1840,7 +1855,7 @@ In `tests/playwright.config.ts`, change the `webServer.env` line:
     },
 ```
 
-- [ ] **Step 2: Write the e2e spec**
+- [x] **Step 2: Write the e2e spec**
 
 Create `tests/e2e/upgrade-prompt.spec.ts`:
 
@@ -1939,12 +1954,12 @@ test.describe("Dashboard upgrade prompt", () => {
 
 > The `tab` role assertions target the segmented control, which is `hidden sm:flex`. Playwright's default viewport is 1280×720, so it is visible. If run at a mobile viewport, guard those assertions with a viewport check.
 
-- [ ] **Step 3: Run the e2e suite**
+- [x] **Step 3: Run the e2e suite**
 
 Run: `cd tests && npx playwright test --config playwright.config.ts upgrade-prompt`
 Expected: 4 tests pass. (Playwright starts `next dev` on port 3100 with the short delay env. First run may need `npx playwright install chromium`.) If `TEST_DATABASE_URL` is unset the file is skipped — acceptable, note it.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add tests/playwright.config.ts tests/e2e/upgrade-prompt.spec.ts
@@ -1958,12 +1973,12 @@ git commit -m "$(printf 'Add Playwright e2e for the dashboard upgrade prompt\n\n
 **Files:**
 - (no code) — verification + memory update
 
-- [ ] **Step 1: Full test suite**
+- [x] **Step 1: Full test suite**
 
 Run: `./run-tests.sh`
 Expected: all groups green — **API Testing** (Auth / Unlock / Dashboard / Upgrade Prompt), **Database Testing**, **Playwright End-to-End Testing**. The per-test-case listing prints for every suite. Note any suites that skip because `TEST_DATABASE_URL` is unset in this environment.
 
-- [ ] **Step 2: Manual browser check**
+- [x] **Step 2: Manual browser check**
 
 Run: `cd frontend && npm run dev`, then:
 1. Sign in (or seed a FREE user + set the session cookie) and open `/dashboard`.
@@ -1974,19 +1989,19 @@ Run: `cd frontend && npm run dev`, then:
 
 Fix any visual regressions against `.superpowers/brainstorm/mockup-upgrade-sheet-v10.html`, committing each fix with a clear message.
 
-- [ ] **Step 3: Update the plan checkboxes and the project memory**
+- [x] **Step 3: Update the plan checkboxes and the project memory**
 
-- Tick every `- [ ]` in this file that is done, commit the plan.
+- Tick every `- [x]` in this file that is done, commit the plan.
 - Update `~/.claude/projects/-Users-rahulsingh-…-WealthVault/memory/dashboard-upgrade-prompt.md`: change "Next step after spec approval" line to note the plan is implemented on `feature/dashboard-upgrade-prompt`, pending review/merge.
 
-- [ ] **Step 4: Final commit**
+- [x] **Step 4: Final commit**
 
 ```bash
 git add docs/superpowers/plans/2026-08-30-dashboard-upgrade-prompt.md
 git commit -m "$(printf 'Mark upgrade-prompt plan complete\n\nClaude-Session: https://claude.ai/code/session_01AYKJrkWLstJJtCobh7tMaB')"
 ```
 
-- [ ] **Step 5: Hand back**
+- [x] **Step 5: Hand back**
 
 Report: branch `feature/dashboard-upgrade-prompt` ready for review; summarise what was built, which tests ran vs skipped, and the follow-ups (real prices + offer window, native i18n review, real checkout wiring).
 
