@@ -39,6 +39,7 @@ export function UpgradeModal({ open, plans, memberCount, onClose }: UpgradeModal
     "ANNUAL";
   const [selected, setSelected] = useState<PaidTier>(defaultTier);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const radioRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   const tierOrder = plans.map((p) => p.tier);
   const moveSelection = (delta: number) => {
@@ -46,11 +47,12 @@ export function UpgradeModal({ open, plans, memberCount, onClose }: UpgradeModal
     if (i === -1) return;
     const next = tierOrder[(i + delta + tierOrder.length) % tierOrder.length];
     setSelected(next);
+    radioRefs.current[next]?.focus();
   };
   const onRadioKeyDown = (tier: PaidTier) => (e: React.KeyboardEvent) => {
     if (e.key === "ArrowRight" || e.key === "ArrowDown") { e.preventDefault(); moveSelection(1); }
     else if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); moveSelection(-1); }
-    else if (e.key === " " || e.key === "Enter") { e.preventDefault(); setSelected(tier); }
+    else if (e.key === " " || e.key === "Enter") { e.preventDefault(); setSelected(tier); radioRefs.current[tier]?.focus(); }
   };
 
   useEffect(() => setMounted(true), []);
@@ -63,15 +65,21 @@ export function UpgradeModal({ open, plans, memberCount, onClose }: UpgradeModal
     document.addEventListener("keydown", onKey);
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const prevFocus = document.activeElement as HTMLElement | null;
-    const raf = requestAnimationFrame(() => dialogRef.current?.focus());
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prevOverflow;
+    };
+  }, [open, onClose]);
+
+  useEffect(() => {
+    if (!open) return;
+    const prevFocus = document.activeElement as HTMLElement | null;
+    const raf = requestAnimationFrame(() => dialogRef.current?.focus());
+    return () => {
       cancelAnimationFrame(raf);
       prevFocus?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!mounted) return null;
 
@@ -200,9 +208,9 @@ export function UpgradeModal({ open, plans, memberCount, onClose }: UpgradeModal
                     </div>
                   )}
 
-                  {/* Segmented control — sm and up only */}
+                  {/* Segmented control — the accessible plan selector */}
                   <div
-                    className="mb-5 hidden gap-1 rounded-xl border p-1 sm:flex"
+                    className="mb-5 flex gap-1 rounded-xl border p-1"
                     style={{ borderColor: "var(--ui-card-border)", background: "var(--ui-subtle-bg)" }}
                     role="radiogroup"
                     aria-label="Choose a billing plan"
@@ -210,6 +218,7 @@ export function UpgradeModal({ open, plans, memberCount, onClose }: UpgradeModal
                     {plans.map((p) => (
                       <button
                         key={p.tier}
+                        ref={(el) => { radioRefs.current[p.tier] = el; }}
                         role="radio"
                         aria-checked={selected === p.tier}
                         tabIndex={selected === p.tier ? 0 : -1}
@@ -238,18 +247,13 @@ export function UpgradeModal({ open, plans, memberCount, onClose }: UpgradeModal
                   </div>
 
                   {/* Plan cards */}
-                  <div className="grid gap-4 sm:grid-cols-3" role="radiogroup" aria-label="Choose a plan">
+                  <div className="grid gap-4 sm:grid-cols-3">
                     {plans.map((p) => {
                       const isSelected = selected === p.tier;
                       return (
                         <div
                           key={p.tier}
                           onClick={() => setSelected(p.tier)}
-                          role="radio"
-                          aria-checked={isSelected}
-                          tabIndex={isSelected ? 0 : -1}
-                          aria-label={`${PLAN_NAME[p.tier]} — ${perMonth(p, p.effectivePerPeriod)} ${t.upgrade.perMonthSuffix}`}
-                          onKeyDown={onRadioKeyDown(p.tier)}
                           className="relative cursor-pointer rounded-2xl border p-4 sm:p-[18px]"
                           style={{
                             borderColor: isSelected ? "var(--ui-accent-border)" : "var(--ui-card-border)",
@@ -349,7 +353,6 @@ export function UpgradeModal({ open, plans, memberCount, onClose }: UpgradeModal
                               console.info("[upgrade-prompt] plan CTA:", p.tier);
                               onClose();
                             }}
-                            onKeyDown={(e) => e.stopPropagation()}
                             className="mt-4 w-full rounded-[10px] border-[1.5px] py-[9px] text-[0.78rem] font-extrabold"
                             style={
                               isSelected
