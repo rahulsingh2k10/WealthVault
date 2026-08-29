@@ -654,7 +654,7 @@ Follows the pattern of `tests/database/subscription-period-service.test.ts`: ski
 Create `tests/api/upgrade-prompt/service.test.ts`:
 
 ```ts
-import { hasTestDb, getTestPrisma, disconnectTestPrisma } from "../../helpers/testDb";
+import { hasTestDb, disconnectTestPrisma } from "../../helpers/testDb";
 import { ensureReferenceData } from "../../helpers/seedReferenceData";
 import { createTestUser, deleteTestUser } from "../../helpers/testUser";
 
@@ -1299,8 +1299,19 @@ git commit -m "$(printf 'Add upgrade i18n namespace across all 11 locales\n\nNon
 
 **Files:**
 - Create: `frontend/src/components/dashboard/UpgradeModal.tsx`
+- Modify: `frontend/src/app/globals.css` (add one `--ui-on-accent` token, per the review fixes below)
 
-The visual component. No Jest unit test — the test infra is node-env with no React renderer; it is verified by `tsc`, the Playwright e2e (Task 12), and a manual browser check (Task 13). Mirrors mockup v10: portalled backdrop + panel, framer-motion transitions, segmented control on `sm+` only, three selectable cards, border beam on the selected card (skipped under reduced motion), offer-aware pricing, features, trust row, "Maybe later".
+The visual component. No Jest unit test — the test infra is node-env with no React renderer; it is verified by `tsc`, the Playwright e2e (Task 12), and a manual browser check (Task 13). Mirrors mockup v10: portalled backdrop + panel, framer-motion transitions, plan selector on `sm+` only, three selectable cards, border beam on the selected card (skipped under reduced motion), offer-aware pricing, features, trust row, "Maybe later".
+
+> **Applied after code review (commit `0ed4a46`):**
+> 1. **Dark-mode contrast** — added `--ui-on-accent` to `globals.css` (`#ffffff` in `:root`, `#1a1400` in `.dark`); all text on an accent-coloured background (emblem, BEST VALUE chip, ✓ badge, selected CTA) uses `var(--ui-on-accent)` instead of hardcoded `#fff` / `text-white` (white on the dark theme's gold accent failed WCAG AA).
+> 2. **Plan selector a11y** — the segmented control and the cards are now a proper `role="radiogroup"` / `role="radio"` with `aria-checked`, roving `tabIndex`, an `aria-label` per card, and an `onRadioKeyDown` handler (Arrow keys cycle selection, Space/Enter select). Replaces the incorrect `role="tab"` / `aria-selected` pattern and fixes the mobile keyboard/AT dead-end (segmented control is `hidden sm:flex`, so the cards must be operable).
+> 3. **Focus handling** — on open, focus moves into the dialog (`dialogRef`, `tabIndex={-1}`, `outline-none`); on close, focus returns to the previously-focused element. Light focus-in/return only — no focus trap (matches the app's `EditModal`).
+> 4. **Decorative glyphs** — the features `✓` and the trust-row `🔒 ↩︎ ✦` are `aria-hidden`.
+>
+> Deferred follow-up (not blocking): move `aria-label="Close"` / `"Choose a plan"` into the `upgrade` i18n namespace.
+>
+> The Step 1 code block below is the ORIGINAL; the committed file (`0ed4a46`) includes the four changes above.
 
 - [ ] **Step 1: Create the file**
 
