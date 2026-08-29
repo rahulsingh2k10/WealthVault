@@ -18,7 +18,11 @@
 
 - All paths are repo-relative from `/Users/rahulsingh/Documents/Documents/CreativeAppz/Github/WealthVault/main/WealthVault`.
 - Run Jest suites from the `tests/` directory: `cd tests && npx jest --config jest.config.js <pattern> --runInBand`.
-- Type-check the frontend with: `cd frontend && npx tsc --noEmit`.
+- **Type-check baseline:** the frontend currently has **89 pre-existing `tsc` errors** — a stale generated Prisma client vs. a reduced 4-model `schema.prisma` (asset models like `bankAccount`, `equityHolding`, `navConfig` are referenced by `seed.ts` and many API routes but not in the schema). This is an unrelated in-progress migration; **do not fix it**. Every "type-check" step below means:
+  `cd frontend && npx tsc --noEmit 2>&1 | grep -c "error TS"` → the count must **stay at 89** (not increase), **and**
+  `cd frontend && npx tsc --noEmit 2>&1 | grep -E "<files you created/modified>"` → must be **empty**.
+  The generated client *does* have `User`, `SubscriptionPlan` (incl. `price`, `offerPrice`, `offerStartDate`, `offerEndDate`, `currency`, `isActive`, `tier`), `SubscriptionPeriod`, `AuthPlatform` — everything this feature uses.
+- **`next build` does not pass on this codebase** (those 89 errors). Do not run it. Runtime verification is via the Playwright e2e (which uses `next dev`, and `next dev` does not fail on type errors).
 - The repo rule (`CLAUDE.md`): surgical changes only, match existing style, YAGNI. Every commit message ends with the trailer:
   `Claude-Session: https://claude.ai/code/session_01AYKJrkWLstJJtCobh7tMaB`
 
@@ -485,10 +489,10 @@ export async function getUpgradePromptData(
 Run: `cd tests && npx jest --config jest.config.js api/upgrade-prompt/plan-card-view --runInBand`
 Expected: PASS (6 tests).
 
-- [ ] **Step 5: Type-check the frontend**
+- [ ] **Step 5: Type-check the frontend (against the 89-error baseline — see Conventions)**
 
-Run: `cd frontend && npx tsc --noEmit`
-Expected: no errors.
+Run: `cd frontend && npx tsc --noEmit 2>&1 | grep -c "error TS"` → must still be `89`.
+Run: `cd frontend && npx tsc --noEmit 2>&1 | grep "UpgradePromptService"` → must be empty.
 
 - [ ] **Step 6: Commit**
 
@@ -822,8 +826,7 @@ Replace it with:
 
 - [ ] **Step 2: Type-check the seed**
 
-Run: `cd frontend && npx tsc --noEmit`
-Expected: no errors (`offerStartDate` / `offerEndDate` are `DateTime?` in the schema; `createMany` accepts them).
+Run: `cd frontend && npx tsc --noEmit 2>&1 | grep -c "error TS"` → must still be `89` (`seed.ts` already has ~22 of those baseline errors from missing asset models; your change touches only `subscriptionPlan.createMany`, and `offerStartDate` / `offerEndDate` are `DateTime?` in the schema + present in the generated client, so no NEW error). Run `... | grep "seed.ts"` and eyeball: the seed errors should be the same asset-model ones as before, none about `subscriptionPlan` / `offerStartDate` / `offerEndDate`.
 
 - [ ] **Step 3: (If a dev database + `SEED_PASSPHRASE` are available) run the seed**
 
@@ -1269,8 +1272,8 @@ For each locale object in the `translations` map, add an `upgrade: { … }` entr
 
 - [ ] **Step 3: Type-check**
 
-Run: `cd frontend && npx tsc --noEmit`
-Expected: no errors. If TypeScript reports a locale is missing the `upgrade` key, that locale object didn't get the block — add it. This is the check that all 11 are present.
+Run: `cd frontend && npx tsc --noEmit 2>&1 | grep -c "error TS"` → must still be `89`.
+Run: `cd frontend && npx tsc --noEmit 2>&1 | grep "translations.ts"` → must be empty. If a locale object is missing the `upgrade` key, tsc reports it here (`translations.ts(NNN): ... is missing the following properties ... upgrade`) — add the block to that locale. This is the check that all 11 are present and complete.
 
 - [ ] **Step 4: Commit**
 
@@ -1669,8 +1672,8 @@ export function UpgradeModal({ open, plans, memberCount, onClose }: UpgradeModal
 
 - [ ] **Step 2: Type-check**
 
-Run: `cd frontend && npx tsc --noEmit`
-Expected: no errors. If `t.upgrade[key]` indexing errors, the union `"everyMonth" | "everyQuarter" | "everyYear"` isn't narrowing — annotate the local: `const key = (...) as "everyMonth" | "everyQuarter" | "everyYear";`.
+Run: `cd frontend && npx tsc --noEmit 2>&1 | grep -c "error TS"` → must still be `89`.
+Run: `cd frontend && npx tsc --noEmit 2>&1 | grep "UpgradeModal"` → must be empty. If `t.upgrade[key]` indexing errors, the union `"everyMonth" | "everyQuarter" | "everyYear"` isn't narrowing — annotate the local: `const key = (...) as "everyMonth" | "everyQuarter" | "everyYear";`.
 
 - [ ] **Step 3: Commit**
 
@@ -1732,10 +1735,10 @@ export function UpgradePrompt({ plans, memberCount }: UpgradePromptData) {
 }
 ```
 
-- [ ] **Step 2: Type-check**
+- [ ] **Step 2: Type-check (against the 89-error baseline — see Conventions)**
 
-Run: `cd frontend && npx tsc --noEmit`
-Expected: no errors.
+Run: `cd frontend && npx tsc --noEmit 2>&1 | grep -c "error TS"` → must still be `89`.
+Run: `cd frontend && npx tsc --noEmit 2>&1 | grep "UpgradePrompt"` → must be empty.
 
 - [ ] **Step 3: Commit**
 
@@ -1776,17 +1779,13 @@ export default async function DashboardPage() {
 }
 ```
 
-- [ ] **Step 2: Type-check**
+- [ ] **Step 2: Type-check (against the 89-error baseline — see Conventions)**
 
-Run: `cd frontend && npx tsc --noEmit`
-Expected: no errors.
+Run: `cd frontend && npx tsc --noEmit 2>&1 | grep -c "error TS"` → must still be `89`.
+Run: `cd frontend && npx tsc --noEmit 2>&1 | grep -E "dashboard/page|UpgradePrompt|UpgradeModal|UpgradePromptService|border-beam"` → must be empty.
+(`plans` / `memberCount` are plain serialisable data, so there is no "Cannot pass a function to a Client Component" RSC boundary issue. `next build` is NOT run — it cannot pass on this codebase; the e2e in Task 12 exercises the real render path via `next dev`.)
 
-- [ ] **Step 3: Production build (catches server/client boundary + RSC serialisation issues)**
-
-Run: `cd frontend && npm run build`
-Expected: build completes. `/dashboard` compiles as a dynamic route. No "Cannot pass a function/class as a prop to a Client Component" — `plans` and `memberCount` are plain data.
-
-- [ ] **Step 4: Regression — existing dashboard API tests still pass**
+- [ ] **Step 3: Regression — existing dashboard API tests still pass**
 
 Run: `cd tests && npx jest --config jest.config.js api/dashboard --runInBand`
 Expected: PASS (3 tests). The "200 when both userId and encryptionKey present" case uses a non-existent userId — `getUpgradePromptData` returns `null` (user lookup fails) and the page still returns `200`.
