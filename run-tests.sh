@@ -66,7 +66,7 @@ run_group() {
   done
 }
 
-API_SUITES=("Auth API Tests:auth" "Unlock API Tests:unlock" "Dashboard API Tests:dashboard")
+API_SUITES=("Auth API Tests:auth" "Unlock API Tests:unlock" "Dashboard API Tests:dashboard" "Upgrade Prompt Tests:upgrade")
 
 print_project_name "Running WealthVault Tests"
 
