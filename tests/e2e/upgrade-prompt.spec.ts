@@ -32,9 +32,12 @@ test.describe("Dashboard upgrade prompt", () => {
       await expect(dialog).toBeVisible({ timeout: 5000 });
 
       await expect(page.getByRole("heading", { name: /your wealth, fully unlocked/i })).toBeVisible();
-      // Sovereign offer price (₹1,200/mo) and offer caption present.
-      await expect(page.getByText("₹1,200", { exact: false })).toBeVisible();
-      await expect(page.getByText(/20% off/i).first()).toBeVisible();
+      await expect(page.getByText("Reserve", { exact: true }).first()).toBeVisible();
+      await expect(page.getByText("Treasury", { exact: true }).first()).toBeVisible();
+      await expect(page.getByText("Sovereign", { exact: true }).first()).toBeVisible();
+      // A per-month price is shown for the selected plan (₹1,200 during the launch
+      // offer, ₹1,500 after it — don't hard-code the offer value).
+      await expect(page.getByText(/₹1,[0-9]{3}\s*\/mo/i).first()).toBeVisible();
     } finally {
       await deleteTestUser(user.id);
     }

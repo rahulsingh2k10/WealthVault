@@ -52,10 +52,14 @@ describeOrSkip("getUpgradePromptData", () => {
         "QUARTERLY",
         "ANNUAL",
       ]);
-      const annual = data.plans.find((p: { tier: string }) => p.tier === "ANNUAL");
-      expect(annual.offerActive).toBe(true);
-      expect(annual.effectivePerPeriod).toBe(14400);
-      expect(annual.discountPercent).toBe(20);
+      const byTier = Object.fromEntries(data.plans.map((p: { tier: string }) => [p.tier, p]));
+      expect(byTier.MONTHLY.basePerPeriod).toBe(3000);
+      expect(byTier.QUARTERLY.basePerPeriod).toBe(6000);
+      expect(byTier.ANNUAL.basePerPeriod).toBe(18000);
+      expect(byTier.MONTHLY.currency).toBe("INR");
+      // effectivePerPeriod / offerActive / discountPercent are exercised by
+      // plan-card-view.test.ts with a fixed clock — not asserted here (they depend
+      // on whether the seeded launch-offer window is still open).
     } finally {
       await deleteTestUser(user.id);
     }
