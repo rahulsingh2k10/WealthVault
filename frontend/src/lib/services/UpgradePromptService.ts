@@ -32,6 +32,7 @@ export interface UpgradePromptData {
 
 /**
  * Turn a SubscriptionPlan row into the view model the modal renders.
+ * `plan.tier` must be a paid tier (MONTHLY / QUARTERLY / ANNUAL) — callers filter out FREE.
  * Pure: `now` is injected so the offer window is testable without a clock.
  */
 export function buildPlanCardView(plan: SubscriptionPlan, now: Date): PlanCardView {

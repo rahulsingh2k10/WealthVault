@@ -80,6 +80,15 @@ describe("buildPlanCardView", () => {
     expect(v.offerActive).toBe(false);
   });
 
+  test("offer is active on the exact window boundaries (now === start, now === end)", () => {
+    const start = new Date("2026-08-01T00:00:00Z");
+    const end = new Date("2026-09-30T23:59:59Z");
+    const common = { price: 6000, offerPrice: 4800, offerStartDate: start, offerEndDate: end };
+
+    expect(buildPlanCardView(plan(common), start).offerActive).toBe(true);
+    expect(buildPlanCardView(plan(common), end).offerActive).toBe(true);
+  });
+
   test("open-ended window (both dates null) with an offerPrice → offer active", () => {
     const v = buildPlanCardView(plan({ offerPrice: 5100 }), NOW);
     expect(v.offerActive).toBe(true);
