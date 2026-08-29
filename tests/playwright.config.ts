@@ -20,6 +20,9 @@ export default defineConfig({
     url: `http://localhost:${PORT}`,
     reuseExistingServer: true,
     timeout: 60000,
-    env: { DATABASE_URL: process.env.TEST_DATABASE_URL ?? "" },
+    env: {
+      DATABASE_URL: process.env.TEST_DATABASE_URL ?? "",
+      NEXT_PUBLIC_UPGRADE_PROMPT_DELAY_MS: "300",
+    },
   },
 });
