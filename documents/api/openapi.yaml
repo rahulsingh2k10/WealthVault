@@ -74,6 +74,8 @@ tags:
     description: Updating an existing user's own details
   - name: Session
     description: Ending an existing session
+  - name: Dashboard
+    description: The protected page reached after OAuth sign-in and vault unlock
 
 x-tagGroups:
   - name: Authentication
@@ -84,6 +86,8 @@ x-tagGroups:
     tags: [Profile]
   - name: Session
     tags: [Session]
+  - name: Dashboard
+    tags: [Dashboard]
 
 security: []
 
@@ -449,6 +453,46 @@ paths:
                   success:
                     type: boolean
                     enum: [true]
+
+  /dashboard:
+    get:
+      summary: Load the dashboard page
+      operationId: getDashboard
+      tags: [Dashboard]
+      security:
+        - SessionCookie: []
+      description: |
+        A page route, not a JSON API — included here because access to it is gated by
+        the same session cookie as the rest of the app, enforced by
+        `frontend/src/middleware.ts` before this route's own handler ever runs.
+
+        The page component itself repeats the `encryptionKey` check
+        (`if (!session.encryptionKey) redirect('/unlock')`), but in normal operation
+        the middleware has already redirected away before that line can execute — it's
+        a defensive second check, not the primary gate.
+
+        Currently renders the app shell (sidebar + header) with an intentionally blank
+        content area — the portfolio-summary data wiring this page used to call
+        (`PortfolioService`/`AssetRepository`) depended on Prisma models that don't
+        exist in the current schema and has been removed; no request to this route can
+        throw as a result of that missing wiring anymore.
+      responses:
+        "200":
+          description: >-
+            Session has both `userId` and `encryptionKey` — renders the dashboard shell
+            with blank content.
+          content:
+            text/html:
+              schema: { type: string }
+        "307":
+          description: |
+            Redirect, from `middleware.ts` (before this route's handler runs):
+            - No `userId` at all → `Location: /`
+            - `userId` present but no `encryptionKey` (vault locked) → `Location: /unlock`
+          headers:
+            Location:
+              schema: { type: string }
+              example: "/unlock"
 
 components:
   parameters:

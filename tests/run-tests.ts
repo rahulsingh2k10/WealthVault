@@ -1,8 +1,8 @@
 import { spawnSync } from "child_process";
 import { stopDevServerIfOwned } from "./helpers/testServer";
 
-type Suite = "auth" | "unlock" | "database" | "playwright";
-const ALL_SUITES: Suite[] = ["auth", "unlock", "database", "playwright"];
+type Suite = "auth" | "unlock" | "dashboard" | "database" | "playwright";
+const ALL_SUITES: Suite[] = ["auth", "unlock", "dashboard", "database", "playwright"];
 
 function runJest(testPathPattern: string): number {
   const result = spawnSync(
@@ -28,6 +28,8 @@ function runSuite(suite: Suite): number {
       return runJest("api/auth");
     case "unlock":
       return runJest("api/unlock");
+    case "dashboard":
+      return runJest("api/dashboard");
     case "database":
       return runJest("database");
     case "playwright":
