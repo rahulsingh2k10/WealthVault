@@ -287,9 +287,10 @@ Create `tests/api/upgrade-prompt/plan-card-view.test.ts`:
 
 ```ts
 import { buildPlanCardView } from "@/lib/services/UpgradePromptService";
-// Type-only import from the frontend's generated client (same approach as tests/helpers/testDb.ts).
-// Erased at compile time, so it does not require the tests/ dir to have a generated Prisma client.
-import type { SubscriptionPlan } from "../../frontend/node_modules/@prisma/client";
+// Type-only import from the frontend's generated client (same approach as tests/helpers/testDb.ts,
+// adjusted for this file being 3 levels below the repo root). Erased at compile time, so it does
+// not require the tests/ dir to have a generated Prisma client.
+import type { SubscriptionPlan } from "../../../frontend/node_modules/@prisma/client";
 
 // Minimal SubscriptionPlan-shaped row. buildPlanCardView only reads tier / price /
 // offerPrice / currency / offerStartDate / offerEndDate, and coerces prices with Number(),
@@ -368,6 +369,15 @@ describe("buildPlanCardView", () => {
     expect(v.offerActive).toBe(false);
   });
 
+  test("offer is active on the exact window boundaries (now === start, now === end)", () => {
+    const start = new Date("2026-08-01T00:00:00Z");
+    const end = new Date("2026-09-30T23:59:59Z");
+    const common = { price: 6000, offerPrice: 4800, offerStartDate: start, offerEndDate: end };
+
+    expect(buildPlanCardView(plan(common), start).offerActive).toBe(true);
+    expect(buildPlanCardView(plan(common), end).offerActive).toBe(true);
+  });
+
   test("open-ended window (both dates null) with an offerPrice → offer active", () => {
     const v = buildPlanCardView(plan({ offerPrice: 5100 }), NOW);
     expect(v.offerActive).toBe(true);
@@ -425,6 +435,7 @@ export interface UpgradePromptData {
 
 /**
  * Turn a SubscriptionPlan row into the view model the modal renders.
+ * `plan.tier` must be a paid tier (MONTHLY / QUARTERLY / ANNUAL) — callers filter out FREE.
  * Pure: `now` is injected so the offer window is testable without a clock.
  */
 export function buildPlanCardView(plan: SubscriptionPlan, now: Date): PlanCardView {
@@ -487,7 +498,7 @@ export async function getUpgradePromptData(
 - [ ] **Step 4: Run it — expect pass**
 
 Run: `cd tests && npx jest --config jest.config.js api/upgrade-prompt/plan-card-view --runInBand`
-Expected: PASS (6 tests).
+Expected: PASS (7 tests).
 
 - [ ] **Step 5: Type-check the frontend (against the 89-error baseline — see Conventions)**
 
