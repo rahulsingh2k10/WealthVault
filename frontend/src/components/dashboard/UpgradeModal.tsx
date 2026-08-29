@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { X } from "lucide-react";
@@ -38,6 +38,20 @@ export function UpgradeModal({ open, plans, memberCount, onClose }: UpgradeModal
     [...plans].sort((a, b) => b.billingMonths - a.billingMonths)[0]?.tier ??
     "ANNUAL";
   const [selected, setSelected] = useState<PaidTier>(defaultTier);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  const tierOrder = plans.map((p) => p.tier);
+  const moveSelection = (delta: number) => {
+    const i = tierOrder.indexOf(selected);
+    if (i === -1) return;
+    const next = tierOrder[(i + delta + tierOrder.length) % tierOrder.length];
+    setSelected(next);
+  };
+  const onRadioKeyDown = (tier: PaidTier) => (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowRight" || e.key === "ArrowDown") { e.preventDefault(); moveSelection(1); }
+    else if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); moveSelection(-1); }
+    else if (e.key === " " || e.key === "Enter") { e.preventDefault(); setSelected(tier); }
+  };
 
   useEffect(() => setMounted(true), []);
 
@@ -49,9 +63,13 @@ export function UpgradeModal({ open, plans, memberCount, onClose }: UpgradeModal
     document.addEventListener("keydown", onKey);
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    const prevFocus = document.activeElement as HTMLElement | null;
+    const raf = requestAnimationFrame(() => dialogRef.current?.focus());
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prevOverflow;
+      cancelAnimationFrame(raf);
+      prevFocus?.focus?.();
     };
   }, [open, onClose]);
 
@@ -103,10 +121,12 @@ export function UpgradeModal({ open, plans, memberCount, onClose }: UpgradeModal
             transition={{ duration: reduceMotion ? 0 : 0.42, ease: [0.22, 1, 0.36, 1] }}
           >
             <div
+              ref={dialogRef}
               role="dialog"
               aria-modal="true"
               aria-labelledby="upgrade-modal-title"
-              className="pointer-events-auto relative flex w-full max-w-[730px] flex-col overflow-hidden rounded-3xl"
+              tabIndex={-1}
+              className="pointer-events-auto relative flex w-full max-w-[730px] flex-col overflow-hidden rounded-3xl outline-none"
               style={{
                 maxHeight: "calc(100dvh - 3rem)",
                 background: "var(--ui-modal-bg)",
@@ -133,7 +153,7 @@ export function UpgradeModal({ open, plans, memberCount, onClose }: UpgradeModal
                 >
                   <div
                     className="flex h-11 w-11 items-center justify-center rounded-xl text-[22px]"
-                    style={{ ...accentStyle, color: "#fff", boxShadow: "0 8px 24px -6px var(--ui-accent)" }}
+                    style={{ ...accentStyle, color: "var(--ui-on-accent)", boxShadow: "0 8px 24px -6px var(--ui-accent)" }}
                   >
                     🏛️
                   </div>
@@ -184,15 +204,17 @@ export function UpgradeModal({ open, plans, memberCount, onClose }: UpgradeModal
                   <div
                     className="mb-5 hidden gap-1 rounded-xl border p-1 sm:flex"
                     style={{ borderColor: "var(--ui-card-border)", background: "var(--ui-subtle-bg)" }}
-                    role="tablist"
-                    aria-label="Choose a plan"
+                    role="radiogroup"
+                    aria-label="Choose a billing plan"
                   >
                     {plans.map((p) => (
                       <button
                         key={p.tier}
-                        role="tab"
-                        aria-selected={selected === p.tier}
+                        role="radio"
+                        aria-checked={selected === p.tier}
+                        tabIndex={selected === p.tier ? 0 : -1}
                         onClick={() => setSelected(p.tier)}
+                        onKeyDown={onRadioKeyDown(p.tier)}
                         className="flex-1 rounded-lg px-2 py-2 text-[0.78rem] font-bold"
                         style={
                           selected === p.tier
@@ -216,13 +238,18 @@ export function UpgradeModal({ open, plans, memberCount, onClose }: UpgradeModal
                   </div>
 
                   {/* Plan cards */}
-                  <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="grid gap-4 sm:grid-cols-3" role="radiogroup" aria-label="Choose a plan">
                     {plans.map((p) => {
                       const isSelected = selected === p.tier;
                       return (
                         <div
                           key={p.tier}
                           onClick={() => setSelected(p.tier)}
+                          role="radio"
+                          aria-checked={isSelected}
+                          tabIndex={isSelected ? 0 : -1}
+                          aria-label={`${PLAN_NAME[p.tier]} — ${perMonth(p, p.effectivePerPeriod)} ${t.upgrade.perMonthSuffix}`}
+                          onKeyDown={onRadioKeyDown(p.tier)}
                           className="relative cursor-pointer rounded-2xl border p-4 sm:p-[18px]"
                           style={{
                             borderColor: isSelected ? "var(--ui-accent-border)" : "var(--ui-card-border)",
@@ -247,7 +274,7 @@ export function UpgradeModal({ open, plans, memberCount, onClose }: UpgradeModal
                             {p.tier === "ANNUAL" ? (
                               <span
                                 className="rounded-full px-2 py-[3px] text-[0.55rem] font-extrabold tracking-wider"
-                                style={{ ...accentStyle, color: "#fff" }}
+                                style={{ ...accentStyle, color: "var(--ui-on-accent)" }}
                               >
                                 {t.upgrade.chipBestValue}
                               </span>
@@ -265,8 +292,8 @@ export function UpgradeModal({ open, plans, memberCount, onClose }: UpgradeModal
                             ) : null}
                             {isSelected && (
                               <span
-                                className="ml-auto flex h-[21px] w-[21px] items-center justify-center rounded-full text-[12px] text-white"
-                                style={{ background: "var(--ui-accent)" }}
+                                className="ml-auto flex h-[21px] w-[21px] items-center justify-center rounded-full text-[12px]"
+                                style={{ background: "var(--ui-accent)", color: "var(--ui-on-accent)" }}
                                 aria-hidden
                               >
                                 ✓
@@ -322,10 +349,11 @@ export function UpgradeModal({ open, plans, memberCount, onClose }: UpgradeModal
                               console.info("[upgrade-prompt] plan CTA:", p.tier);
                               onClose();
                             }}
+                            onKeyDown={(e) => e.stopPropagation()}
                             className="mt-4 w-full rounded-[10px] border-[1.5px] py-[9px] text-[0.78rem] font-extrabold"
                             style={
                               isSelected
-                                ? { ...accentStyle, color: "#fff", borderColor: "transparent" }
+                                ? { ...accentStyle, color: "var(--ui-on-accent)", borderColor: "transparent" }
                                 : { color: "var(--ui-accent)", borderColor: "var(--ui-accent-border)", background: "transparent" }
                             }
                           >
@@ -340,7 +368,7 @@ export function UpgradeModal({ open, plans, memberCount, onClose }: UpgradeModal
                   <div className="mt-7 grid gap-3 sm:grid-cols-2">
                     {[t.upgrade.feature1, t.upgrade.feature2, t.upgrade.feature3, t.upgrade.feature4].map((f) => (
                       <div key={f} className="text-[0.78rem] text-[color:var(--ui-text-pri)]">
-                        <span className="mr-2 font-extrabold" style={{ color: "var(--ui-accent-warm)" }}>
+                        <span className="mr-2 font-extrabold" style={{ color: "var(--ui-accent-warm)" }} aria-hidden>
                           ✓
                         </span>
                         {f}
@@ -351,9 +379,9 @@ export function UpgradeModal({ open, plans, memberCount, onClose }: UpgradeModal
 
                 {/* Trust + Maybe later */}
                 <div className="flex flex-wrap items-center justify-center gap-4 px-6 pb-1 pt-4 text-[0.72rem] text-[color:var(--ui-text-muted)] sm:px-8">
-                  <span>🔒 {t.upgrade.trustEncrypted}</span>
-                  <span>↩︎ {t.upgrade.trustCancel}</span>
-                  <span>✦ {t.upgrade.trustMoneyBack}</span>
+                  <span><span aria-hidden>🔒 </span>{t.upgrade.trustEncrypted}</span>
+                  <span><span aria-hidden>↩︎ </span>{t.upgrade.trustCancel}</span>
+                  <span><span aria-hidden>✦ </span>{t.upgrade.trustMoneyBack}</span>
                 </div>
                 <button
                   onClick={onClose}
