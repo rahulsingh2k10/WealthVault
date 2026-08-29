@@ -1,4 +1,4 @@
-import { hasTestDb, getTestPrisma, disconnectTestPrisma } from "../../helpers/testDb";
+import { hasTestDb, disconnectTestPrisma } from "../../helpers/testDb";
 import { ensureReferenceData } from "../../helpers/seedReferenceData";
 import { createTestUser, deleteTestUser } from "../../helpers/testUser";
 
