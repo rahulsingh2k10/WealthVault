@@ -106,3 +106,22 @@ export const ASSET_COLOR_LIST = [
   "#6366f1", "#0ea5e9", "#f59e0b", "#a855f7",
   "#10b981", "#f97316", "#ec4899", "#64748b", "#22c55e", "#ef4444",
 ];
+
+/**
+ * Format a whole-unit money amount for display, e.g.
+ *   formatMoney(1600, "INR")            → "₹1,600"
+ *   formatMoney(1600, "USD", "en-US")   → "$1,600"
+ * Unlike formatINR, this shows no decimal places — subscription prices are whole units.
+ */
+export function formatMoney(
+  amount: number,
+  currency: string,
+  locale = "en-IN"
+): string {
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
