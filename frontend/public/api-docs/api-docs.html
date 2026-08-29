@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf8" />
+  <title>WealthVault API</title>
+  <!-- needed for adaptive design -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      padding: 0;
+      margin: 0;
+    }
+  </style>
+  <script src="redoc.standalone.js"></script><style data-styled="true" data-styled-version="6.4.2">.kktglN{width:calc(100% - 40%);padding:0 40px;}/*!sc*/
+@media print,screen and (max-width: 75rem){.kktglN{width:100%;padding:40px 40px;}}/*!sc*/
+.kmAAAV{width:calc(100% - 40%);padding:0 40px;}/*!sc*/
+@media print,screen and (max-width: 75rem){.kmAAAV{width:100%;padding:0px 40px;}}/*!sc*/
+data-styled.g5[id="sc-hKVpXn"]{content:"kktglN,kmAAAV,"}/*!sc*/
+.jleRXN{padding:40px 0;}/*!sc*/
+.jleRXN:last-child{min-height:calc(100vh + 1px);}/*!sc*/
+.jleRXN>.jleRXN:last-child{min-height:initial;}/*!sc*/
+@media print,screen and (max-width: 75rem){.jleRXN{padding:0;}}/*!sc*/
+.grDwca{padding:40px 0;position:relative;}/*!sc*/
+.grDwca:last-child{min-height:calc(100vh + 1px);}/*!sc*/
+.grDwca>.grDwca:last-child{min-height:initial;}/*!sc*/
+@media print,screen and (max-width: 75rem){.grDwca{padding:0;}}/*!sc*/
+.grDwca:not(:last-of-type):after{position:absolute;bottom:0;width:100%;display:block;content:'';border-bottom:1px solid rgba(0, 0, 0, 0.2);}/*!sc*/
+data-styled.g6[id="sc-eCQgVK"]{content:"jleRXN,grDwca,"}/*!sc*/
+.fpMlmc{width:40%;color:#ffffff;background-color:#263238;padding:0 40px;}/*!sc*/
+@media print,screen and (max-width: 75rem){.fpMlmc{width:100%;padding:40px 40px;}}/*!sc*/
+data-styled.g7[id="sc-jSppWd"]{content:"fpMlmc,"}/*!sc*/
+.bdQQyo{background-color:#263238;}/*!sc*/
+data-styled.g8[id="sc-gKkgUA"]{content:"bdQQyo,"}/*!sc*/
+.lhRBUS{display:flex;width:100%;padding:0;}/*!sc*/
+@media print,screen and (max-width: 75rem){.lhRBUS{flex-direction:column;}}/*!sc*/
+data-styled.g9[id="sc-iCECmn"]{content:"lhRBUS,"}/*!sc*/
+.eRMVDe{font-family:Montserrat,sans-serif;font-weight:400;font-size:1.85714em;line-height:1.6em;color:#333333;}/*!sc*/
+data-styled.g10[id="sc-fuztkK"]{content:"eRMVDe,"}/*!sc*/
+.MOVBZ{font-family:Montserrat,sans-serif;font-weight:400;font-size:1.57143em;line-height:1.6em;color:#333333;margin:0 0 20px;}/*!sc*/
+data-styled.g11[id="sc-qdQOe"]{content:"MOVBZ,"}/*!sc*/
+.iamDfj{color:#ffffff;}/*!sc*/
+data-styled.g13[id="sc-kEbgWM"]{content:"iamDfj,"}/*!sc*/
+.kcvrhp{border-bottom:1px solid rgba(38, 50, 56, 0.3);margin:1em 0 1em 0;color:rgba(38, 50, 56, 0.5);font-weight:normal;text-transform:uppercase;font-size:0.929em;line-height:20px;}/*!sc*/
+data-styled.g14[id="sc-iqkkDd"]{content:"kcvrhp,"}/*!sc*/
+.jmoZom{cursor:pointer;margin-left:-20px;padding:0;line-height:1;width:20px;display:inline-block;outline:0;}/*!sc*/
+.jmoZom:before{content:'';width:15px;height:15px;background-size:contain;background-image:url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZlcnNpb249IjEuMSIgeD0iMCIgeT0iMCIgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiBlbmFibGUtYmFja2dyb3VuZD0ibmV3IDAgMCA1MTIgNTEyIiB4bWw6c3BhY2U9InByZXNlcnZlIj48cGF0aCBmaWxsPSIjMDEwMTAxIiBkPSJNNDU5LjcgMjMzLjRsLTkwLjUgOTAuNWMtNTAgNTAtMTMxIDUwLTE4MSAwIC03LjktNy44LTE0LTE2LjctMTkuNC0yNS44bDQyLjEtNDIuMWMyLTIgNC41LTMuMiA2LjgtNC41IDIuOSA5LjkgOCAxOS4zIDE1LjggMjcuMiAyNSAyNSA2NS42IDI0LjkgOTAuNSAwbDkwLjUtOTAuNWMyNS0yNSAyNS02NS42IDAtOTAuNSAtMjQuOS0yNS02NS41LTI1LTkwLjUgMGwtMzIuMiAzMi4yYy0yNi4xLTEwLjItNTQuMi0xMi45LTgxLjYtOC45bDY4LjYtNjguNmM1MC01MCAxMzEtNTAgMTgxIDBDNTA5LjYgMTAyLjMgNTA5LjYgMTgzLjQgNDU5LjcgMjMzLjR6TTIyMC4zIDM4Mi4ybC0zMi4yIDMyLjJjLTI1IDI0LjktNjUuNiAyNC45LTkwLjUgMCAtMjUtMjUtMjUtNjUuNiAwLTkwLjVsOTAuNS05MC41YzI1LTI1IDY1LjUtMjUgOTAuNSAwIDcuOCA3LjggMTIuOSAxNy4yIDE1LjggMjcuMSAyLjQtMS40IDQuOC0yLjUgNi44LTQuNWw0Mi4xLTQyYy01LjQtOS4yLTExLjYtMTgtMTkuNC0yNS44IC01MC01MC0xMzEtNTAtMTgxIDBsLTkwLjUgOTAuNWMtNTAgNTAtNTAgMTMxIDAgMTgxIDUwIDUwIDEzMSA1MCAxODEgMGw2OC42LTY4LjZDMjc0LjYgMzk1LjEgMjQ2LjQgMzkyLjMgMjIwLjMgMzgyLjJ6Ii8+PC9zdmc+Cg==');opacity:0.5;visibility:hidden;display:inline-block;vertical-align:middle;}/*!sc*/
+h1:hover>.jmoZom::before,h2:hover>.jmoZom::before,.jmoZom:hover::before{visibility:visible;}/*!sc*/
+data-styled.g15[id="sc-crPgjm"]{content:"jmoZom,"}/*!sc*/
+.kdgFPv{height:18px;width:18px;min-width:18px;vertical-align:middle;float:right;transition:transform 0.2s ease-out;transform:rotateZ(-90deg);}/*!sc*/
+.fwrvvc{height:1.5em;width:1.5em;min-width:1.5em;vertical-align:middle;float:left;transition:transform 0.2s ease-out;transform:rotateZ(-90deg);}/*!sc*/
+.fwrvvc polygon{fill:#ffa500;}/*!sc*/
+.bQKUih{height:20px;width:20px;min-width:20px;vertical-align:middle;float:right;transition:transform 0.2s ease-out;transform:rotateZ(0);}/*!sc*/
+.bQKUih polygon{fill:white;}/*!sc*/
+.bEEWJa{height:1.3em;width:1.3em;min-width:1.3em;vertical-align:middle;transition:transform 0.2s ease-out;transform:rotateZ(-90deg);}/*!sc*/
+.gngmNp{height:1.5em;width:1.5em;min-width:1.5em;vertical-align:middle;float:left;transition:transform 0.2s ease-out;transform:rotateZ(-90deg);}/*!sc*/
+.gngmNp polygon{fill:#1d8127;}/*!sc*/
+.hJoFRR{height:1.5em;width:1.5em;min-width:1.5em;vertical-align:middle;float:left;transition:transform 0.2s ease-out;transform:rotateZ(-90deg);}/*!sc*/
+.hJoFRR polygon{fill:#d41f1c;}/*!sc*/
+data-styled.g16[id="sc-dYjPD"]{content:"kdgFPv,fwrvvc,bQKUih,bEEWJa,gngmNp,hJoFRR,"}/*!sc*/
+.jFNAwF{border-left:1px solid #7c7cbb;box-sizing:border-box;position:relative;padding:10px 10px 10px 0;}/*!sc*/
+@media screen and (max-width: 50rem){.jFNAwF{display:block;overflow:hidden;}}/*!sc*/
+tr:first-of-type>.jFNAwF,tr.last>.jFNAwF{border-left-width:0;background-position:top left;background-repeat:no-repeat;background-size:1px 100%;}/*!sc*/
+tr:first-of-type>.jFNAwF{background-image:linear-gradient(
+      to bottom,
+      transparent 0%,
+      transparent 22px,
+      #7c7cbb 22px,
+      #7c7cbb 100%
+    );}/*!sc*/
+tr.last>.jFNAwF{background-image:linear-gradient(
+      to bottom,
+      #7c7cbb 0%,
+      #7c7cbb 22px,
+      transparent 22px,
+      transparent 100%
+    );}/*!sc*/
+tr.last+tr>.jFNAwF{border-left-color:transparent;}/*!sc*/
+tr.last:first-child>.jFNAwF{background:none;border-left-color:transparent;}/*!sc*/
+data-styled.g19[id="sc-hCcPtG"]{content:"jFNAwF,"}/*!sc*/
+.lcdEEX{vertical-align:top;line-height:20px;white-space:nowrap;font-size:13px;font-family:Courier,monospace;}/*!sc*/
+.lcdEEX.deprecated{text-decoration:line-through;color:#707070;}/*!sc*/
+data-styled.g21[id="sc-fFCZOx"]{content:"lcdEEX,"}/*!sc*/
+.gLpZiQ{border-bottom:1px solid #9fb4be;padding:10px 0;width:75%;box-sizing:border-box;}/*!sc*/
+tr.expanded .gLpZiQ{border-bottom:none;}/*!sc*/
+@media screen and (max-width: 50rem){.gLpZiQ{padding:0 20px;border-bottom:none;border-left:1px solid #7c7cbb;}tr.last>.gLpZiQ{border-left:none;}}/*!sc*/
+data-styled.g22[id="sc-bjLslk"]{content:"gLpZiQ,"}/*!sc*/
+.kkMuqc{color:#7c7cbb;font-family:Courier,monospace;margin-right:10px;}/*!sc*/
+.kkMuqc::before{content:'';display:inline-block;vertical-align:middle;width:10px;height:1px;background:#7c7cbb;}/*!sc*/
+.kkMuqc::after{content:'';display:inline-block;vertical-align:middle;width:1px;background:#7c7cbb;height:7px;}/*!sc*/
+data-styled.g23[id="sc-ieCSdj"]{content:"kkMuqc,"}/*!sc*/
+.bsjUmE{border-collapse:separate;border-radius:3px;font-size:14px;border-spacing:0;width:100%;}/*!sc*/
+.bsjUmE >tr{vertical-align:middle;}/*!sc*/
+@media screen and (max-width: 50rem){.bsjUmE{display:block;}.bsjUmE >tr,.bsjUmE >tbody>tr{display:block;}}/*!sc*/
+@media screen and (max-width: 50rem) and (-ms-high-contrast:none){.bsjUmE td{float:left;width:100%;}}/*!sc*/
+.bsjUmE .sc-dILkzW,.bsjUmE .sc-dILkzW .sc-dILkzW .sc-dILkzW,.bsjUmE .sc-dILkzW .sc-dILkzW .sc-dILkzW .sc-dILkzW .sc-dILkzW{margin:1em;margin-right:0;background:#fafafa;}/*!sc*/
+.bsjUmE .sc-dILkzW .sc-dILkzW,.bsjUmE .sc-dILkzW .sc-dILkzW .sc-dILkzW .sc-dILkzW,.bsjUmE .sc-dILkzW .sc-dILkzW .sc-dILkzW .sc-dILkzW .sc-dILkzW .sc-dILkzW{background:#ffffff;}/*!sc*/
+data-styled.g25[id="sc-hHopjF"]{content:"bsjUmE,"}/*!sc*/
+.kibfTX >ul{list-style:none;padding:0;margin:0;margin:0 -5px;}/*!sc*/
+.kibfTX >ul >li{padding:5px 10px;display:inline-block;background-color:#11171a;border-bottom:1px solid rgba(0, 0, 0, 0.5);cursor:pointer;text-align:center;outline:none;color:#ccc;margin:0 5px 5px 5px;border:1px solid #07090b;border-radius:5px;min-width:60px;font-size:0.9em;font-weight:bold;}/*!sc*/
+.kibfTX >ul >li.react-tabs__tab--selected{color:#333333;background:#ffffff;}/*!sc*/
+.kibfTX >ul >li.react-tabs__tab--selected:focus{outline:auto;}/*!sc*/
+.kibfTX >ul >li:only-child{flex:none;min-width:100px;}/*!sc*/
+.kibfTX >ul >li.tab-success{color:#1d8127;}/*!sc*/
+.kibfTX >ul >li.tab-redirect{color:#ffa500;}/*!sc*/
+.kibfTX >ul >li.tab-info{color:#87ceeb;}/*!sc*/
+.kibfTX >ul >li.tab-error{color:#d41f1c;}/*!sc*/
+.kibfTX >.react-tabs__tab-panel{background:#11171a;}/*!sc*/
+.kibfTX >.react-tabs__tab-panel>div,.kibfTX >.react-tabs__tab-panel>pre{padding:20px;margin:0;}/*!sc*/
+.kibfTX >.react-tabs__tab-panel>div>pre{padding:0;}/*!sc*/
+data-styled.g31[id="sc-cxxQMU"]{content:"kibfTX,"}/*!sc*/
+.fiNpIH code[class*='language-'],.fiNpIH pre[class*='language-']{text-shadow:0 -0.1em 0.2em black;text-align:left;white-space:pre;word-spacing:normal;word-break:normal;word-wrap:normal;line-height:1.5;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-hyphens:none;-moz-hyphens:none;-ms-hyphens:none;hyphens:none;}/*!sc*/
+@media print{.fiNpIH code[class*='language-'],.fiNpIH pre[class*='language-']{text-shadow:none;}}/*!sc*/
+.fiNpIH pre[class*='language-']{padding:1em;margin:0.5em 0;overflow:auto;}/*!sc*/
+.fiNpIH .token.comment,.fiNpIH .token.prolog,.fiNpIH .token.doctype,.fiNpIH .token.cdata{color:hsl(30, 20%, 50%);}/*!sc*/
+.fiNpIH .token.punctuation{opacity:0.7;}/*!sc*/
+.fiNpIH .namespace{opacity:0.7;}/*!sc*/
+.fiNpIH .token.property,.fiNpIH .token.tag,.fiNpIH .token.number,.fiNpIH .token.constant,.fiNpIH .token.symbol{color:#4a8bb3;}/*!sc*/
+.fiNpIH .token.boolean{color:#e64441;}/*!sc*/
+.fiNpIH .token.selector,.fiNpIH .token.attr-name,.fiNpIH .token.string,.fiNpIH .token.char,.fiNpIH .token.builtin,.fiNpIH .token.inserted{color:#a0fbaa;}/*!sc*/
+.fiNpIH .token.selector+a,.fiNpIH .token.attr-name+a,.fiNpIH .token.string+a,.fiNpIH .token.char+a,.fiNpIH .token.builtin+a,.fiNpIH .token.inserted+a,.fiNpIH .token.selector+a:visited,.fiNpIH .token.attr-name+a:visited,.fiNpIH .token.string+a:visited,.fiNpIH .token.char+a:visited,.fiNpIH .token.builtin+a:visited,.fiNpIH .token.inserted+a:visited{color:#4ed2ba;text-decoration:underline;}/*!sc*/
+.fiNpIH .token.property.string{color:white;}/*!sc*/
+.fiNpIH .token.operator,.fiNpIH .token.entity,.fiNpIH .token.url,.fiNpIH .token.variable{color:hsl(40, 90%, 60%);}/*!sc*/
+.fiNpIH .token.atrule,.fiNpIH .token.attr-value,.fiNpIH .token.keyword{color:hsl(350, 40%, 70%);}/*!sc*/
+.fiNpIH .token.regex,.fiNpIH .token.important{color:#e90;}/*!sc*/
+.fiNpIH .token.important,.fiNpIH .token.bold{font-weight:bold;}/*!sc*/
+.fiNpIH .token.italic{font-style:italic;}/*!sc*/
+.fiNpIH .token.entity{cursor:help;}/*!sc*/
+.fiNpIH .token.deleted{color:red;}/*!sc*/
+data-styled.g33[id="sc-iJSMbW"]{content:"fiNpIH,"}/*!sc*/
+.dzKJV{opacity:0.7;transition:opacity 0.3s ease;text-align:right;}/*!sc*/
+.dzKJV:focus-within{opacity:1;}/*!sc*/
+.dzKJV >button{background-color:transparent;border:0;color:inherit;padding:2px 10px;font-family:Roboto,sans-serif;font-size:14px;line-height:1.5em;cursor:pointer;outline:0;}/*!sc*/
+.dzKJV >button :hover,.dzKJV >button :focus{background:rgba(255, 255, 255, 0.1);}/*!sc*/
+data-styled.g34[id="sc-giQkEn"]{content:"dzKJV,"}/*!sc*/
+.iOXjCz{position:relative;}/*!sc*/
+data-styled.g38[id="sc-kLEbxe"]{content:"iOXjCz,"}/*!sc*/
+.kxMqOs{margin-left:10px;text-transform:none;font-size:0.929em;color:black;}/*!sc*/
+data-styled.g42[id="sc-gXvOjn"]{content:"kxMqOs,"}/*!sc*/
+.ewCFMV{font-family:Roboto,sans-serif;font-weight:400;line-height:1.5em;}/*!sc*/
+.ewCFMV p:last-child{margin-bottom:0;}/*!sc*/
+.ewCFMV h1{font-family:Montserrat,sans-serif;font-weight:400;font-size:1.85714em;line-height:1.6em;color:#32329f;margin-top:0;}/*!sc*/
+.ewCFMV h2{font-family:Montserrat,sans-serif;font-weight:400;font-size:1.57143em;line-height:1.6em;color:#333333;}/*!sc*/
+.ewCFMV code{color:#e53935;background-color:rgba(38, 50, 56, 0.05);font-family:Courier,monospace;border-radius:2px;border:1px solid rgba(38, 50, 56, 0.1);padding:0 5px;font-size:13px;font-weight:400;word-break:break-word;}/*!sc*/
+.ewCFMV pre{font-family:Courier,monospace;white-space:pre;background-color:#11171a;color:white;padding:20px;overflow-x:auto;line-height:normal;border-radius:0;border:1px solid rgba(38, 50, 56, 0.1);}/*!sc*/
+.ewCFMV pre code{background-color:transparent;color:white;padding:0;}/*!sc*/
+.ewCFMV pre code:before,.ewCFMV pre code:after{content:none;}/*!sc*/
+.ewCFMV blockquote{margin:0;margin-bottom:1em;padding:0 15px;color:#777;border-left:4px solid #ddd;}/*!sc*/
+.ewCFMV img{max-width:100%;box-sizing:content-box;}/*!sc*/
+.ewCFMV ul,.ewCFMV ol{padding-left:2em;margin:0;margin-bottom:1em;}/*!sc*/
+.ewCFMV ul ul,.ewCFMV ol ul,.ewCFMV ul ol,.ewCFMV ol ol{margin-bottom:0;margin-top:0;}/*!sc*/
+.ewCFMV table{display:block;width:100%;overflow:auto;word-break:normal;word-break:keep-all;border-collapse:collapse;border-spacing:0;margin-top:1.5em;margin-bottom:1.5em;}/*!sc*/
+.ewCFMV table tr{background-color:#fff;border-top:1px solid #ccc;}/*!sc*/
+.ewCFMV table tr:nth-child(2n){background-color:#fafafa;}/*!sc*/
+.ewCFMV table th,.ewCFMV table td{padding:6px 13px;border:1px solid #ddd;}/*!sc*/
+.ewCFMV table th{text-align:left;font-weight:bold;}/*!sc*/
+.ewCFMV .share-link{cursor:pointer;margin-left:-20px;padding:0;line-height:1;width:20px;display:inline-block;outline:0;}/*!sc*/
+.ewCFMV .share-link:before{content:'';width:15px;height:15px;background-size:contain;background-image:url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZlcnNpb249IjEuMSIgeD0iMCIgeT0iMCIgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiBlbmFibGUtYmFja2dyb3VuZD0ibmV3IDAgMCA1MTIgNTEyIiB4bWw6c3BhY2U9InByZXNlcnZlIj48cGF0aCBmaWxsPSIjMDEwMTAxIiBkPSJNNDU5LjcgMjMzLjRsLTkwLjUgOTAuNWMtNTAgNTAtMTMxIDUwLTE4MSAwIC03LjktNy44LTE0LTE2LjctMTkuNC0yNS44bDQyLjEtNDIuMWMyLTIgNC41LTMuMiA2LjgtNC41IDIuOSA5LjkgOCAxOS4zIDE1LjggMjcuMiAyNSAyNSA2NS42IDI0LjkgOTAuNSAwbDkwLjUtOTAuNWMyNS0yNSAyNS02NS42IDAtOTAuNSAtMjQuOS0yNS02NS41LTI1LTkwLjUgMGwtMzIuMiAzMi4yYy0yNi4xLTEwLjItNTQuMi0xMi45LTgxLjYtOC45bDY4LjYtNjguNmM1MC01MCAxMzEtNTAgMTgxIDBDNTA5LjYgMTAyLjMgNTA5LjYgMTgzLjQgNDU5LjcgMjMzLjR6TTIyMC4zIDM4Mi4ybC0zMi4yIDMyLjJjLTI1IDI0LjktNjUuNiAyNC45LTkwLjUgMCAtMjUtMjUtMjUtNjUuNiAwLTkwLjVsOTAuNS05MC41YzI1LTI1IDY1LjUtMjUgOTAuNSAwIDcuOCA3LjggMTIuOSAxNy4yIDE1LjggMjcuMSAyLjQtMS40IDQuOC0yLjUgNi44LTQuNWw0Mi4xLTQyYy01LjQtOS4yLTExLjYtMTgtMTkuNC0yNS44IC01MC01MC0xMzEtNTAtMTgxIDBsLTkwLjUgOTAuNWMtNTAgNTAtNTAgMTMxIDAgMTgxIDUwIDUwIDEzMSA1MCAxODEgMGw2OC42LTY4LjZDMjc0LjYgMzk1LjEgMjQ2LjQgMzkyLjMgMjIwLjMgMzgyLjJ6Ii8+PC9zdmc+Cg==');opacity:0.5;visibility:hidden;display:inline-block;vertical-align:middle;}/*!sc*/
+.ewCFMV h1:hover>.share-link::before,.ewCFMV h2:hover>.share-link::before,.ewCFMV .share-link:hover::before{visibility:visible;}/*!sc*/
+.ewCFMV a{text-decoration:auto;color:#32329f;}/*!sc*/
+.ewCFMV a:visited{color:#32329f;}/*!sc*/
+.ewCFMV a:hover{color:#6868cf;text-decoration:auto;}/*!sc*/
+.dNfUH{font-family:Roboto,sans-serif;font-weight:400;line-height:1.5em;}/*!sc*/
+.dNfUH p:last-child{margin-bottom:0;}/*!sc*/
+.dNfUH p:first-child{margin-top:0;}/*!sc*/
+.dNfUH p:last-child{margin-bottom:0;}/*!sc*/
+.dNfUH p{display:inline-block;}/*!sc*/
+.dNfUH h1{font-family:Montserrat,sans-serif;font-weight:400;font-size:1.85714em;line-height:1.6em;color:#32329f;margin-top:0;}/*!sc*/
+.dNfUH h2{font-family:Montserrat,sans-serif;font-weight:400;font-size:1.57143em;line-height:1.6em;color:#333333;}/*!sc*/
+.dNfUH code{color:#e53935;background-color:rgba(38, 50, 56, 0.05);font-family:Courier,monospace;border-radius:2px;border:1px solid rgba(38, 50, 56, 0.1);padding:0 5px;font-size:13px;font-weight:400;word-break:break-word;}/*!sc*/
+.dNfUH pre{font-family:Courier,monospace;white-space:pre;background-color:#11171a;color:white;padding:20px;overflow-x:auto;line-height:normal;border-radius:0;border:1px solid rgba(38, 50, 56, 0.1);}/*!sc*/
+.dNfUH pre code{background-color:transparent;color:white;padding:0;}/*!sc*/
+.dNfUH pre code:before,.dNfUH pre code:after{content:none;}/*!sc*/
+.dNfUH blockquote{margin:0;margin-bottom:1em;padding:0 15px;color:#777;border-left:4px solid #ddd;}/*!sc*/
+.dNfUH img{max-width:100%;box-sizing:content-box;}/*!sc*/
+.dNfUH ul,.dNfUH ol{padding-left:2em;margin:0;margin-bottom:1em;}/*!sc*/
+.dNfUH ul ul,.dNfUH ol ul,.dNfUH ul ol,.dNfUH ol ol{margin-bottom:0;margin-top:0;}/*!sc*/
+.dNfUH table{display:block;width:100%;overflow:auto;word-break:normal;word-break:keep-all;border-collapse:collapse;border-spacing:0;margin-top:1.5em;margin-bottom:1.5em;}/*!sc*/
+.dNfUH table tr{background-color:#fff;border-top:1px solid #ccc;}/*!sc*/
+.dNfUH table tr:nth-child(2n){background-color:#fafafa;}/*!sc*/
+.dNfUH table th,.dNfUH table td{padding:6px 13px;border:1px solid #ddd;}/*!sc*/
+.dNfUH table th{text-align:left;font-weight:bold;}/*!sc*/
+.dNfUH .share-link{cursor:pointer;margin-left:-20px;padding:0;line-height:1;width:20px;display:inline-block;outline:0;}/*!sc*/
+.dNfUH .share-link:before{content:'';width:15px;height:15px;background-size:contain;background-image:url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZlcnNpb249IjEuMSIgeD0iMCIgeT0iMCIgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiBlbmFibGUtYmFja2dyb3VuZD0ibmV3IDAgMCA1MTIgNTEyIiB4bWw6c3BhY2U9InByZXNlcnZlIj48cGF0aCBmaWxsPSIjMDEwMTAxIiBkPSJNNDU5LjcgMjMzLjRsLTkwLjUgOTAuNWMtNTAgNTAtMTMxIDUwLTE4MSAwIC03LjktNy44LTE0LTE2LjctMTkuNC0yNS44bDQyLjEtNDIuMWMyLTIgNC41LTMuMiA2LjgtNC41IDIuOSA5LjkgOCAxOS4zIDE1LjggMjcuMiAyNSAyNSA2NS42IDI0LjkgOTAuNSAwbDkwLjUtOTAuNWMyNS0yNSAyNS02NS42IDAtOTAuNSAtMjQuOS0yNS02NS41LTI1LTkwLjUgMGwtMzIuMiAzMi4yYy0yNi4xLTEwLjItNTQuMi0xMi45LTgxLjYtOC45bDY4LjYtNjguNmM1MC01MCAxMzEtNTAgMTgxIDBDNTA5LjYgMTAyLjMgNTA5LjYgMTgzLjQgNDU5LjcgMjMzLjR6TTIyMC4zIDM4Mi4ybC0zMi4yIDMyLjJjLTI1IDI0LjktNjUuNiAyNC45LTkwLjUgMCAtMjUtMjUtMjUtNjUuNiAwLTkwLjVsOTAuNS05MC41YzI1LTI1IDY1LjUtMjUgOTAuNSAwIDcuOCA3LjggMTIuOSAxNy4yIDE1LjggMjcuMSAyLjQtMS40IDQuOC0yLjUgNi44LTQuNWw0Mi4xLTQyYy01LjQtOS4yLTExLjYtMTgtMTkuNC0yNS44IC01MC01MC0xMzEtNTAtMTgxIDBsLTkwLjUgOTAuNWMtNTAgNTAtNTAgMTMxIDAgMTgxIDUwIDUwIDEzMSA1MCAxODEgMGw2OC42LTY4LjZDMjc0LjYgMzk1LjEgMjQ2LjQgMzkyLjMgMjIwLjMgMzgyLjJ6Ii8+PC9zdmc+Cg==');opacity:0.5;visibility:hidden;display:inline-block;vertical-align:middle;}/*!sc*/
+.dNfUH h1:hover>.share-link::before,.dNfUH h2:hover>.share-link::before,.dNfUH .share-link:hover::before{visibility:visible;}/*!sc*/
+.dNfUH a{text-decoration:auto;color:#32329f;}/*!sc*/
+.dNfUH a:visited{color:#32329f;}/*!sc*/
+.dNfUH a:hover{color:#6868cf;text-decoration:auto;}/*!sc*/
+.bAoMjv{font-family:Roboto,sans-serif;font-weight:400;line-height:1.5em;}/*!sc*/
+.bAoMjv p:last-child{margin-bottom:0;}/*!sc*/
+.bAoMjv p:first-child{margin-top:0;}/*!sc*/
+.bAoMjv p:last-child{margin-bottom:0;}/*!sc*/
+.bAoMjv h1{font-family:Montserrat,sans-serif;font-weight:400;font-size:1.85714em;line-height:1.6em;color:#32329f;margin-top:0;}/*!sc*/
+.bAoMjv h2{font-family:Montserrat,sans-serif;font-weight:400;font-size:1.57143em;line-height:1.6em;color:#333333;}/*!sc*/
+.bAoMjv code{color:#e53935;background-color:rgba(38, 50, 56, 0.05);font-family:Courier,monospace;border-radius:2px;border:1px solid rgba(38, 50, 56, 0.1);padding:0 5px;font-size:13px;font-weight:400;word-break:break-word;}/*!sc*/
+.bAoMjv pre{font-family:Courier,monospace;white-space:pre;background-color:#11171a;color:white;padding:20px;overflow-x:auto;line-height:normal;border-radius:0;border:1px solid rgba(38, 50, 56, 0.1);}/*!sc*/
+.bAoMjv pre code{background-color:transparent;color:white;padding:0;}/*!sc*/
+.bAoMjv pre code:before,.bAoMjv pre code:after{content:none;}/*!sc*/
+.bAoMjv blockquote{margin:0;margin-bottom:1em;padding:0 15px;color:#777;border-left:4px solid #ddd;}/*!sc*/
+.bAoMjv img{max-width:100%;box-sizing:content-box;}/*!sc*/
+.bAoMjv ul,.bAoMjv ol{padding-left:2em;margin:0;margin-bottom:1em;}/*!sc*/
+.bAoMjv ul ul,.bAoMjv ol ul,.bAoMjv ul ol,.bAoMjv ol ol{margin-bottom:0;margin-top:0;}/*!sc*/
+.bAoMjv table{display:block;width:100%;overflow:auto;word-break:normal;word-break:keep-all;border-collapse:collapse;border-spacing:0;margin-top:1.5em;margin-bottom:1.5em;}/*!sc*/
+.bAoMjv table tr{background-color:#fff;border-top:1px solid #ccc;}/*!sc*/
+.bAoMjv table tr:nth-child(2n){background-color:#fafafa;}/*!sc*/
+.bAoMjv table th,.bAoMjv table td{padding:6px 13px;border:1px solid #ddd;}/*!sc*/
+.bAoMjv table th{text-align:left;font-weight:bold;}/*!sc*/
+.bAoMjv .share-link{cursor:pointer;margin-left:-20px;padding:0;line-height:1;width:20px;display:inline-block;outline:0;}/*!sc*/
+.bAoMjv .share-link:before{content:'';width:15px;height:15px;background-size:contain;background-image:url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZlcnNpb249IjEuMSIgeD0iMCIgeT0iMCIgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiBlbmFibGUtYmFja2dyb3VuZD0ibmV3IDAgMCA1MTIgNTEyIiB4bWw6c3BhY2U9InByZXNlcnZlIj48cGF0aCBmaWxsPSIjMDEwMTAxIiBkPSJNNDU5LjcgMjMzLjRsLTkwLjUgOTAuNWMtNTAgNTAtMTMxIDUwLTE4MSAwIC03LjktNy44LTE0LTE2LjctMTkuNC0yNS44bDQyLjEtNDIuMWMyLTIgNC41LTMuMiA2LjgtNC41IDIuOSA5LjkgOCAxOS4zIDE1LjggMjcuMiAyNSAyNSA2NS42IDI0LjkgOTAuNSAwbDkwLjUtOTAuNWMyNS0yNSAyNS02NS42IDAtOTAuNSAtMjQuOS0yNS02NS41LTI1LTkwLjUgMGwtMzIuMiAzMi4yYy0yNi4xLTEwLjItNTQuMi0xMi45LTgxLjYtOC45bDY4LjYtNjguNmM1MC01MCAxMzEtNTAgMTgxIDBDNTA5LjYgMTAyLjMgNTA5LjYgMTgzLjQgNDU5LjcgMjMzLjR6TTIyMC4zIDM4Mi4ybC0zMi4yIDMyLjJjLTI1IDI0LjktNjUuNiAyNC45LTkwLjUgMCAtMjUtMjUtMjUtNjUuNiAwLTkwLjVsOTAuNS05MC41YzI1LTI1IDY1LjUtMjUgOTAuNSAwIDcuOCA3LjggMTIuOSAxNy4yIDE1LjggMjcuMSAyLjQtMS40IDQuOC0yLjUgNi44LTQuNWw0Mi4xLTQyYy01LjQtOS4yLTExLjYtMTgtMTkuNC0yNS44IC01MC01MC0xMzEtNTAtMTgxIDBsLTkwLjUgOTAuNWMtNTAgNTAtNTAgMTMxIDAgMTgxIDUwIDUwIDEzMSA1MCAxODEgMGw2OC42LTY4LjZDMjc0LjYgMzk1LjEgMjQ2LjQgMzkyLjMgMjIwLjMgMzgyLjJ6Ii8+PC9zdmc+Cg==');opacity:0.5;visibility:hidden;display:inline-block;vertical-align:middle;}/*!sc*/
+.bAoMjv h1:hover>.share-link::before,.bAoMjv h2:hover>.share-link::before,.bAoMjv .share-link:hover::before{visibility:visible;}/*!sc*/
+.bAoMjv a{text-decoration:auto;color:#32329f;}/*!sc*/
+.bAoMjv a:visited{color:#32329f;}/*!sc*/
+.bAoMjv a:hover{color:#6868cf;text-decoration:auto;}/*!sc*/
+data-styled.g43[id="sc-cBEgGa"]{content:"ewCFMV,dNfUH,bAoMjv,"}/*!sc*/
+.dDDioG{display:inline;}/*!sc*/
+data-styled.g44[id="sc-ciCrSJ"]{content:"dDDioG,"}/*!sc*/
+.feYhXE{position:relative;}/*!sc*/
+data-styled.g45[id="sc-jcgtOs"]{content:"feYhXE,"}/*!sc*/
+.hHzuQA:hover>.sc-giQkEn{opacity:1;}/*!sc*/
+data-styled.g50[id="sc-cTZdpT"]{content:"hHzuQA,"}/*!sc*/
+.jgTAJz{font-family:Courier,monospace;font-size:13px;white-space:pre;contain:content;overflow-x:auto;}/*!sc*/
+.jgTAJz .redoc-json code>.collapser{display:none;pointer-events:none;}/*!sc*/
+.jgTAJz .callback-function{color:gray;}/*!sc*/
+.jgTAJz .collapser:after{content:'-';cursor:pointer;}/*!sc*/
+.jgTAJz .collapsed>.collapser:after{content:'+';cursor:pointer;}/*!sc*/
+.jgTAJz .ellipsis:after{content:' … ';}/*!sc*/
+.jgTAJz .collapsible{margin-left:2em;}/*!sc*/
+.jgTAJz .hoverable{padding-top:1px;padding-bottom:1px;padding-left:2px;padding-right:2px;border-radius:2px;}/*!sc*/
+.jgTAJz .hovered{background-color:rgba(235, 238, 249, 1);}/*!sc*/
+.jgTAJz .collapser{background-color:transparent;border:0;color:#fff;font-family:Courier,monospace;font-size:13px;padding-right:6px;padding-left:6px;padding-top:0;padding-bottom:0;display:flex;align-items:center;justify-content:center;width:15px;height:15px;position:absolute;top:4px;left:-1.5em;cursor:default;user-select:none;-webkit-user-select:none;padding:2px;}/*!sc*/
+.jgTAJz .collapser:focus{outline-color:#fff;outline-style:dotted;outline-width:1px;}/*!sc*/
+.jgTAJz ul{list-style-type:none;padding:0px;margin:0px 0px 0px 26px;}/*!sc*/
+.jgTAJz li{position:relative;display:block;}/*!sc*/
+.jgTAJz .hoverable{display:inline-block;}/*!sc*/
+.jgTAJz .selected{outline-style:solid;outline-width:1px;outline-style:dotted;}/*!sc*/
+.jgTAJz .collapsed>.collapsible{display:none;}/*!sc*/
+.jgTAJz .ellipsis{display:none;}/*!sc*/
+.jgTAJz .collapsed>.ellipsis{display:inherit;}/*!sc*/
+data-styled.g51[id="sc-jNDflC"]{content:"jgTAJz,"}/*!sc*/
+.kgKexQ{padding:0.9em;background-color:rgba(38,50,56,0.4);margin:0 0 10px 0;display:block;font-family:Montserrat,sans-serif;font-size:0.929em;line-height:1.5em;}/*!sc*/
+data-styled.g52[id="sc-dPqFhK"]{content:"kgKexQ,"}/*!sc*/
+.BuCyN{font-family:Montserrat,sans-serif;font-size:12px;position:absolute;z-index:1;top:-11px;left:12px;font-weight:600;color:rgba(255,255,255,0.7);}/*!sc*/
+data-styled.g53[id="sc-bBzIOb"]{content:"BuCyN,"}/*!sc*/
+.bMFMGt{position:relative;}/*!sc*/
+data-styled.g54[id="sc-cNSlRw"]{content:"bMFMGt,"}/*!sc*/
+.jUCYlq{margin-top:15px;}/*!sc*/
+data-styled.g57[id="sc-hUheUT"]{content:"jUCYlq,"}/*!sc*/
+.jMRTsl{vertical-align:middle;font-size:13px;line-height:20px;}/*!sc*/
+data-styled.g59[id="sc-gSILEF"]{content:"jMRTsl,"}/*!sc*/
+.NncTE{color:rgba(102,102,102,0.9);}/*!sc*/
+data-styled.g60[id="sc-lbpDNm"]{content:"NncTE,"}/*!sc*/
+.kUjPnZ{color:#666;}/*!sc*/
+data-styled.g61[id="sc-iNyHtD"]{content:"kUjPnZ,"}/*!sc*/
+.dHYagA{color:#d41f1c;font-size:0.9em;font-weight:normal;margin-left:20px;line-height:1;}/*!sc*/
+data-styled.g63[id="sc-eIYgEQ"]{content:"dHYagA,"}/*!sc*/
+.hzxDQO:after{content:' and ';font-weight:normal;}/*!sc*/
+.hzxDQO:last-child:after{content:none;}/*!sc*/
+.hzxDQO a{text-decoration:auto;color:#32329f;}/*!sc*/
+.hzxDQO a:visited{color:#32329f;}/*!sc*/
+.hzxDQO a:hover{color:#6868cf;text-decoration:auto;}/*!sc*/
+data-styled.g82[id="sc-hPfayn"]{content:"hzxDQO,"}/*!sc*/
+.dVYuXz{white-space:nowrap;}/*!sc*/
+.dVYuXz:after{content:' or ';white-space:pre;}/*!sc*/
+.dVYuXz:last-child:after,.dVYuXz:only-child:after{content:none;}/*!sc*/
+.dVYuXz a{text-decoration:auto;color:#32329f;}/*!sc*/
+.dVYuXz a:visited{color:#32329f;}/*!sc*/
+.dVYuXz a:hover{color:#6868cf;text-decoration:auto;}/*!sc*/
+data-styled.g83[id="sc-dtnsVa"]{content:"dVYuXz,"}/*!sc*/
+.jdqJPb{flex:1 1 auto;cursor:pointer;}/*!sc*/
+data-styled.g84[id="sc-dalEhJ"]{content:"jdqJPb,"}/*!sc*/
+.cVAkzL{width:75%;text-overflow:ellipsis;border-radius:4px;overflow:hidden;}/*!sc*/
+@media screen and (max-width: 50rem){.cVAkzL{margin-top:10px;}}/*!sc*/
+data-styled.g85[id="sc-jTPGds"]{content:"cVAkzL,"}/*!sc*/
+.kEkHzF{display:inline-block;margin:0;}/*!sc*/
+data-styled.g86[id="sc-jQQpTv"]{content:"kEkHzF,"}/*!sc*/
+.kGZLat{width:100%;display:flex;margin:1em 0;flex-direction:row;}/*!sc*/
+@media screen and (max-width: 50rem){.kGZLat{flex-direction:column;}}/*!sc*/
+data-styled.g87[id="sc-fuYIqi"]{content:"kGZLat,"}/*!sc*/
+.cBgvIi{margin-top:0;margin-bottom:0.5em;}/*!sc*/
+data-styled.g93[id="sc-ctiVdb"]{content:"cBgvIi,"}/*!sc*/
+.jjsIAS{width:9ex;display:inline-block;height:13px;line-height:13px;background-color:#333;border-radius:3px;background-repeat:no-repeat;background-position:6px 4px;font-size:7px;font-family:Verdana,sans-serif;color:white;text-transform:uppercase;text-align:center;font-weight:bold;vertical-align:middle;margin-right:6px;margin-top:2px;}/*!sc*/
+.jjsIAS.get{background-color:#2F8132;}/*!sc*/
+.jjsIAS.post{background-color:#186FAF;}/*!sc*/
+.jjsIAS.put{background-color:#95507c;}/*!sc*/
+.jjsIAS.options{background-color:#947014;}/*!sc*/
+.jjsIAS.patch{background-color:#bf581d;}/*!sc*/
+.jjsIAS.delete{background-color:#cc3333;}/*!sc*/
+.jjsIAS.basic{background-color:#707070;}/*!sc*/
+.jjsIAS.link{background-color:#07818F;}/*!sc*/
+.jjsIAS.head{background-color:#A23DAD;}/*!sc*/
+.jjsIAS.hook{background-color:#32329f;}/*!sc*/
+.jjsIAS.schema{background-color:#707070;}/*!sc*/
+data-styled.g101[id="sc-XpSrr"]{content:"jjsIAS,"}/*!sc*/
+.dqIuaF{margin:0;padding:0;}/*!sc*/
+.dqIuaF:first-child{padding-bottom:32px;}/*!sc*/
+.sc-ilnrqe .sc-ilnrqe{font-size:0.929em;}/*!sc*/
+.gTfiRs{margin:0;padding:0;display:none;}/*!sc*/
+.gTfiRs:first-child{padding-bottom:32px;}/*!sc*/
+.sc-ilnrqe .sc-ilnrqe{font-size:0.929em;}/*!sc*/
+data-styled.g102[id="sc-ilnrqe"]{content:"dqIuaF,gTfiRs,"}/*!sc*/
+.ffJlvZ{list-style:none inside none;overflow:hidden;text-overflow:ellipsis;padding:0;margin-top:15px;}/*!sc*/
+.cQETmj{list-style:none inside none;overflow:hidden;text-overflow:ellipsis;padding:0;}/*!sc*/
+data-styled.g103[id="sc-uMZhz"]{content:"ffJlvZ,cQETmj,"}/*!sc*/
+.kFukRb{cursor:pointer;color:#333333;margin:0;padding:12.5px 20px;display:flex;justify-content:space-between;font-family:Montserrat,sans-serif;opacity:0.7;text-transform:uppercase;font-size:0.8em;padding-bottom:0;cursor:default;background-color:#fafafa;}/*!sc*/
+.kFukRb .sc-dYjPD{height:1.5em;width:1.5em;}/*!sc*/
+.kFukRb .sc-dYjPD polygon{fill:#333333;}/*!sc*/
+.buxoPL{cursor:pointer;color:#333333;margin:0;padding:12.5px 20px;display:flex;justify-content:space-between;font-family:Montserrat,sans-serif;font-size:0.929em;text-transform:none;background-color:#fafafa;}/*!sc*/
+.buxoPL:hover{color:#32329f;background-color:#e1e1e1;}/*!sc*/
+.buxoPL .sc-dYjPD{height:1.5em;width:1.5em;}/*!sc*/
+.buxoPL .sc-dYjPD polygon{fill:#333333;}/*!sc*/
+.cGOuox{cursor:pointer;color:#333333;margin:0;padding:12.5px 20px;display:flex;justify-content:space-between;font-family:Montserrat,sans-serif;background-color:#fafafa;}/*!sc*/
+.cGOuox:hover{color:#32329f;background-color:#ededed;}/*!sc*/
+.cGOuox .sc-dYjPD{height:1.5em;width:1.5em;}/*!sc*/
+.cGOuox .sc-dYjPD polygon{fill:#333333;}/*!sc*/
+data-styled.g104[id="sc-bitxrY"]{content:"kFukRb,buxoPL,cGOuox,"}/*!sc*/
+.ehBKwY{display:inline-block;vertical-align:middle;width:calc(100% - 38px);overflow:hidden;text-overflow:ellipsis;}/*!sc*/
+data-styled.g105[id="sc-eHoOIp"]{content:"ehBKwY,"}/*!sc*/
+.gtBLyN{font-size:0.8em;margin-top:10px;text-align:center;position:fixed;width:260px;bottom:0;background:#fafafa;}/*!sc*/
+.gtBLyN a,.gtBLyN a:visited,.gtBLyN a:hover{color:#333333!important;padding:5px 0;border-top:1px solid #e1e1e1;text-decoration:none;display:flex;align-items:center;justify-content:center;}/*!sc*/
+.gtBLyN img{width:15px;margin-right:5px;}/*!sc*/
+@media screen and (max-width: 50rem){.gtBLyN{width:100%;}}/*!sc*/
+data-styled.g106[id="sc-hAkAFK"]{content:"gtBLyN,"}/*!sc*/
+.fYxpnv{cursor:pointer;position:relative;margin-bottom:5px;}/*!sc*/
+data-styled.g112[id="sc-fXwuWv"]{content:"fYxpnv,"}/*!sc*/
+.dsIRaZ{font-family:Courier,monospace;margin-left:10px;flex:1;overflow-x:hidden;text-overflow:ellipsis;}/*!sc*/
+data-styled.g113[id="sc-FpjRO"]{content:"dsIRaZ,"}/*!sc*/
+.jzaJhV{outline:0;color:inherit;width:100%;text-align:left;cursor:pointer;padding:10px 30px 10px 20px;border-radius:4px 4px 0 0;background-color:#11171a;display:flex;white-space:nowrap;align-items:center;border:1px solid transparent;border-bottom:0;transition:border-color 0.25s ease;}/*!sc*/
+.jzaJhV ..sc-FpjRO{color:#ffffff;}/*!sc*/
+.jzaJhV:focus{box-shadow:inset 0 2px 2px rgba(0, 0, 0, 0.45),0 2px 0 rgba(128, 128, 128, 0.25);}/*!sc*/
+data-styled.g114[id="sc-jWMFtl"]{content:"jzaJhV,"}/*!sc*/
+.hlSrtW{font-size:0.929em;line-height:20px;background-color:#2F8132;color:#ffffff;padding:3px 10px;text-transform:uppercase;font-family:Montserrat,sans-serif;margin:0;}/*!sc*/
+.hOENFc{font-size:0.929em;line-height:20px;background-color:#186FAF;color:#ffffff;padding:3px 10px;text-transform:uppercase;font-family:Montserrat,sans-serif;margin:0;}/*!sc*/
+.dFcZpG{font-size:0.929em;line-height:20px;background-color:#bf581d;color:#ffffff;padding:3px 10px;text-transform:uppercase;font-family:Montserrat,sans-serif;margin:0;}/*!sc*/
+data-styled.g115[id="sc-eEFuoE"]{content:"hlSrtW,hOENFc,dFcZpG,"}/*!sc*/
+.tUxhh{position:absolute;width:100%;z-index:100;background:#fafafa;color:#263238;box-sizing:border-box;box-shadow:0 0 6px rgba(0, 0, 0, 0.33);overflow:hidden;border-bottom-left-radius:4px;border-bottom-right-radius:4px;transition:all 0.25s ease;visibility:hidden;transform:translateY(-50%) scaleY(0);}/*!sc*/
+data-styled.g116[id="sc-fmtEmb"]{content:"tUxhh,"}/*!sc*/
+.bAnPPh{padding:10px;}/*!sc*/
+data-styled.g117[id="sc-ljIcGq"]{content:"bAnPPh,"}/*!sc*/
+.PEJyb{padding:5px;border:1px solid #ccc;background:#fff;word-break:break-all;color:#32329f;}/*!sc*/
+.PEJyb >span{color:#333333;}/*!sc*/
+data-styled.g118[id="sc-jlJOIR"]{content:"PEJyb,"}/*!sc*/
+.bxWqzP{text-transform:lowercase;margin-left:0;line-height:1.5em;}/*!sc*/
+data-styled.g119[id="sc-dTCDEk"]{content:"bxWqzP,"}/*!sc*/
+.hrTWt{display:block;border:0;width:100%;text-align:left;padding:10px;border-radius:2px;margin-bottom:4px;line-height:1.5em;cursor:pointer;color:#ffa500;background-color:rgba(255,165,0,0.1);}/*!sc*/
+.hrTWt:focus{outline:auto #ffa500;}/*!sc*/
+.iSTZHA{display:block;border:0;width:100%;text-align:left;padding:10px;border-radius:2px;margin-bottom:4px;line-height:1.5em;cursor:pointer;color:#1d8127;background-color:rgba(29,129,39,0.07);}/*!sc*/
+.iSTZHA:focus{outline:auto #1d8127;}/*!sc*/
+.cKkXxa{display:block;border:0;width:100%;text-align:left;padding:10px;border-radius:2px;margin-bottom:4px;line-height:1.5em;cursor:pointer;color:#d41f1c;background-color:rgba(212,31,28,0.07);}/*!sc*/
+.cKkXxa:focus{outline:auto #d41f1c;}/*!sc*/
+data-styled.g121[id="sc-cbuLjy"]{content:"hrTWt,iSTZHA,cKkXxa,"}/*!sc*/
+.cqDULz{vertical-align:top;}/*!sc*/
+data-styled.g124[id="sc-fXmTIC"]{content:"cqDULz,"}/*!sc*/
+.hgNHCh{font-size:1.3em;padding:0.2em 0;margin:3em 0 1.1em;color:#333333;font-weight:normal;}/*!sc*/
+data-styled.g125[id="sc-fINhYD"]{content:"hgNHCh,"}/*!sc*/
+.ktZmcf{margin-bottom:30px;}/*!sc*/
+data-styled.g130[id="sc-iFUzrA"]{content:"ktZmcf,"}/*!sc*/
+.kjuNaM{user-select:none;width:20px;height:20px;align-self:center;display:flex;flex-direction:column;color:#32329f;}/*!sc*/
+data-styled.g131[id="sc-iruNHB"]{content:"kjuNaM,"}/*!sc*/
+.cczbHe{width:260px;background-color:#fafafa;overflow:hidden;display:flex;flex-direction:column;backface-visibility:hidden;height:100vh;position:sticky;position:-webkit-sticky;top:0;}/*!sc*/
+@media screen and (max-width: 50rem){.cczbHe{position:fixed;z-index:20;width:100%;background:#fafafa;display:none;}}/*!sc*/
+@media print{.cczbHe{display:none;}}/*!sc*/
+data-styled.g132[id="sc-eVYbGh"]{content:"cczbHe,"}/*!sc*/
+.ddPveE{outline:none;user-select:none;background-color:#f2f2f2;color:#32329f;display:none;cursor:pointer;position:fixed;right:20px;z-index:100;border-radius:50%;box-shadow:0 0 20px rgba(0, 0, 0, 0.3);bottom:44px;width:60px;height:60px;padding:0 20px;}/*!sc*/
+@media screen and (max-width: 50rem){.ddPveE{display:flex;}}/*!sc*/
+.ddPveE svg{color:#0065FB;}/*!sc*/
+@media print{.ddPveE{display:none;}}/*!sc*/
+data-styled.g133[id="sc-kTmAaw"]{content:"ddPveE,"}/*!sc*/
+.jetsmW{font-family:Roboto,sans-serif;font-size:14px;font-weight:400;line-height:1.5em;color:#333333;display:flex;position:relative;text-align:left;-webkit-font-smoothing:antialiased;font-smoothing:antialiased;text-rendering:optimizeSpeed!important;tap-highlight-color:rgba(0, 0, 0, 0);text-size-adjust:100%;}/*!sc*/
+.jetsmW *{box-sizing:border-box;-webkit-tap-highlight-color:rgba(255, 255, 255, 0);}/*!sc*/
+data-styled.g134[id="sc-dwkskT"]{content:"jetsmW,"}/*!sc*/
+.ldXCvc{z-index:1;position:relative;overflow:hidden;width:calc(100% - 260px);contain:layout;}/*!sc*/
+@media print,screen and (max-width: 50rem){.ldXCvc{width:100%;}}/*!sc*/
+data-styled.g135[id="sc-jtyQFi"]{content:"ldXCvc,"}/*!sc*/
+.bjzTxL{background:#263238;position:absolute;top:0;bottom:0;right:0;width:calc((100% - 260px) * 0.4);}/*!sc*/
+@media print,screen and (max-width: 75rem){.bjzTxL{display:none;}}/*!sc*/
+data-styled.g136[id="sc-ekVkVN"]{content:"bjzTxL,"}/*!sc*/
+.uMSfb{padding:5px 0;}/*!sc*/
+data-styled.g137[id="sc-kijJqc"]{content:"uMSfb,"}/*!sc*/
+.fTcICO{width:calc(100% - 40px);box-sizing:border-box;margin:0 20px;padding:5px 10px 5px 20px;border:0;border-bottom:1px solid #e1e1e1;font-family:Roboto,sans-serif;font-weight:bold;font-size:13px;color:#333333;background-color:transparent;outline:none;}/*!sc*/
+data-styled.g138[id="sc-cLhBAz"]{content:"fTcICO,"}/*!sc*/
+.kAmnlO{position:absolute;left:20px;height:1.8em;width:0.9em;}/*!sc*/
+.kAmnlO path{fill:#333333;}/*!sc*/
+data-styled.g139[id="sc-iIvZUO"]{content:"kAmnlO,"}/*!sc*/
+</style>
+  
+</head>
+
+<body>
+  
+      <div id="redoc"><div class="sc-dwkskT jetsmW redoc-wrap"><div class="sc-eVYbGh cczbHe menu-content" style="top:0px;height:calc(100vh - 0px)"><div role="search" class="sc-kijJqc uMSfb"><svg class="sc-iIvZUO kAmnlO search-icon" version="1.1" viewBox="0 0 1000 1000" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M968.2,849.4L667.3,549c83.9-136.5,66.7-317.4-51.7-435.6C477.1-25,252.5-25,113.9,113.4c-138.5,138.3-138.5,362.6,0,501C219.2,730.1,413.2,743,547.6,666.5l301.9,301.4c43.6,43.6,76.9,14.9,104.2-12.4C981,928.3,1011.8,893,968.2,849.4z M524.5,522c-88.9,88.7-233,88.7-321.8,0c-88.9-88.7-88.9-232.6,0-321.3c88.9-88.7,233-88.7,321.8,0C613.4,289.4,613.4,433.3,524.5,522z"></path></svg><input placeholder="Search..." aria-label="Search" type="text" class="sc-cLhBAz fTcICO search-input" value=""/></div><div class="sc-kLEbxe iOXjCz scrollbar-container undefined"><ul role="menu" class="sc-ilnrqe dqIuaF"><li tabindex="0" depth="0" data-item-id="group/Authentication" role="menuitem" aria-label="Authentication" aria-expanded="true" class="sc-uMZhz ffJlvZ"><label class="sc-bitxrY kFukRb -depth0"><span width="calc(100% - 38px)" title="Authentication" class="sc-eHoOIp ehBKwY">Authentication</span></label><ul class="sc-ilnrqe dqIuaF"><li tabindex="0" depth="1" data-item-id="tag/Google" role="menuitem" aria-label="Google" aria-expanded="false" class="sc-uMZhz cQETmj"><label class="sc-bitxrY buxoPL -depth1"><span width="calc(100% - 38px)" title="Google" class="sc-eHoOIp ehBKwY">Google</span><svg class="sc-dYjPD kdgFPv" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg></label><ul class="sc-ilnrqe gTfiRs"><li tabindex="0" depth="2" data-item-id="tag/Google/operation/startGoogleSignIn" role="menuitem" aria-label="Start Google OAuth sign-in" aria-expanded="false" class="sc-uMZhz cQETmj"><label class="sc-bitxrY cGOuox -depth2"><span type="get" class="sc-XpSrr jjsIAS operation-type get">get</span><span tabindex="0" width="calc(100% - 38px)" class="sc-eHoOIp ehBKwY">Start Google OAuth sign-in</span></label></li><li tabindex="0" depth="2" data-item-id="tag/Google/operation/completeGoogleSignIn" role="menuitem" aria-label="Complete Google OAuth sign-in and upsert the user row" aria-expanded="false" class="sc-uMZhz cQETmj"><label class="sc-bitxrY cGOuox -depth2"><span type="get" class="sc-XpSrr jjsIAS operation-type get">get</span><span tabindex="0" width="calc(100% - 38px)" class="sc-eHoOIp ehBKwY">Complete Google OAuth sign-in and upsert the user row</span></label></li></ul></li><li tabindex="0" depth="1" data-item-id="tag/Apple" role="menuitem" aria-label="Apple" aria-expanded="false" class="sc-uMZhz cQETmj"><label class="sc-bitxrY buxoPL -depth1"><span width="calc(100% - 38px)" title="Apple" class="sc-eHoOIp ehBKwY">Apple</span><svg class="sc-dYjPD kdgFPv" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg></label><ul class="sc-ilnrqe gTfiRs"><li tabindex="0" depth="2" data-item-id="tag/Apple/operation/startAppleSignIn" role="menuitem" aria-label="Start Apple OAuth sign-in" aria-expanded="false" class="sc-uMZhz cQETmj"><label class="sc-bitxrY cGOuox -depth2"><span type="get" class="sc-XpSrr jjsIAS operation-type get">get</span><span tabindex="0" width="calc(100% - 38px)" class="sc-eHoOIp ehBKwY">Start Apple OAuth sign-in</span></label></li><li tabindex="0" depth="2" data-item-id="tag/Apple/operation/completeAppleSignIn" role="menuitem" aria-label="Complete Apple OAuth sign-in and upsert the user row" aria-expanded="false" class="sc-uMZhz cQETmj"><label class="sc-bitxrY cGOuox -depth2"><span type="post" class="sc-XpSrr jjsIAS operation-type post">post</span><span tabindex="0" width="calc(100% - 38px)" class="sc-eHoOIp ehBKwY">Complete Apple OAuth sign-in and upsert the user row</span></label></li></ul></li><li tabindex="0" depth="1" data-item-id="tag/X-(Twitter)" role="menuitem" aria-label="X (Twitter)" aria-expanded="false" class="sc-uMZhz cQETmj"><label class="sc-bitxrY buxoPL -depth1"><span width="calc(100% - 38px)" title="X (Twitter)" class="sc-eHoOIp ehBKwY">X (Twitter)</span><svg class="sc-dYjPD kdgFPv" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg></label><ul class="sc-ilnrqe gTfiRs"><li tabindex="0" depth="2" data-item-id="tag/X-(Twitter)/operation/startXSignIn" role="menuitem" aria-label="Start X (Twitter) OAuth sign-in" aria-expanded="false" class="sc-uMZhz cQETmj"><label class="sc-bitxrY cGOuox -depth2"><span type="get" class="sc-XpSrr jjsIAS operation-type get">get</span><span tabindex="0" width="calc(100% - 38px)" class="sc-eHoOIp ehBKwY">Start X (Twitter) OAuth sign-in</span></label></li><li tabindex="0" depth="2" data-item-id="tag/X-(Twitter)/operation/completeXSignIn" role="menuitem" aria-label="Complete X OAuth sign-in and upsert the user row" aria-expanded="false" class="sc-uMZhz cQETmj"><label class="sc-bitxrY cGOuox -depth2"><span type="get" class="sc-XpSrr jjsIAS operation-type get">get</span><span tabindex="0" width="calc(100% - 38px)" class="sc-eHoOIp ehBKwY">Complete X OAuth sign-in and upsert the user row</span></label></li></ul></li><li tabindex="0" depth="1" data-item-id="tag/LinkedIn" role="menuitem" aria-label="LinkedIn" aria-expanded="false" class="sc-uMZhz cQETmj"><label class="sc-bitxrY buxoPL -depth1"><span width="calc(100% - 38px)" title="LinkedIn" class="sc-eHoOIp ehBKwY">LinkedIn</span><svg class="sc-dYjPD kdgFPv" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg></label><ul class="sc-ilnrqe gTfiRs"><li tabindex="0" depth="2" data-item-id="tag/LinkedIn/operation/startLinkedInSignIn" role="menuitem" aria-label="Start LinkedIn OAuth sign-in" aria-expanded="false" class="sc-uMZhz cQETmj"><label class="sc-bitxrY cGOuox -depth2"><span type="get" class="sc-XpSrr jjsIAS operation-type get">get</span><span tabindex="0" width="calc(100% - 38px)" class="sc-eHoOIp ehBKwY">Start LinkedIn OAuth sign-in</span></label></li><li tabindex="0" depth="2" data-item-id="tag/LinkedIn/operation/completeLinkedInSignIn" role="menuitem" aria-label="Complete LinkedIn OAuth sign-in and upsert the user row" aria-expanded="false" class="sc-uMZhz cQETmj"><label class="sc-bitxrY cGOuox -depth2"><span type="get" class="sc-XpSrr jjsIAS operation-type get">get</span><span tabindex="0" width="calc(100% - 38px)" class="sc-eHoOIp ehBKwY">Complete LinkedIn OAuth sign-in and upsert the user row</span></label></li></ul></li></ul></li><li tabindex="0" depth="0" data-item-id="group/Vault" role="menuitem" aria-label="Vault" aria-expanded="true" class="sc-uMZhz ffJlvZ"><label class="sc-bitxrY kFukRb -depth0"><span width="calc(100% - 38px)" title="Vault" class="sc-eHoOIp ehBKwY">Vault</span></label><ul class="sc-ilnrqe dqIuaF"><li tabindex="0" depth="1" data-item-id="tag/Unlock" role="menuitem" aria-label="Unlock" aria-expanded="false" class="sc-uMZhz cQETmj"><label class="sc-bitxrY buxoPL -depth1"><span width="calc(100% - 38px)" title="Unlock" class="sc-eHoOIp ehBKwY">Unlock</span><svg class="sc-dYjPD kdgFPv" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg></label><ul class="sc-ilnrqe gTfiRs"><li tabindex="0" depth="2" data-item-id="tag/Unlock/operation/unlockVault" role="menuitem" aria-label="Verify a returning user&#x27;s passphrase, or establish a first-time user&#x27;s passphrase" aria-expanded="false" class="sc-uMZhz cQETmj"><label class="sc-bitxrY cGOuox -depth2"><span type="post" class="sc-XpSrr jjsIAS operation-type post">post</span><span tabindex="0" width="calc(100% - 38px)" class="sc-eHoOIp ehBKwY">Verify a returning user&#x27;s passphrase, or establish a first-time user&#x27;s passphrase</span></label></li></ul></li></ul></li><li tabindex="0" depth="0" data-item-id="group/Profile" role="menuitem" aria-label="Profile" aria-expanded="true" class="sc-uMZhz ffJlvZ"><label class="sc-bitxrY kFukRb -depth0"><span width="calc(100% - 38px)" title="Profile" class="sc-eHoOIp ehBKwY">Profile</span></label><ul class="sc-ilnrqe dqIuaF"><li tabindex="0" depth="1" data-item-id="tag/Profile" role="menuitem" aria-label="Profile" aria-expanded="false" class="sc-uMZhz cQETmj"><label class="sc-bitxrY buxoPL -depth1"><span width="calc(100% - 38px)" title="Profile" class="sc-eHoOIp ehBKwY">Profile</span><svg class="sc-dYjPD kdgFPv" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg></label><ul class="sc-ilnrqe gTfiRs"><li tabindex="0" depth="2" data-item-id="tag/Profile/operation/updateAvatar" role="menuitem" aria-label="Update the current user&#x27;s avatar" aria-expanded="false" class="sc-uMZhz cQETmj"><label class="sc-bitxrY cGOuox -depth2"><span type="patch" class="sc-XpSrr jjsIAS operation-type patch">patch</span><span tabindex="0" width="calc(100% - 38px)" class="sc-eHoOIp ehBKwY">Update the current user&#x27;s avatar</span></label></li></ul></li></ul></li><li tabindex="0" depth="0" data-item-id="group/Session" role="menuitem" aria-label="Session" aria-expanded="true" class="sc-uMZhz ffJlvZ"><label class="sc-bitxrY kFukRb -depth0"><span width="calc(100% - 38px)" title="Session" class="sc-eHoOIp ehBKwY">Session</span></label><ul class="sc-ilnrqe dqIuaF"><li tabindex="0" depth="1" data-item-id="tag/Session" role="menuitem" aria-label="Session" aria-expanded="false" class="sc-uMZhz cQETmj"><label class="sc-bitxrY buxoPL -depth1"><span width="calc(100% - 38px)" title="Session" class="sc-eHoOIp ehBKwY">Session</span><svg class="sc-dYjPD kdgFPv" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg></label><ul class="sc-ilnrqe gTfiRs"><li tabindex="0" depth="2" data-item-id="tag/Session/operation/signOut" role="menuitem" aria-label="End the current session" aria-expanded="false" class="sc-uMZhz cQETmj"><label class="sc-bitxrY cGOuox -depth2"><span type="post" class="sc-XpSrr jjsIAS operation-type post">post</span><span tabindex="0" width="calc(100% - 38px)" class="sc-eHoOIp ehBKwY">End the current session</span></label></li></ul></li></ul></li></ul><div class="sc-hAkAFK gtBLyN"><a target="_blank" rel="noopener noreferrer" href="https://redocly.com/redoc/">API docs by Redocly</a></div></div></div><div class="sc-kTmAaw ddPveE"><div class="sc-iruNHB kjuNaM"><svg class="" style="transform:translate(2px, -4px) rotate(180deg);transition:transform 0.2s ease" viewBox="0 0 926.23699 573.74994" version="1.1" x="0px" y="0px" width="15" height="15"><g transform="translate(904.92214,-879.1482)"><path d="
+          m -673.67664,1221.6502 -231.2455,-231.24803 55.6165,
+          -55.627 c 30.5891,-30.59485 56.1806,-55.627 56.8701,-55.627 0.6894,
+          0 79.8637,78.60862 175.9427,174.68583 l 174.6892,174.6858 174.6892,
+          -174.6858 c 96.079,-96.07721 175.253196,-174.68583 175.942696,
+          -174.68583 0.6895,0 26.281,25.03215 56.8701,
+          55.627 l 55.6165,55.627 -231.245496,231.24803 c -127.185,127.1864
+          -231.5279,231.248 -231.873,231.248 -0.3451,0 -104.688,
+          -104.0616 -231.873,-231.248 z
+        " fill="currentColor"></path></g></svg><svg class="" style="transform:translate(2px, 4px);transition:transform 0.2s ease" viewBox="0 0 926.23699 573.74994" version="1.1" x="0px" y="0px" width="15" height="15"><g transform="translate(904.92214,-879.1482)"><path d="
+          m -673.67664,1221.6502 -231.2455,-231.24803 55.6165,
+          -55.627 c 30.5891,-30.59485 56.1806,-55.627 56.8701,-55.627 0.6894,
+          0 79.8637,78.60862 175.9427,174.68583 l 174.6892,174.6858 174.6892,
+          -174.6858 c 96.079,-96.07721 175.253196,-174.68583 175.942696,
+          -174.68583 0.6895,0 26.281,25.03215 56.8701,
+          55.627 l 55.6165,55.627 -231.245496,231.24803 c -127.185,127.1864
+          -231.5279,231.248 -231.873,231.248 -0.3451,0 -104.688,
+          -104.0616 -231.873,-231.248 z
+        " fill="currentColor"></path></g></svg></div></div><div class="sc-jtyQFi ldXCvc api-content"><div class="sc-eCQgVK jleRXN"><div class="sc-iCECmn lhRBUS"><div class="sc-hKVpXn kktglN api-info"><h1 class="sc-fuztkK sc-ctiVdb eRMVDe cBgvIi">WealthVault API<!-- --> <span>(<!-- -->1.0.0<!-- -->)</span></h1><p>Download OpenAPI specification<!-- -->:</p><div class="sc-iJSMbW sc-cBEgGa fiNpIH ewCFMV"></div><div data-role="redoc-summary" html="" class="sc-iJSMbW sc-cBEgGa fiNpIH ewCFMV"></div><div data-role="redoc-description" html="&lt;p&gt;OAuth sign-in, vault-unlock, and profile routes for WealthVault, generated from
+&lt;code&gt;user-creation-api.md&lt;/code&gt; and &lt;code&gt;unlock-api.md&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;Scope: this spec covers the four OAuth providers&amp;#39; initiate + callback routes,
+&lt;code&gt;POST /api/auth/unlock&lt;/code&gt;, and &lt;code&gt;PATCH /api/auth/avatar&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;WealthVault has no dedicated &amp;quot;create a user&amp;quot; endpoint: a &lt;code&gt;users&lt;/code&gt; row is created
+or updated as a side effect of a successful OAuth callback (a Prisma &lt;code&gt;upsert&lt;/code&gt;),
+detailed below. There is also no generic &amp;quot;edit profile&amp;quot; endpoint — &lt;code&gt;fullName&lt;/code&gt; and
+&lt;code&gt;username&lt;/code&gt; are only ever refreshed via that same OAuth login upsert; &lt;code&gt;avatar&lt;/code&gt; is
+the one user detail with its own dedicated update route (&lt;code&gt;PATCH /api/auth/avatar&lt;/code&gt;).&lt;/p&gt;
+&lt;h3 id=&quot;what-every-oauth-callback-writes-to-users-the-upsert&quot;&gt;What every OAuth callback writes to &lt;code&gt;users&lt;/code&gt; (the upsert)&lt;/h3&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Column&lt;/th&gt;
+&lt;th&gt;On create (new &lt;code&gt;username&lt;/code&gt;)&lt;/th&gt;
+&lt;th&gt;On update (returning user)&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;id&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;auto-generated &lt;code&gt;uuid()&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;unchanged&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;fullName&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;from the provider profile&lt;/td&gt;
+&lt;td&gt;refreshed from the provider profile&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;username&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;provider-derived identity string (email, or bare handle for X) — this is the upsert key&lt;/td&gt;
+&lt;td&gt;unchanged&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;auth_platformId&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;FK to &lt;code&gt;auth_platforms.id&lt;/code&gt;, resolved from the provider&lt;/td&gt;
+&lt;td&gt;refreshed&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;avatar&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;provider&amp;#39;s photo URL, or omitted entirely for Apple&lt;/td&gt;
+&lt;td&gt;refreshed (Google/LinkedIn/X only — never for Apple)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;subscriptionPlanId&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;FK to &lt;code&gt;subscription_plans.id&lt;/code&gt;, always the &lt;code&gt;FREE&lt;/code&gt; row&amp;#39;s id&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;never touched&lt;/strong&gt; — a returning user keeps whatever tier they&amp;#39;re on&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;verifier&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;left &lt;code&gt;NULL&lt;/code&gt; (set later by &lt;code&gt;POST /api/auth/unlock&lt;/code&gt;)&lt;/td&gt;
+&lt;td&gt;untouched&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;createdAt&lt;/code&gt; / &lt;code&gt;updatedAt&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;set automatically by Prisma&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;updatedAt&lt;/code&gt; refreshed&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;&lt;/table&gt;
+&lt;h3 id=&quot;what-a-successful-callback-writes-to-the-session-cookie&quot;&gt;What a successful callback writes to the session cookie&lt;/h3&gt;
+&lt;p&gt;Every callback seals a &lt;code&gt;portfolio_session&lt;/code&gt; cookie (see the &lt;code&gt;SessionCookie&lt;/code&gt; security
+scheme below) containing:&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Field&lt;/th&gt;
+&lt;th&gt;Value&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;userId&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;the &lt;code&gt;User.id&lt;/code&gt; of the row just created/updated&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;userName&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;User.fullName&lt;/code&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;userEmail&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;User.username&lt;/code&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;userAvatar&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;provider avatar URL, or &lt;code&gt;&amp;quot;&amp;quot;&lt;/code&gt; for Apple/X-without-image&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;&lt;/table&gt;
+&lt;p&gt;&lt;code&gt;subscription&lt;/code&gt; is deliberately not included in this cookie.&lt;/p&gt;
+&lt;h3 id=&quot;failure-redirect-codes-errorcode&quot;&gt;Failure redirect codes (&lt;code&gt;/?error=&amp;lt;code&amp;gt;&lt;/code&gt;)&lt;/h3&gt;
+&lt;p&gt;On any of these, no row is created or modified in &lt;code&gt;users&lt;/code&gt; — the upsert is either
+never reached, or its result is discarded because the route already returned:&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Code&lt;/th&gt;
+&lt;th&gt;When&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;access_denied&lt;/code&gt; (or whatever code the provider sent)&lt;/td&gt;
+&lt;td&gt;User declined consent on the provider&amp;#39;s screen&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;missing_params&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;Callback arrived without &lt;code&gt;code&lt;/code&gt; or &lt;code&gt;state&lt;/code&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;invalid_state&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;CSRF check failed, or (X only) the PKCE &lt;code&gt;x_code_verifier&lt;/code&gt; cookie was missing&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;token_exchange_failed&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;The provider rejected the authorization code&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;invalid_user_info&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;Provider&amp;#39;s profile endpoint didn&amp;#39;t return the required fields (Google/X/LinkedIn only — Apple has no equivalent check)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;server_error&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;Any unhandled exception, including a failed upsert&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;&lt;/table&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH ewCFMV"><p>OAuth sign-in, vault-unlock, and profile routes for WealthVault, generated from
+<code>user-creation-api.md</code> and <code>unlock-api.md</code>.</p>
+<p>Scope: this spec covers the four OAuth providers&#39; initiate + callback routes,
+<code>POST /api/auth/unlock</code>, and <code>PATCH /api/auth/avatar</code>.</p>
+<p>WealthVault has no dedicated &quot;create a user&quot; endpoint: a <code>users</code> row is created
+or updated as a side effect of a successful OAuth callback (a Prisma <code>upsert</code>),
+detailed below. There is also no generic &quot;edit profile&quot; endpoint — <code>fullName</code> and
+<code>username</code> are only ever refreshed via that same OAuth login upsert; <code>avatar</code> is
+the one user detail with its own dedicated update route (<code>PATCH /api/auth/avatar</code>).</p>
+<h3 id="what-every-oauth-callback-writes-to-users-the-upsert">What every OAuth callback writes to <code>users</code> (the upsert)</h3>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>On create (new <code>username</code>)</th>
+<th>On update (returning user)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>id</code></td>
+<td>auto-generated <code>uuid()</code></td>
+<td>unchanged</td>
+</tr>
+<tr>
+<td><code>fullName</code></td>
+<td>from the provider profile</td>
+<td>refreshed from the provider profile</td>
+</tr>
+<tr>
+<td><code>username</code></td>
+<td>provider-derived identity string (email, or bare handle for X) — this is the upsert key</td>
+<td>unchanged</td>
+</tr>
+<tr>
+<td><code>auth_platformId</code></td>
+<td>FK to <code>auth_platforms.id</code>, resolved from the provider</td>
+<td>refreshed</td>
+</tr>
+<tr>
+<td><code>avatar</code></td>
+<td>provider&#39;s photo URL, or omitted entirely for Apple</td>
+<td>refreshed (Google/LinkedIn/X only — never for Apple)</td>
+</tr>
+<tr>
+<td><code>subscriptionPlanId</code></td>
+<td>FK to <code>subscription_plans.id</code>, always the <code>FREE</code> row&#39;s id</td>
+<td><strong>never touched</strong> — a returning user keeps whatever tier they&#39;re on</td>
+</tr>
+<tr>
+<td><code>verifier</code></td>
+<td>left <code>NULL</code> (set later by <code>POST /api/auth/unlock</code>)</td>
+<td>untouched</td>
+</tr>
+<tr>
+<td><code>createdAt</code> / <code>updatedAt</code></td>
+<td>set automatically by Prisma</td>
+<td><code>updatedAt</code> refreshed</td>
+</tr>
+</tbody></table>
+<h3 id="what-a-successful-callback-writes-to-the-session-cookie">What a successful callback writes to the session cookie</h3>
+<p>Every callback seals a <code>portfolio_session</code> cookie (see the <code>SessionCookie</code> security
+scheme below) containing:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>userId</code></td>
+<td>the <code>User.id</code> of the row just created/updated</td>
+</tr>
+<tr>
+<td><code>userName</code></td>
+<td><code>User.fullName</code></td>
+</tr>
+<tr>
+<td><code>userEmail</code></td>
+<td><code>User.username</code></td>
+</tr>
+<tr>
+<td><code>userAvatar</code></td>
+<td>provider avatar URL, or <code>&quot;&quot;</code> for Apple/X-without-image</td>
+</tr>
+</tbody></table>
+<p><code>subscription</code> is deliberately not included in this cookie.</p>
+<h3 id="failure-redirect-codes-errorcode">Failure redirect codes (<code>/?error=&lt;code&gt;</code>)</h3>
+<p>On any of these, no row is created or modified in <code>users</code> — the upsert is either
+never reached, or its result is discarded because the route already returned:</p>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>When</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>access_denied</code> (or whatever code the provider sent)</td>
+<td>User declined consent on the provider&#39;s screen</td>
+</tr>
+<tr>
+<td><code>missing_params</code></td>
+<td>Callback arrived without <code>code</code> or <code>state</code></td>
+</tr>
+<tr>
+<td><code>invalid_state</code></td>
+<td>CSRF check failed, or (X only) the PKCE <code>x_code_verifier</code> cookie was missing</td>
+</tr>
+<tr>
+<td><code>token_exchange_failed</code></td>
+<td>The provider rejected the authorization code</td>
+</tr>
+<tr>
+<td><code>invalid_user_info</code></td>
+<td>Provider&#39;s profile endpoint didn&#39;t return the required fields (Google/X/LinkedIn only — Apple has no equivalent check)</td>
+</tr>
+<tr>
+<td><code>server_error</code></td>
+<td>Any unhandled exception, including a failed upsert</td>
+</tr>
+</tbody></table>
+</div></div></div></div><div id="tag/Google" data-section-id="tag/Google" class="sc-eCQgVK jleRXN"><div class="sc-iCECmn lhRBUS"><div class="sc-hKVpXn kktglN"><h2 class="sc-qdQOe MOVBZ"><a class="sc-crPgjm jmoZom" href="#tag/Google" aria-label="tag/Google"></a>Google</h2></div></div><div class="sc-hKVpXn kmAAAV"><div class="sc-iJSMbW sc-cBEgGa fiNpIH ewCFMV redoc-markdown " html="&lt;p&gt;Google OAuth sign-in&lt;/p&gt;
+"><p>Google OAuth sign-in</p>
+</div></div></div><div id="tag/Google/operation/startGoogleSignIn" data-section-id="tag/Google/operation/startGoogleSignIn" class="sc-eCQgVK grDwca"><div data-section-id="operation/startGoogleSignIn" id="operation/startGoogleSignIn" class="sc-iCECmn lhRBUS"><div class="sc-hKVpXn kktglN"><h2 class="sc-qdQOe MOVBZ"><a class="sc-crPgjm jmoZom" href="#tag/Google/operation/startGoogleSignIn" aria-label="tag/Google/operation/startGoogleSignIn"></a>Start Google OAuth sign-in<!-- --> </h2><div><h3 class="sc-fINhYD hgNHCh">Responses</h3><div><button class="sc-cbuLjy hrTWt"><svg class="sc-dYjPD fwrvvc" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg><strong class="sc-fXmTIC cqDULz">302<!-- --> </strong><div html="&lt;p&gt;Redirect to Google&amp;#39;s consent screen.&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa sc-ciCrSJ fiNpIH dNfUH dDDioG"><p>Redirect to Google&#39;s consent screen.</p>
+</div></button></div></div></div><div class="sc-jSppWd sc-gKkgUA fpMlmc bdQQyo"><div class="sc-fXwuWv fYxpnv"><button class="sc-jWMFtl jzaJhV"><span type="get" class="sc-eEFuoE hlSrtW http-verb get">get</span><span class="sc-FpjRO dsIRaZ">/api/auth/google</span><svg class="sc-dYjPD bQKUih" style="margin-right:-25px" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg></button><div aria-hidden="true" class="sc-fmtEmb tUxhh"><div class="sc-ljIcGq bAnPPh"><div html="&lt;p&gt;Local development&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH bAoMjv"><p>Local development</p>
+</div><div tabindex="0" role="button"><div class="sc-jlJOIR PEJyb"><span>http://localhost:3000</span>/api/auth/google</div></div></div></div></div></div></div></div><div id="tag/Google/operation/completeGoogleSignIn" data-section-id="tag/Google/operation/completeGoogleSignIn" class="sc-eCQgVK grDwca"><div data-section-id="operation/completeGoogleSignIn" id="operation/completeGoogleSignIn" class="sc-iCECmn lhRBUS"><div class="sc-hKVpXn kktglN"><h2 class="sc-qdQOe MOVBZ"><a class="sc-crPgjm jmoZom" href="#tag/Google/operation/completeGoogleSignIn" aria-label="tag/Google/operation/completeGoogleSignIn"></a>Complete Google OAuth sign-in and upsert the user row<!-- --> </h2><div class="sc-iFUzrA ktZmcf"><div html="&lt;p&gt;Profile fetch (server-side): &lt;code&gt;GET https://www.googleapis.com/oauth2/v3/userinfo&lt;/code&gt;
+→ &lt;code&gt;email&lt;/code&gt; (→ &lt;code&gt;username&lt;/code&gt;), &lt;code&gt;given_name&lt;/code&gt;/&lt;code&gt;family_name&lt;/code&gt; (→ &lt;code&gt;fullName&lt;/code&gt;), &lt;code&gt;picture&lt;/code&gt; (→ &lt;code&gt;avatar&lt;/code&gt;).&lt;/p&gt;
+&lt;p&gt;Database effect on &lt;code&gt;users&lt;/code&gt; (full table in the Info section above):
+&lt;code&gt;auth_platformId&lt;/code&gt; set to the &lt;code&gt;GOOGLE&lt;/code&gt; row&amp;#39;s id, &lt;code&gt;avatar&lt;/code&gt; set.&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH ewCFMV"><p>Profile fetch (server-side): <code>GET https://www.googleapis.com/oauth2/v3/userinfo</code>
+→ <code>email</code> (→ <code>username</code>), <code>given_name</code>/<code>family_name</code> (→ <code>fullName</code>), <code>picture</code> (→ <code>avatar</code>).</p>
+<p>Database effect on <code>users</code> (full table in the Info section above):
+<code>auth_platformId</code> set to the <code>GOOGLE</code> row&#39;s id, <code>avatar</code> set.</p>
+</div></div><div><h5 class="sc-iqkkDd kcvrhp">query<!-- --> Parameters</h5><table class="sc-hHopjF bsjUmE"><tbody><tr class=""><td kind="field" title="code" class="sc-hCcPtG sc-fFCZOx jFNAwF lcdEEX"><span class="sc-ieCSdj kkMuqc"></span><span class="property-name">code</span><div class="sc-gSILEF sc-eIYgEQ jMRTsl dHYagA">required</div></td><td class="sc-bjLslk gLpZiQ"><div><div><span class="sc-gSILEF sc-lbpDNm jMRTsl NncTE"></span><span class="sc-gSILEF sc-iNyHtD jMRTsl kUjPnZ">string</span></div> <div><div html="&lt;p&gt;Authorization code from the provider.&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH bAoMjv"><p>Authorization code from the provider.</p>
+</div></div></div></td></tr><tr class=""><td kind="field" title="state" class="sc-hCcPtG sc-fFCZOx jFNAwF lcdEEX"><span class="sc-ieCSdj kkMuqc"></span><span class="property-name">state</span><div class="sc-gSILEF sc-eIYgEQ jMRTsl dHYagA">required</div></td><td class="sc-bjLslk gLpZiQ"><div><div><span class="sc-gSILEF sc-lbpDNm jMRTsl NncTE"></span><span class="sc-gSILEF sc-iNyHtD jMRTsl kUjPnZ">string</span></div> <div><div html="&lt;p&gt;Must match the &lt;code&gt;oauth_state&lt;/code&gt; cookie (CSRF check).&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH bAoMjv"><p>Must match the <code>oauth_state</code> cookie (CSRF check).</p>
+</div></div></div></td></tr><tr class="last "><td kind="field" title="error" class="sc-hCcPtG sc-fFCZOx jFNAwF lcdEEX"><span class="sc-ieCSdj kkMuqc"></span><span class="property-name">error</span></td><td class="sc-bjLslk gLpZiQ"><div><div><span class="sc-gSILEF sc-lbpDNm jMRTsl NncTE"></span><span class="sc-gSILEF sc-iNyHtD jMRTsl kUjPnZ">string</span></div> <div><div html="&lt;p&gt;Present if the user declined consent.&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH bAoMjv"><p>Present if the user declined consent.</p>
+</div></div></div></td></tr></tbody></table></div><div><h5 class="sc-iqkkDd kcvrhp">cookie<!-- --> Parameters</h5><table class="sc-hHopjF bsjUmE"><tbody><tr class="last "><td kind="field" title="oauth_state" class="sc-hCcPtG sc-fFCZOx jFNAwF lcdEEX"><span class="sc-ieCSdj kkMuqc"></span><span class="property-name">oauth_state</span><div class="sc-gSILEF sc-eIYgEQ jMRTsl dHYagA">required</div></td><td class="sc-bjLslk gLpZiQ"><div><div><span class="sc-gSILEF sc-lbpDNm jMRTsl NncTE"></span><span class="sc-gSILEF sc-iNyHtD jMRTsl kUjPnZ">string</span></div> <div><div html="&lt;p&gt;Set by the corresponding &lt;code&gt;GET /api/auth/&amp;lt;provider&amp;gt;&lt;/code&gt; initiate route.&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH bAoMjv"><p>Set by the corresponding <code>GET /api/auth/&lt;provider&gt;</code> initiate route.</p>
+</div></div></div></td></tr></tbody></table></div><div><h3 class="sc-fINhYD hgNHCh">Responses</h3><div><button class="sc-cbuLjy hrTWt"><svg class="sc-dYjPD fwrvvc" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg><strong class="sc-fXmTIC cqDULz">302<!-- --> </strong><div html="&lt;p&gt;Success → redirect to &lt;code&gt;/unlock&lt;/code&gt; with a sealed &lt;code&gt;portfolio_session&lt;/code&gt; cookie (fields
+listed in the Info section above), or failure → redirect to &lt;code&gt;/?error=&amp;lt;code&amp;gt;&lt;/code&gt;
+(full list of codes in the Info section above).&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa sc-ciCrSJ fiNpIH dNfUH dDDioG"><p>Success → redirect to <code>/unlock</code> with a sealed <code>portfolio_session</code> cookie (fields
+listed in the Info section above), or failure → redirect to <code>/?error=&lt;code&gt;</code>
+(full list of codes in the Info section above).</p>
+</div></button></div></div></div><div class="sc-jSppWd sc-gKkgUA fpMlmc bdQQyo"><div class="sc-fXwuWv fYxpnv"><button class="sc-jWMFtl jzaJhV"><span type="get" class="sc-eEFuoE hlSrtW http-verb get">get</span><span class="sc-FpjRO dsIRaZ">/api/auth/google/callback</span><svg class="sc-dYjPD bQKUih" style="margin-right:-25px" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg></button><div aria-hidden="true" class="sc-fmtEmb tUxhh"><div class="sc-ljIcGq bAnPPh"><div html="&lt;p&gt;Local development&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH bAoMjv"><p>Local development</p>
+</div><div tabindex="0" role="button"><div class="sc-jlJOIR PEJyb"><span>http://localhost:3000</span>/api/auth/google/callback</div></div></div></div></div></div></div></div><div id="tag/Apple" data-section-id="tag/Apple" class="sc-eCQgVK jleRXN"><div class="sc-iCECmn lhRBUS"><div class="sc-hKVpXn kktglN"><h2 class="sc-qdQOe MOVBZ"><a class="sc-crPgjm jmoZom" href="#tag/Apple" aria-label="tag/Apple"></a>Apple</h2></div></div><div class="sc-hKVpXn kmAAAV"><div class="sc-iJSMbW sc-cBEgGa fiNpIH ewCFMV redoc-markdown " html="&lt;p&gt;Apple OAuth sign-in&lt;/p&gt;
+"><p>Apple OAuth sign-in</p>
+</div></div></div><div id="tag/Apple/operation/startAppleSignIn" data-section-id="tag/Apple/operation/startAppleSignIn" class="sc-eCQgVK grDwca"><div data-section-id="operation/startAppleSignIn" id="operation/startAppleSignIn" class="sc-iCECmn lhRBUS"><div class="sc-hKVpXn kktglN"><h2 class="sc-qdQOe MOVBZ"><a class="sc-crPgjm jmoZom" href="#tag/Apple/operation/startAppleSignIn" aria-label="tag/Apple/operation/startAppleSignIn"></a>Start Apple OAuth sign-in<!-- --> </h2><div><h3 class="sc-fINhYD hgNHCh">Responses</h3><div><button class="sc-cbuLjy hrTWt"><svg class="sc-dYjPD fwrvvc" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg><strong class="sc-fXmTIC cqDULz">302<!-- --> </strong><div html="&lt;p&gt;Redirect to Apple&amp;#39;s consent screen (&lt;code&gt;response_mode=form_post&lt;/code&gt;).&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa sc-ciCrSJ fiNpIH dNfUH dDDioG"><p>Redirect to Apple&#39;s consent screen (<code>response_mode=form_post</code>).</p>
+</div></button></div></div></div><div class="sc-jSppWd sc-gKkgUA fpMlmc bdQQyo"><div class="sc-fXwuWv fYxpnv"><button class="sc-jWMFtl jzaJhV"><span type="get" class="sc-eEFuoE hlSrtW http-verb get">get</span><span class="sc-FpjRO dsIRaZ">/api/auth/apple</span><svg class="sc-dYjPD bQKUih" style="margin-right:-25px" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg></button><div aria-hidden="true" class="sc-fmtEmb tUxhh"><div class="sc-ljIcGq bAnPPh"><div html="&lt;p&gt;Local development&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH bAoMjv"><p>Local development</p>
+</div><div tabindex="0" role="button"><div class="sc-jlJOIR PEJyb"><span>http://localhost:3000</span>/api/auth/apple</div></div></div></div></div></div></div></div><div id="tag/Apple/operation/completeAppleSignIn" data-section-id="tag/Apple/operation/completeAppleSignIn" class="sc-eCQgVK grDwca"><div data-section-id="operation/completeAppleSignIn" id="operation/completeAppleSignIn" class="sc-iCECmn lhRBUS"><div class="sc-hKVpXn kktglN"><h2 class="sc-qdQOe MOVBZ"><a class="sc-crPgjm jmoZom" href="#tag/Apple/operation/completeAppleSignIn" aria-label="tag/Apple/operation/completeAppleSignIn"></a>Complete Apple OAuth sign-in and upsert the user row<!-- --> </h2><div class="sc-iFUzrA ktZmcf"><div html="&lt;p&gt;Apple is the one provider that calls its callback with &lt;code&gt;POST&lt;/code&gt; + a form-encoded
+body instead of &lt;code&gt;GET&lt;/code&gt; + a query string, per Apple&amp;#39;s &lt;code&gt;response_mode=form_post&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;Profile fetch: decoded &lt;code&gt;id_token&lt;/code&gt; JWT &lt;code&gt;email&lt;/code&gt; claim (→ &lt;code&gt;username&lt;/code&gt;, falls back to
+&lt;code&gt;apple_{sub}@apple.com&lt;/code&gt; since Apple omits &lt;code&gt;email&lt;/code&gt; on repeat logins) + the one-time
+&lt;code&gt;user&lt;/code&gt; field (→ &lt;code&gt;fullName&lt;/code&gt;, first login only).&lt;/p&gt;
+&lt;p&gt;Database effect on &lt;code&gt;users&lt;/code&gt; (full table in the Info section above):
+&lt;code&gt;auth_platformId&lt;/code&gt; set to the &lt;code&gt;APPLE&lt;/code&gt; row&amp;#39;s id, &lt;code&gt;avatar&lt;/code&gt; &lt;strong&gt;never&lt;/strong&gt; set (Apple exposes
+no profile picture).&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH ewCFMV"><p>Apple is the one provider that calls its callback with <code>POST</code> + a form-encoded
+body instead of <code>GET</code> + a query string, per Apple&#39;s <code>response_mode=form_post</code>.</p>
+<p>Profile fetch: decoded <code>id_token</code> JWT <code>email</code> claim (→ <code>username</code>, falls back to
+<code>apple_{sub}@apple.com</code> since Apple omits <code>email</code> on repeat logins) + the one-time
+<code>user</code> field (→ <code>fullName</code>, first login only).</p>
+<p>Database effect on <code>users</code> (full table in the Info section above):
+<code>auth_platformId</code> set to the <code>APPLE</code> row&#39;s id, <code>avatar</code> <strong>never</strong> set (Apple exposes
+no profile picture).</p>
+</div></div><div><h5 class="sc-iqkkDd kcvrhp">cookie<!-- --> Parameters</h5><table class="sc-hHopjF bsjUmE"><tbody><tr class="last "><td kind="field" title="oauth_state" class="sc-hCcPtG sc-fFCZOx jFNAwF lcdEEX"><span class="sc-ieCSdj kkMuqc"></span><span class="property-name">oauth_state</span><div class="sc-gSILEF sc-eIYgEQ jMRTsl dHYagA">required</div></td><td class="sc-bjLslk gLpZiQ"><div><div><span class="sc-gSILEF sc-lbpDNm jMRTsl NncTE"></span><span class="sc-gSILEF sc-iNyHtD jMRTsl kUjPnZ">string</span></div> <div><div html="&lt;p&gt;Set by the corresponding &lt;code&gt;GET /api/auth/&amp;lt;provider&amp;gt;&lt;/code&gt; initiate route.&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH bAoMjv"><p>Set by the corresponding <code>GET /api/auth/&lt;provider&gt;</code> initiate route.</p>
+</div></div></div></td></tr></tbody></table></div><h5 class="sc-iqkkDd kcvrhp">Request Body schema: <span class="sc-gXvOjn kxMqOs">application/x-www-form-urlencoded</span><div class="sc-gSILEF sc-eIYgEQ sc-dTCDEk jMRTsl dHYagA bxWqzP">required</div></h5><div html="" class="sc-iJSMbW sc-cBEgGa fiNpIH ewCFMV"></div><table class="sc-hHopjF bsjUmE"><tbody><tr class=""><td kind="field" title="code" class="sc-hCcPtG sc-fFCZOx jFNAwF lcdEEX"><span class="sc-ieCSdj kkMuqc"></span><span class="property-name">code</span><div class="sc-gSILEF sc-eIYgEQ jMRTsl dHYagA">required</div></td><td class="sc-bjLslk gLpZiQ"><div><div><span class="sc-gSILEF sc-lbpDNm jMRTsl NncTE"></span><span class="sc-gSILEF sc-iNyHtD jMRTsl kUjPnZ">string</span></div> <div><div html="&lt;p&gt;Authorization code from Apple&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH bAoMjv"><p>Authorization code from Apple</p>
+</div></div></div></td></tr><tr class=""><td kind="field" title="state" class="sc-hCcPtG sc-fFCZOx jFNAwF lcdEEX"><span class="sc-ieCSdj kkMuqc"></span><span class="property-name">state</span><div class="sc-gSILEF sc-eIYgEQ jMRTsl dHYagA">required</div></td><td class="sc-bjLslk gLpZiQ"><div><div><span class="sc-gSILEF sc-lbpDNm jMRTsl NncTE"></span><span class="sc-gSILEF sc-iNyHtD jMRTsl kUjPnZ">string</span></div> <div><div html="&lt;p&gt;Must match the &lt;code&gt;oauth_state&lt;/code&gt; cookie&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH bAoMjv"><p>Must match the <code>oauth_state</code> cookie</p>
+</div></div></div></td></tr><tr class=""><td kind="field" title="error" class="sc-hCcPtG sc-fFCZOx jFNAwF lcdEEX"><span class="sc-ieCSdj kkMuqc"></span><span class="property-name">error</span></td><td class="sc-bjLslk gLpZiQ"><div><div><span class="sc-gSILEF sc-lbpDNm jMRTsl NncTE"></span><span class="sc-gSILEF sc-iNyHtD jMRTsl kUjPnZ">string</span></div> <div><div html="&lt;p&gt;Present if the user declined consent&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH bAoMjv"><p>Present if the user declined consent</p>
+</div></div></div></td></tr><tr class="last "><td kind="field" title="user" class="sc-hCcPtG sc-fFCZOx jFNAwF lcdEEX"><span class="sc-ieCSdj kkMuqc"></span><span class="property-name">user</span></td><td class="sc-bjLslk gLpZiQ"><div><div><span class="sc-gSILEF sc-lbpDNm jMRTsl NncTE"></span><span class="sc-gSILEF sc-iNyHtD jMRTsl kUjPnZ">string</span></div> <div><div html="&lt;p&gt;JSON string, sent only on the user&amp;#39;s first-ever authorization; contains &lt;code&gt;name.firstName&lt;/code&gt;/&lt;code&gt;name.lastName&lt;/code&gt;&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH bAoMjv"><p>JSON string, sent only on the user&#39;s first-ever authorization; contains <code>name.firstName</code>/<code>name.lastName</code></p>
+</div></div></div></td></tr></tbody></table><div><h3 class="sc-fINhYD hgNHCh">Responses</h3><div><button class="sc-cbuLjy hrTWt"><svg class="sc-dYjPD fwrvvc" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg><strong class="sc-fXmTIC cqDULz">302<!-- --> </strong><div html="&lt;p&gt;Success → redirect to &lt;code&gt;/unlock&lt;/code&gt; with a sealed &lt;code&gt;portfolio_session&lt;/code&gt; cookie (fields
+listed in the Info section above), or failure → redirect to &lt;code&gt;/?error=&amp;lt;code&amp;gt;&lt;/code&gt;
+(full list of codes in the Info section above).&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa sc-ciCrSJ fiNpIH dNfUH dDDioG"><p>Success → redirect to <code>/unlock</code> with a sealed <code>portfolio_session</code> cookie (fields
+listed in the Info section above), or failure → redirect to <code>/?error=&lt;code&gt;</code>
+(full list of codes in the Info section above).</p>
+</div></button></div></div></div><div class="sc-jSppWd sc-gKkgUA fpMlmc bdQQyo"><div class="sc-fXwuWv fYxpnv"><button class="sc-jWMFtl jzaJhV"><span type="post" class="sc-eEFuoE hOENFc http-verb post">post</span><span class="sc-FpjRO dsIRaZ">/api/auth/apple/callback</span><svg class="sc-dYjPD bQKUih" style="margin-right:-25px" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg></button><div aria-hidden="true" class="sc-fmtEmb tUxhh"><div class="sc-ljIcGq bAnPPh"><div html="&lt;p&gt;Local development&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH bAoMjv"><p>Local development</p>
+</div><div tabindex="0" role="button"><div class="sc-jlJOIR PEJyb"><span>http://localhost:3000</span>/api/auth/apple/callback</div></div></div></div></div></div></div></div><div id="tag/X-(Twitter)" data-section-id="tag/X-(Twitter)" class="sc-eCQgVK jleRXN"><div class="sc-iCECmn lhRBUS"><div class="sc-hKVpXn kktglN"><h2 class="sc-qdQOe MOVBZ"><a class="sc-crPgjm jmoZom" href="#tag/X-(Twitter)" aria-label="tag/X-(Twitter)"></a>X (Twitter)</h2></div></div><div class="sc-hKVpXn kmAAAV"><div class="sc-iJSMbW sc-cBEgGa fiNpIH ewCFMV redoc-markdown " html="&lt;p&gt;X (Twitter) OAuth sign-in&lt;/p&gt;
+"><p>X (Twitter) OAuth sign-in</p>
+</div></div></div><div id="tag/X-(Twitter)/operation/startXSignIn" data-section-id="tag/X-(Twitter)/operation/startXSignIn" class="sc-eCQgVK grDwca"><div data-section-id="operation/startXSignIn" id="operation/startXSignIn" class="sc-iCECmn lhRBUS"><div class="sc-hKVpXn kktglN"><h2 class="sc-qdQOe MOVBZ"><a class="sc-crPgjm jmoZom" href="#tag/X-(Twitter)/operation/startXSignIn" aria-label="tag/X-(Twitter)/operation/startXSignIn"></a>Start X (Twitter) OAuth sign-in<!-- --> </h2><div><h3 class="sc-fINhYD hgNHCh">Responses</h3><div><button class="sc-cbuLjy hrTWt"><svg class="sc-dYjPD fwrvvc" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg><strong class="sc-fXmTIC cqDULz">302<!-- --> </strong><div html="&lt;p&gt;Redirect to X&amp;#39;s consent screen.&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa sc-ciCrSJ fiNpIH dNfUH dDDioG"><p>Redirect to X&#39;s consent screen.</p>
+</div></button></div></div></div><div class="sc-jSppWd sc-gKkgUA fpMlmc bdQQyo"><div class="sc-fXwuWv fYxpnv"><button class="sc-jWMFtl jzaJhV"><span type="get" class="sc-eEFuoE hlSrtW http-verb get">get</span><span class="sc-FpjRO dsIRaZ">/api/auth/x</span><svg class="sc-dYjPD bQKUih" style="margin-right:-25px" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg></button><div aria-hidden="true" class="sc-fmtEmb tUxhh"><div class="sc-ljIcGq bAnPPh"><div html="&lt;p&gt;Local development&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH bAoMjv"><p>Local development</p>
+</div><div tabindex="0" role="button"><div class="sc-jlJOIR PEJyb"><span>http://localhost:3000</span>/api/auth/x</div></div></div></div></div></div></div></div><div id="tag/X-(Twitter)/operation/completeXSignIn" data-section-id="tag/X-(Twitter)/operation/completeXSignIn" class="sc-eCQgVK grDwca"><div data-section-id="operation/completeXSignIn" id="operation/completeXSignIn" class="sc-iCECmn lhRBUS"><div class="sc-hKVpXn kktglN"><h2 class="sc-qdQOe MOVBZ"><a class="sc-crPgjm jmoZom" href="#tag/X-(Twitter)/operation/completeXSignIn" aria-label="tag/X-(Twitter)/operation/completeXSignIn"></a>Complete X OAuth sign-in and upsert the user row<!-- --> </h2><div class="sc-iFUzrA ktZmcf"><div html="&lt;p&gt;Profile fetch: &lt;code&gt;GET https://api.twitter.com/2/users/me&lt;/code&gt; → &lt;code&gt;username&lt;/code&gt; handle
+(→ &lt;code&gt;username&lt;/code&gt;, &lt;strong&gt;not&lt;/strong&gt; an email), &lt;code&gt;name&lt;/code&gt; (→ &lt;code&gt;fullName&lt;/code&gt;), &lt;code&gt;profile_image_url&lt;/code&gt; (→ &lt;code&gt;avatar&lt;/code&gt;).&lt;/p&gt;
+&lt;p&gt;Database effect on &lt;code&gt;users&lt;/code&gt; (full table in the Info section above):
+&lt;code&gt;auth_platformId&lt;/code&gt; set to the &lt;code&gt;X&lt;/code&gt; row&amp;#39;s id, &lt;code&gt;avatar&lt;/code&gt; set. &lt;code&gt;username&lt;/code&gt; is the bare X
+handle here, not an email, since X&amp;#39;s API doesn&amp;#39;t expose the account&amp;#39;s email address.&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH ewCFMV"><p>Profile fetch: <code>GET https://api.twitter.com/2/users/me</code> → <code>username</code> handle
+(→ <code>username</code>, <strong>not</strong> an email), <code>name</code> (→ <code>fullName</code>), <code>profile_image_url</code> (→ <code>avatar</code>).</p>
+<p>Database effect on <code>users</code> (full table in the Info section above):
+<code>auth_platformId</code> set to the <code>X</code> row&#39;s id, <code>avatar</code> set. <code>username</code> is the bare X
+handle here, not an email, since X&#39;s API doesn&#39;t expose the account&#39;s email address.</p>
+</div></div><div><h5 class="sc-iqkkDd kcvrhp">query<!-- --> Parameters</h5><table class="sc-hHopjF bsjUmE"><tbody><tr class=""><td kind="field" title="code" class="sc-hCcPtG sc-fFCZOx jFNAwF lcdEEX"><span class="sc-ieCSdj kkMuqc"></span><span class="property-name">code</span><div class="sc-gSILEF sc-eIYgEQ jMRTsl dHYagA">required</div></td><td class="sc-bjLslk gLpZiQ"><div><div><span class="sc-gSILEF sc-lbpDNm jMRTsl NncTE"></span><span class="sc-gSILEF sc-iNyHtD jMRTsl kUjPnZ">string</span></div> <div><div html="&lt;p&gt;Authorization code from the provider.&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH bAoMjv"><p>Authorization code from the provider.</p>
+</div></div></div></td></tr><tr class=""><td kind="field" title="state" class="sc-hCcPtG sc-fFCZOx jFNAwF lcdEEX"><span class="sc-ieCSdj kkMuqc"></span><span class="property-name">state</span><div class="sc-gSILEF sc-eIYgEQ jMRTsl dHYagA">required</div></td><td class="sc-bjLslk gLpZiQ"><div><div><span class="sc-gSILEF sc-lbpDNm jMRTsl NncTE"></span><span class="sc-gSILEF sc-iNyHtD jMRTsl kUjPnZ">string</span></div> <div><div html="&lt;p&gt;Must match the &lt;code&gt;oauth_state&lt;/code&gt; cookie (CSRF check).&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH bAoMjv"><p>Must match the <code>oauth_state</code> cookie (CSRF check).</p>
+</div></div></div></td></tr><tr class="last "><td kind="field" title="error" class="sc-hCcPtG sc-fFCZOx jFNAwF lcdEEX"><span class="sc-ieCSdj kkMuqc"></span><span class="property-name">error</span></td><td class="sc-bjLslk gLpZiQ"><div><div><span class="sc-gSILEF sc-lbpDNm jMRTsl NncTE"></span><span class="sc-gSILEF sc-iNyHtD jMRTsl kUjPnZ">string</span></div> <div><div html="&lt;p&gt;Present if the user declined consent.&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH bAoMjv"><p>Present if the user declined consent.</p>
+</div></div></div></td></tr></tbody></table></div><div><h5 class="sc-iqkkDd kcvrhp">cookie<!-- --> Parameters</h5><table class="sc-hHopjF bsjUmE"><tbody><tr class=""><td kind="field" title="oauth_state" class="sc-hCcPtG sc-fFCZOx jFNAwF lcdEEX"><span class="sc-ieCSdj kkMuqc"></span><span class="property-name">oauth_state</span><div class="sc-gSILEF sc-eIYgEQ jMRTsl dHYagA">required</div></td><td class="sc-bjLslk gLpZiQ"><div><div><span class="sc-gSILEF sc-lbpDNm jMRTsl NncTE"></span><span class="sc-gSILEF sc-iNyHtD jMRTsl kUjPnZ">string</span></div> <div><div html="&lt;p&gt;Set by the corresponding &lt;code&gt;GET /api/auth/&amp;lt;provider&amp;gt;&lt;/code&gt; initiate route.&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH bAoMjv"><p>Set by the corresponding <code>GET /api/auth/&lt;provider&gt;</code> initiate route.</p>
+</div></div></div></td></tr><tr class="last "><td kind="field" title="x_code_verifier" class="sc-hCcPtG sc-fFCZOx jFNAwF lcdEEX"><span class="sc-ieCSdj kkMuqc"></span><span class="property-name">x_code_verifier</span><div class="sc-gSILEF sc-eIYgEQ jMRTsl dHYagA">required</div></td><td class="sc-bjLslk gLpZiQ"><div><div><span class="sc-gSILEF sc-lbpDNm jMRTsl NncTE"></span><span class="sc-gSILEF sc-iNyHtD jMRTsl kUjPnZ">string</span></div> <div><div html="&lt;p&gt;PKCE verifier cookie set by &lt;code&gt;GET /api/auth/x&lt;/code&gt;; the callback fails without it.&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH bAoMjv"><p>PKCE verifier cookie set by <code>GET /api/auth/x</code>; the callback fails without it.</p>
+</div></div></div></td></tr></tbody></table></div><div><h3 class="sc-fINhYD hgNHCh">Responses</h3><div><button class="sc-cbuLjy hrTWt"><svg class="sc-dYjPD fwrvvc" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg><strong class="sc-fXmTIC cqDULz">302<!-- --> </strong><div html="&lt;p&gt;Success → redirect to &lt;code&gt;/unlock&lt;/code&gt; with a sealed &lt;code&gt;portfolio_session&lt;/code&gt; cookie (fields
+listed in the Info section above), or failure → redirect to &lt;code&gt;/?error=&amp;lt;code&amp;gt;&lt;/code&gt;
+(full list of codes in the Info section above).&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa sc-ciCrSJ fiNpIH dNfUH dDDioG"><p>Success → redirect to <code>/unlock</code> with a sealed <code>portfolio_session</code> cookie (fields
+listed in the Info section above), or failure → redirect to <code>/?error=&lt;code&gt;</code>
+(full list of codes in the Info section above).</p>
+</div></button></div></div></div><div class="sc-jSppWd sc-gKkgUA fpMlmc bdQQyo"><div class="sc-fXwuWv fYxpnv"><button class="sc-jWMFtl jzaJhV"><span type="get" class="sc-eEFuoE hlSrtW http-verb get">get</span><span class="sc-FpjRO dsIRaZ">/api/auth/x/callback</span><svg class="sc-dYjPD bQKUih" style="margin-right:-25px" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg></button><div aria-hidden="true" class="sc-fmtEmb tUxhh"><div class="sc-ljIcGq bAnPPh"><div html="&lt;p&gt;Local development&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH bAoMjv"><p>Local development</p>
+</div><div tabindex="0" role="button"><div class="sc-jlJOIR PEJyb"><span>http://localhost:3000</span>/api/auth/x/callback</div></div></div></div></div></div></div></div><div id="tag/LinkedIn" data-section-id="tag/LinkedIn" class="sc-eCQgVK jleRXN"><div class="sc-iCECmn lhRBUS"><div class="sc-hKVpXn kktglN"><h2 class="sc-qdQOe MOVBZ"><a class="sc-crPgjm jmoZom" href="#tag/LinkedIn" aria-label="tag/LinkedIn"></a>LinkedIn</h2></div></div><div class="sc-hKVpXn kmAAAV"><div class="sc-iJSMbW sc-cBEgGa fiNpIH ewCFMV redoc-markdown " html="&lt;p&gt;LinkedIn OAuth sign-in&lt;/p&gt;
+"><p>LinkedIn OAuth sign-in</p>
+</div></div></div><div id="tag/LinkedIn/operation/startLinkedInSignIn" data-section-id="tag/LinkedIn/operation/startLinkedInSignIn" class="sc-eCQgVK grDwca"><div data-section-id="operation/startLinkedInSignIn" id="operation/startLinkedInSignIn" class="sc-iCECmn lhRBUS"><div class="sc-hKVpXn kktglN"><h2 class="sc-qdQOe MOVBZ"><a class="sc-crPgjm jmoZom" href="#tag/LinkedIn/operation/startLinkedInSignIn" aria-label="tag/LinkedIn/operation/startLinkedInSignIn"></a>Start LinkedIn OAuth sign-in<!-- --> </h2><div><h3 class="sc-fINhYD hgNHCh">Responses</h3><div><button class="sc-cbuLjy hrTWt"><svg class="sc-dYjPD fwrvvc" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg><strong class="sc-fXmTIC cqDULz">302<!-- --> </strong><div html="&lt;p&gt;Redirect to LinkedIn&amp;#39;s consent screen.&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa sc-ciCrSJ fiNpIH dNfUH dDDioG"><p>Redirect to LinkedIn&#39;s consent screen.</p>
+</div></button></div></div></div><div class="sc-jSppWd sc-gKkgUA fpMlmc bdQQyo"><div class="sc-fXwuWv fYxpnv"><button class="sc-jWMFtl jzaJhV"><span type="get" class="sc-eEFuoE hlSrtW http-verb get">get</span><span class="sc-FpjRO dsIRaZ">/api/auth/linkedin</span><svg class="sc-dYjPD bQKUih" style="margin-right:-25px" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg></button><div aria-hidden="true" class="sc-fmtEmb tUxhh"><div class="sc-ljIcGq bAnPPh"><div html="&lt;p&gt;Local development&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH bAoMjv"><p>Local development</p>
+</div><div tabindex="0" role="button"><div class="sc-jlJOIR PEJyb"><span>http://localhost:3000</span>/api/auth/linkedin</div></div></div></div></div></div></div></div><div id="tag/LinkedIn/operation/completeLinkedInSignIn" data-section-id="tag/LinkedIn/operation/completeLinkedInSignIn" class="sc-eCQgVK grDwca"><div data-section-id="operation/completeLinkedInSignIn" id="operation/completeLinkedInSignIn" class="sc-iCECmn lhRBUS"><div class="sc-hKVpXn kktglN"><h2 class="sc-qdQOe MOVBZ"><a class="sc-crPgjm jmoZom" href="#tag/LinkedIn/operation/completeLinkedInSignIn" aria-label="tag/LinkedIn/operation/completeLinkedInSignIn"></a>Complete LinkedIn OAuth sign-in and upsert the user row<!-- --> </h2><div class="sc-iFUzrA ktZmcf"><div html="&lt;p&gt;Profile fetch: &lt;code&gt;GET https://api.linkedin.com/v2/userinfo&lt;/code&gt; (OIDC) → &lt;code&gt;email&lt;/code&gt;
+(→ &lt;code&gt;username&lt;/code&gt;), &lt;code&gt;given_name&lt;/code&gt;/&lt;code&gt;family_name&lt;/code&gt; (→ &lt;code&gt;fullName&lt;/code&gt;), &lt;code&gt;picture&lt;/code&gt; (→ &lt;code&gt;avatar&lt;/code&gt;).&lt;/p&gt;
+&lt;p&gt;Database effect on &lt;code&gt;users&lt;/code&gt; (full table in the Info section above):
+&lt;code&gt;auth_platformId&lt;/code&gt; set to the &lt;code&gt;LINKEDIN&lt;/code&gt; row&amp;#39;s id, &lt;code&gt;avatar&lt;/code&gt; set.&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH ewCFMV"><p>Profile fetch: <code>GET https://api.linkedin.com/v2/userinfo</code> (OIDC) → <code>email</code>
+(→ <code>username</code>), <code>given_name</code>/<code>family_name</code> (→ <code>fullName</code>), <code>picture</code> (→ <code>avatar</code>).</p>
+<p>Database effect on <code>users</code> (full table in the Info section above):
+<code>auth_platformId</code> set to the <code>LINKEDIN</code> row&#39;s id, <code>avatar</code> set.</p>
+</div></div><div><h5 class="sc-iqkkDd kcvrhp">query<!-- --> Parameters</h5><table class="sc-hHopjF bsjUmE"><tbody><tr class=""><td kind="field" title="code" class="sc-hCcPtG sc-fFCZOx jFNAwF lcdEEX"><span class="sc-ieCSdj kkMuqc"></span><span class="property-name">code</span><div class="sc-gSILEF sc-eIYgEQ jMRTsl dHYagA">required</div></td><td class="sc-bjLslk gLpZiQ"><div><div><span class="sc-gSILEF sc-lbpDNm jMRTsl NncTE"></span><span class="sc-gSILEF sc-iNyHtD jMRTsl kUjPnZ">string</span></div> <div><div html="&lt;p&gt;Authorization code from the provider.&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH bAoMjv"><p>Authorization code from the provider.</p>
+</div></div></div></td></tr><tr class=""><td kind="field" title="state" class="sc-hCcPtG sc-fFCZOx jFNAwF lcdEEX"><span class="sc-ieCSdj kkMuqc"></span><span class="property-name">state</span><div class="sc-gSILEF sc-eIYgEQ jMRTsl dHYagA">required</div></td><td class="sc-bjLslk gLpZiQ"><div><div><span class="sc-gSILEF sc-lbpDNm jMRTsl NncTE"></span><span class="sc-gSILEF sc-iNyHtD jMRTsl kUjPnZ">string</span></div> <div><div html="&lt;p&gt;Must match the &lt;code&gt;oauth_state&lt;/code&gt; cookie (CSRF check).&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH bAoMjv"><p>Must match the <code>oauth_state</code> cookie (CSRF check).</p>
+</div></div></div></td></tr><tr class="last "><td kind="field" title="error" class="sc-hCcPtG sc-fFCZOx jFNAwF lcdEEX"><span class="sc-ieCSdj kkMuqc"></span><span class="property-name">error</span></td><td class="sc-bjLslk gLpZiQ"><div><div><span class="sc-gSILEF sc-lbpDNm jMRTsl NncTE"></span><span class="sc-gSILEF sc-iNyHtD jMRTsl kUjPnZ">string</span></div> <div><div html="&lt;p&gt;Present if the user declined consent.&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH bAoMjv"><p>Present if the user declined consent.</p>
+</div></div></div></td></tr></tbody></table></div><div><h5 class="sc-iqkkDd kcvrhp">cookie<!-- --> Parameters</h5><table class="sc-hHopjF bsjUmE"><tbody><tr class="last "><td kind="field" title="oauth_state" class="sc-hCcPtG sc-fFCZOx jFNAwF lcdEEX"><span class="sc-ieCSdj kkMuqc"></span><span class="property-name">oauth_state</span><div class="sc-gSILEF sc-eIYgEQ jMRTsl dHYagA">required</div></td><td class="sc-bjLslk gLpZiQ"><div><div><span class="sc-gSILEF sc-lbpDNm jMRTsl NncTE"></span><span class="sc-gSILEF sc-iNyHtD jMRTsl kUjPnZ">string</span></div> <div><div html="&lt;p&gt;Set by the corresponding &lt;code&gt;GET /api/auth/&amp;lt;provider&amp;gt;&lt;/code&gt; initiate route.&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH bAoMjv"><p>Set by the corresponding <code>GET /api/auth/&lt;provider&gt;</code> initiate route.</p>
+</div></div></div></td></tr></tbody></table></div><div><h3 class="sc-fINhYD hgNHCh">Responses</h3><div><button class="sc-cbuLjy hrTWt"><svg class="sc-dYjPD fwrvvc" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg><strong class="sc-fXmTIC cqDULz">302<!-- --> </strong><div html="&lt;p&gt;Success → redirect to &lt;code&gt;/unlock&lt;/code&gt; with a sealed &lt;code&gt;portfolio_session&lt;/code&gt; cookie (fields
+listed in the Info section above), or failure → redirect to &lt;code&gt;/?error=&amp;lt;code&amp;gt;&lt;/code&gt;
+(full list of codes in the Info section above).&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa sc-ciCrSJ fiNpIH dNfUH dDDioG"><p>Success → redirect to <code>/unlock</code> with a sealed <code>portfolio_session</code> cookie (fields
+listed in the Info section above), or failure → redirect to <code>/?error=&lt;code&gt;</code>
+(full list of codes in the Info section above).</p>
+</div></button></div></div></div><div class="sc-jSppWd sc-gKkgUA fpMlmc bdQQyo"><div class="sc-fXwuWv fYxpnv"><button class="sc-jWMFtl jzaJhV"><span type="get" class="sc-eEFuoE hlSrtW http-verb get">get</span><span class="sc-FpjRO dsIRaZ">/api/auth/linkedin/callback</span><svg class="sc-dYjPD bQKUih" style="margin-right:-25px" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg></button><div aria-hidden="true" class="sc-fmtEmb tUxhh"><div class="sc-ljIcGq bAnPPh"><div html="&lt;p&gt;Local development&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH bAoMjv"><p>Local development</p>
+</div><div tabindex="0" role="button"><div class="sc-jlJOIR PEJyb"><span>http://localhost:3000</span>/api/auth/linkedin/callback</div></div></div></div></div></div></div></div><div id="tag/Unlock" data-section-id="tag/Unlock" class="sc-eCQgVK jleRXN"><div class="sc-iCECmn lhRBUS"><div class="sc-hKVpXn kktglN"><h2 class="sc-qdQOe MOVBZ"><a class="sc-crPgjm jmoZom" href="#tag/Unlock" aria-label="tag/Unlock"></a>Unlock</h2></div></div><div class="sc-hKVpXn kmAAAV"><div class="sc-iJSMbW sc-cBEgGa fiNpIH ewCFMV redoc-markdown " html="&lt;p&gt;Vault passphrase setup/verification, run after OAuth sign-in&lt;/p&gt;
+"><p>Vault passphrase setup/verification, run after OAuth sign-in</p>
+</div></div></div><div id="tag/Unlock/operation/unlockVault" data-section-id="tag/Unlock/operation/unlockVault" class="sc-eCQgVK grDwca"><div data-section-id="operation/unlockVault" id="operation/unlockVault" class="sc-iCECmn lhRBUS"><div class="sc-hKVpXn kktglN"><h2 class="sc-qdQOe MOVBZ"><a class="sc-crPgjm jmoZom" href="#tag/Unlock/operation/unlockVault" aria-label="tag/Unlock/operation/unlockVault"></a>Verify a returning user&#x27;s passphrase, or establish a first-time user&#x27;s passphrase<!-- --> </h2><div class="sc-iFUzrA ktZmcf"><div html="&lt;p&gt;There is exactly one route for both signup and login of the vault passphrase —
+it silently branches into a first-time (create) or returning (verify) path based
+on whether the signed-in user&amp;#39;s &lt;code&gt;verifier&lt;/code&gt; column is currently &lt;code&gt;NULL&lt;/code&gt;. Requires an
+existing OAuth session (&lt;code&gt;session.userId&lt;/code&gt;); this is the second of two distinct
+authentication steps (OAuth proves &lt;em&gt;who you are&lt;/em&gt;, this proves &lt;em&gt;you know the vault
+passphrase&lt;/em&gt;).&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH ewCFMV"><p>There is exactly one route for both signup and login of the vault passphrase —
+it silently branches into a first-time (create) or returning (verify) path based
+on whether the signed-in user&#39;s <code>verifier</code> column is currently <code>NULL</code>. Requires an
+existing OAuth session (<code>session.userId</code>); this is the second of two distinct
+authentication steps (OAuth proves <em>who you are</em>, this proves <em>you know the vault
+passphrase</em>).</p>
+</div></div><div class="sc-fuYIqi kGZLat"><div class="sc-dalEhJ jdqJPb"><h5 class="sc-iqkkDd sc-jQQpTv kcvrhp kEkHzF">Authorizations:</h5><svg class="sc-dYjPD bEEWJa" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg></div><div class="sc-jTPGds cVAkzL"><span class="sc-dtnsVa dVYuXz"><span class="sc-hPfayn hzxDQO"><i>SessionCookie</i></span></span></div></div><h5 class="sc-iqkkDd kcvrhp">Request Body schema: <span class="sc-gXvOjn kxMqOs">application/json</span><div class="sc-gSILEF sc-eIYgEQ sc-dTCDEk jMRTsl dHYagA bxWqzP">required</div></h5><div html="" class="sc-iJSMbW sc-cBEgGa fiNpIH ewCFMV"></div><table class="sc-hHopjF bsjUmE"><tbody><tr class="last "><td kind="field" title="passphrase" class="sc-hCcPtG sc-fFCZOx jFNAwF lcdEEX"><span class="sc-ieCSdj kkMuqc"></span><span class="property-name">passphrase</span><div class="sc-gSILEF sc-eIYgEQ jMRTsl dHYagA">required</div></td><td class="sc-bjLslk gLpZiQ"><div><div><span class="sc-gSILEF sc-lbpDNm jMRTsl NncTE"></span><span class="sc-gSILEF sc-iNyHtD jMRTsl kUjPnZ">string</span></div> <div><div html="&lt;p&gt;The vault passphrase, plaintext, sent once over HTTPS. Never persisted as plaintext anywhere — see the &lt;code&gt;UnlockResult&lt;/code&gt; schema.&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH bAoMjv"><p>The vault passphrase, plaintext, sent once over HTTPS. Never persisted as plaintext anywhere — see the <code>UnlockResult</code> schema.</p>
+</div></div></div></td></tr></tbody></table><div><h3 class="sc-fINhYD hgNHCh">Responses</h3><div><button class="sc-cbuLjy iSTZHA"><svg class="sc-dYjPD gngmNp" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg><strong class="sc-fXmTIC cqDULz">200<!-- --> </strong><div html="&lt;p&gt;Passphrase accepted.&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa sc-ciCrSJ fiNpIH dNfUH dDDioG"><p>Passphrase accepted.</p>
+</div></button></div><div><button class="sc-cbuLjy cKkXxa"><svg class="sc-dYjPD hJoFRR" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg><strong class="sc-fXmTIC cqDULz">400<!-- --> </strong><div html="&lt;p&gt;Missing passphrase, or (first-time only) the passphrase failed server-side strength validation.&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa sc-ciCrSJ fiNpIH dNfUH dDDioG"><p>Missing passphrase, or (first-time only) the passphrase failed server-side strength validation.</p>
+</div></button></div><div><button class="sc-cbuLjy cKkXxa"><svg class="sc-dYjPD hJoFRR" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg><strong class="sc-fXmTIC cqDULz">401<!-- --> </strong><div html="&lt;p&gt;No valid session, or (returning user only) the passphrase didn&amp;#39;t match.&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa sc-ciCrSJ fiNpIH dNfUH dDDioG"><p>No valid session, or (returning user only) the passphrase didn&#39;t match.</p>
+</div></button></div><div><button class="sc-cbuLjy cKkXxa"><svg class="sc-dYjPD hJoFRR" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg><strong class="sc-fXmTIC cqDULz">404<!-- --> </strong><div html="&lt;p&gt;session.userId doesn&amp;#39;t correspond to any row in users (stale session after account deletion).&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa sc-ciCrSJ fiNpIH dNfUH dDDioG"><p>session.userId doesn&#39;t correspond to any row in users (stale session after account deletion).</p>
+</div></button></div><div><button class="sc-cbuLjy cKkXxa"><svg class="sc-dYjPD hJoFRR" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg><strong class="sc-fXmTIC cqDULz">500<!-- --> </strong><div html="&lt;p&gt;Any unhandled exception.&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa sc-ciCrSJ fiNpIH dNfUH dDDioG"><p>Any unhandled exception.</p>
+</div></button></div></div></div><div class="sc-jSppWd sc-gKkgUA fpMlmc bdQQyo"><div class="sc-fXwuWv fYxpnv"><button class="sc-jWMFtl jzaJhV"><span type="post" class="sc-eEFuoE hOENFc http-verb post">post</span><span class="sc-FpjRO dsIRaZ">/api/auth/unlock</span><svg class="sc-dYjPD bQKUih" style="margin-right:-25px" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg></button><div aria-hidden="true" class="sc-fmtEmb tUxhh"><div class="sc-ljIcGq bAnPPh"><div html="&lt;p&gt;Local development&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH bAoMjv"><p>Local development</p>
+</div><div tabindex="0" role="button"><div class="sc-jlJOIR PEJyb"><span>http://localhost:3000</span>/api/auth/unlock</div></div></div></div></div><div><h3 class="sc-kEbgWM iamDfj"> <!-- -->Request samples<!-- --> </h3><div class="sc-cxxQMU kibfTX" data-rttabs="true"><ul class="react-tabs__tab-list" role="tablist"><li class="react-tabs__tab react-tabs__tab--selected" role="tab" id="tab_R_2aepa_0" aria-selected="true" aria-disabled="false" aria-controls="panel_R_2aepa_0" tabindex="0" data-rttab="true">Payload</li></ul><div class="react-tabs__tab-panel react-tabs__tab-panel--selected" role="tabpanel" id="panel_R_2aepa_0" aria-labelledby="tab_R_2aepa_0"><div><div class="sc-cNSlRw bMFMGt"><span class="sc-bBzIOb BuCyN">Content type</span><div class="sc-dPqFhK kgKexQ">application/json</div></div><div class="sc-hUheUT jUCYlq"><div class="sc-cTZdpT hHzuQA"><div class="sc-giQkEn dzKJV"><button><div class="sc-jcgtOs feYhXE">Copy</div></button></div><div tabindex="0" class="sc-iJSMbW fiNpIH sc-jNDflC jgTAJz"><div class="redoc-json"><code><button class="collapser" aria-label="collapse"></button><span class="token punctuation">{</span><span class="ellipsis"></span><ul class="obj collapsible"><li><div class="hoverable "><span class="property token string">"passphrase"</span>: <span class="token string">&quot;string&quot;</span></div></li></ul><span class="token punctuation">}</span></code></div></div></div></div></div></div></div></div><div><h3 class="sc-kEbgWM iamDfj"> <!-- -->Response samples<!-- --> </h3><div class="sc-cxxQMU kibfTX" data-rttabs="true"><ul class="react-tabs__tab-list" role="tablist"><li class="tab-success react-tabs__tab--selected" role="tab" id="tab_R_2eepa_0" aria-selected="true" aria-disabled="false" aria-controls="panel_R_2eepa_0" tabindex="0" data-rttab="true">200</li><li class="tab-error" role="tab" id="tab_R_2eepa_1" aria-selected="false" aria-disabled="false" aria-controls="panel_R_2eepa_1" data-rttab="true">400</li><li class="tab-error" role="tab" id="tab_R_2eepa_2" aria-selected="false" aria-disabled="false" aria-controls="panel_R_2eepa_2" data-rttab="true">401</li><li class="tab-error" role="tab" id="tab_R_2eepa_3" aria-selected="false" aria-disabled="false" aria-controls="panel_R_2eepa_3" data-rttab="true">404</li><li class="tab-error" role="tab" id="tab_R_2eepa_4" aria-selected="false" aria-disabled="false" aria-controls="panel_R_2eepa_4" data-rttab="true">500</li></ul><div class="react-tabs__tab-panel react-tabs__tab-panel--selected" role="tabpanel" id="panel_R_2eepa_0" aria-labelledby="tab_R_2eepa_0"><div><div class="sc-cNSlRw bMFMGt"><span class="sc-bBzIOb BuCyN">Content type</span><div class="sc-dPqFhK kgKexQ">application/json</div></div><div class="sc-hUheUT jUCYlq"><div class="sc-cTZdpT hHzuQA"><div class="sc-giQkEn dzKJV"><button><div class="sc-jcgtOs feYhXE">Copy</div></button></div><div tabindex="0" class="sc-iJSMbW fiNpIH sc-jNDflC jgTAJz"><div class="redoc-json"><code><button class="collapser" aria-label="collapse"></button><span class="token punctuation">{</span><span class="ellipsis"></span><ul class="obj collapsible"><li><div class="hoverable "><span class="property token string">"success"</span>: <span class="token boolean">true</span><span class="token punctuation">,</span></div></li><li><div class="hoverable "><span class="property token string">"firstTime"</span>: <span class="token boolean">true</span></div></li></ul><span class="token punctuation">}</span></code></div></div></div></div></div></div><div class="react-tabs__tab-panel" role="tabpanel" id="panel_R_2eepa_1" aria-labelledby="tab_R_2eepa_1"></div><div class="react-tabs__tab-panel" role="tabpanel" id="panel_R_2eepa_2" aria-labelledby="tab_R_2eepa_2"></div><div class="react-tabs__tab-panel" role="tabpanel" id="panel_R_2eepa_3" aria-labelledby="tab_R_2eepa_3"></div><div class="react-tabs__tab-panel" role="tabpanel" id="panel_R_2eepa_4" aria-labelledby="tab_R_2eepa_4"></div></div></div></div></div></div><div id="tag/Profile" data-section-id="tag/Profile" class="sc-eCQgVK jleRXN"><div class="sc-iCECmn lhRBUS"><div class="sc-hKVpXn kktglN"><h2 class="sc-qdQOe MOVBZ"><a class="sc-crPgjm jmoZom" href="#tag/Profile" aria-label="tag/Profile"></a>Profile</h2></div></div><div class="sc-hKVpXn kmAAAV"><div class="sc-iJSMbW sc-cBEgGa fiNpIH ewCFMV redoc-markdown " html="&lt;p&gt;Updating an existing user&amp;#39;s own details&lt;/p&gt;
+"><p>Updating an existing user&#39;s own details</p>
+</div></div></div><div id="tag/Profile/operation/updateAvatar" data-section-id="tag/Profile/operation/updateAvatar" class="sc-eCQgVK grDwca"><div data-section-id="operation/updateAvatar" id="operation/updateAvatar" class="sc-iCECmn lhRBUS"><div class="sc-hKVpXn kktglN"><h2 class="sc-qdQOe MOVBZ"><a class="sc-crPgjm jmoZom" href="#tag/Profile/operation/updateAvatar" aria-label="tag/Profile/operation/updateAvatar"></a>Update the current user&#x27;s avatar<!-- --> </h2><div class="sc-iFUzrA ktZmcf"><div html="&lt;p&gt;Overwrites &lt;code&gt;users.avatar&lt;/code&gt; with a client-uploaded image and keeps the session&amp;#39;s
+&lt;code&gt;userAvatar&lt;/code&gt; in sync, replacing whatever avatar the OAuth provider originally
+supplied. Independent of the unlock flow — can be called before or after
+&lt;code&gt;POST /api/auth/unlock&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;Database effect: &lt;code&gt;UPDATE users SET avatar = &amp;lt;data URL&amp;gt; WHERE id = :userId&lt;/code&gt;.&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH ewCFMV"><p>Overwrites <code>users.avatar</code> with a client-uploaded image and keeps the session&#39;s
+<code>userAvatar</code> in sync, replacing whatever avatar the OAuth provider originally
+supplied. Independent of the unlock flow — can be called before or after
+<code>POST /api/auth/unlock</code>.</p>
+<p>Database effect: <code>UPDATE users SET avatar = &lt;data URL&gt; WHERE id = :userId</code>.</p>
+</div></div><div class="sc-fuYIqi kGZLat"><div class="sc-dalEhJ jdqJPb"><h5 class="sc-iqkkDd sc-jQQpTv kcvrhp kEkHzF">Authorizations:</h5><svg class="sc-dYjPD bEEWJa" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg></div><div class="sc-jTPGds cVAkzL"><span class="sc-dtnsVa dVYuXz"><span class="sc-hPfayn hzxDQO"><i>SessionCookie</i></span></span></div></div><h5 class="sc-iqkkDd kcvrhp">Request Body schema: <span class="sc-gXvOjn kxMqOs">application/json</span><div class="sc-gSILEF sc-eIYgEQ sc-dTCDEk jMRTsl dHYagA bxWqzP">required</div></h5><div html="" class="sc-iJSMbW sc-cBEgGa fiNpIH ewCFMV"></div><table class="sc-hHopjF bsjUmE"><tbody><tr class="last "><td kind="field" title="avatar" class="sc-hCcPtG sc-fFCZOx jFNAwF lcdEEX"><span class="sc-ieCSdj kkMuqc"></span><span class="property-name">avatar</span><div class="sc-gSILEF sc-eIYgEQ jMRTsl dHYagA">required</div></td><td class="sc-bjLslk gLpZiQ"><div><div><span class="sc-gSILEF sc-lbpDNm jMRTsl NncTE"></span><span class="sc-gSILEF sc-iNyHtD jMRTsl kUjPnZ">string</span></div> <div><div html="&lt;p&gt;A base64 data URL (&lt;code&gt;data:image/...;base64,...&lt;/code&gt;). Must be under &lt;del&gt;500,000 characters (&lt;/del&gt;350 KB of image data).&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH bAoMjv"><p>A base64 data URL (<code>data:image/...;base64,...</code>). Must be under <del>500,000 characters (</del>350 KB of image data).</p>
+</div></div></div></td></tr></tbody></table><div><h3 class="sc-fINhYD hgNHCh">Responses</h3><div><button class="sc-cbuLjy iSTZHA"><svg class="sc-dYjPD gngmNp" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg><strong class="sc-fXmTIC cqDULz">200<!-- --> </strong><div html="&lt;p&gt;Avatar saved.&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa sc-ciCrSJ fiNpIH dNfUH dDDioG"><p>Avatar saved.</p>
+</div></button></div><div><button class="sc-cbuLjy cKkXxa"><svg class="sc-dYjPD hJoFRR" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg><strong class="sc-fXmTIC cqDULz">400<!-- --> </strong><div html="&lt;p&gt;Missing/malformed avatar data, or the image exceeds the size limit.&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa sc-ciCrSJ fiNpIH dNfUH dDDioG"><p>Missing/malformed avatar data, or the image exceeds the size limit.</p>
+</div></button></div><div><button class="sc-cbuLjy cKkXxa"><svg class="sc-dYjPD hJoFRR" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg><strong class="sc-fXmTIC cqDULz">401<!-- --> </strong><div html="&lt;p&gt;No valid session.&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa sc-ciCrSJ fiNpIH dNfUH dDDioG"><p>No valid session.</p>
+</div></button></div></div></div><div class="sc-jSppWd sc-gKkgUA fpMlmc bdQQyo"><div class="sc-fXwuWv fYxpnv"><button class="sc-jWMFtl jzaJhV"><span type="patch" class="sc-eEFuoE dFcZpG http-verb patch">patch</span><span class="sc-FpjRO dsIRaZ">/api/auth/avatar</span><svg class="sc-dYjPD bQKUih" style="margin-right:-25px" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg></button><div aria-hidden="true" class="sc-fmtEmb tUxhh"><div class="sc-ljIcGq bAnPPh"><div html="&lt;p&gt;Local development&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH bAoMjv"><p>Local development</p>
+</div><div tabindex="0" role="button"><div class="sc-jlJOIR PEJyb"><span>http://localhost:3000</span>/api/auth/avatar</div></div></div></div></div><div><h3 class="sc-kEbgWM iamDfj"> <!-- -->Request samples<!-- --> </h3><div class="sc-cxxQMU kibfTX" data-rttabs="true"><ul class="react-tabs__tab-list" role="tablist"><li class="react-tabs__tab react-tabs__tab--selected" role="tab" id="tab_R_2aepq_0" aria-selected="true" aria-disabled="false" aria-controls="panel_R_2aepq_0" tabindex="0" data-rttab="true">Payload</li></ul><div class="react-tabs__tab-panel react-tabs__tab-panel--selected" role="tabpanel" id="panel_R_2aepq_0" aria-labelledby="tab_R_2aepq_0"><div><div class="sc-cNSlRw bMFMGt"><span class="sc-bBzIOb BuCyN">Content type</span><div class="sc-dPqFhK kgKexQ">application/json</div></div><div class="sc-hUheUT jUCYlq"><div class="sc-cTZdpT hHzuQA"><div class="sc-giQkEn dzKJV"><button><div class="sc-jcgtOs feYhXE">Copy</div></button></div><div tabindex="0" class="sc-iJSMbW fiNpIH sc-jNDflC jgTAJz"><div class="redoc-json"><code><button class="collapser" aria-label="collapse"></button><span class="token punctuation">{</span><span class="ellipsis"></span><ul class="obj collapsible"><li><div class="hoverable "><span class="property token string">"avatar"</span>: <span class="token string">&quot;string&quot;</span></div></li></ul><span class="token punctuation">}</span></code></div></div></div></div></div></div></div></div><div><h3 class="sc-kEbgWM iamDfj"> <!-- -->Response samples<!-- --> </h3><div class="sc-cxxQMU kibfTX" data-rttabs="true"><ul class="react-tabs__tab-list" role="tablist"><li class="tab-success react-tabs__tab--selected" role="tab" id="tab_R_2eepq_0" aria-selected="true" aria-disabled="false" aria-controls="panel_R_2eepq_0" tabindex="0" data-rttab="true">200</li><li class="tab-error" role="tab" id="tab_R_2eepq_1" aria-selected="false" aria-disabled="false" aria-controls="panel_R_2eepq_1" data-rttab="true">400</li><li class="tab-error" role="tab" id="tab_R_2eepq_2" aria-selected="false" aria-disabled="false" aria-controls="panel_R_2eepq_2" data-rttab="true">401</li></ul><div class="react-tabs__tab-panel react-tabs__tab-panel--selected" role="tabpanel" id="panel_R_2eepq_0" aria-labelledby="tab_R_2eepq_0"><div><div class="sc-cNSlRw bMFMGt"><span class="sc-bBzIOb BuCyN">Content type</span><div class="sc-dPqFhK kgKexQ">application/json</div></div><div class="sc-hUheUT jUCYlq"><div class="sc-cTZdpT hHzuQA"><div class="sc-giQkEn dzKJV"><button><div class="sc-jcgtOs feYhXE">Copy</div></button></div><div tabindex="0" class="sc-iJSMbW fiNpIH sc-jNDflC jgTAJz"><div class="redoc-json"><code><button class="collapser" aria-label="collapse"></button><span class="token punctuation">{</span><span class="ellipsis"></span><ul class="obj collapsible"><li><div class="hoverable "><span class="property token string">"success"</span>: <span class="token boolean">true</span></div></li></ul><span class="token punctuation">}</span></code></div></div></div></div></div></div><div class="react-tabs__tab-panel" role="tabpanel" id="panel_R_2eepq_1" aria-labelledby="tab_R_2eepq_1"></div><div class="react-tabs__tab-panel" role="tabpanel" id="panel_R_2eepq_2" aria-labelledby="tab_R_2eepq_2"></div></div></div></div></div></div><div id="tag/Session" data-section-id="tag/Session" class="sc-eCQgVK jleRXN"><div class="sc-iCECmn lhRBUS"><div class="sc-hKVpXn kktglN"><h2 class="sc-qdQOe MOVBZ"><a class="sc-crPgjm jmoZom" href="#tag/Session" aria-label="tag/Session"></a>Session</h2></div></div><div class="sc-hKVpXn kmAAAV"><div class="sc-iJSMbW sc-cBEgGa fiNpIH ewCFMV redoc-markdown " html="&lt;p&gt;Ending an existing session&lt;/p&gt;
+"><p>Ending an existing session</p>
+</div></div></div><div id="tag/Session/operation/signOut" data-section-id="tag/Session/operation/signOut" class="sc-eCQgVK grDwca"><div data-section-id="operation/signOut" id="operation/signOut" class="sc-iCECmn lhRBUS"><div class="sc-hKVpXn kktglN"><h2 class="sc-qdQOe MOVBZ"><a class="sc-crPgjm jmoZom" href="#tag/Session/operation/signOut" aria-label="tag/Session/operation/signOut"></a>End the current session<!-- --> </h2><div class="sc-iFUzrA ktZmcf"><div html="&lt;p&gt;Destroys the &lt;code&gt;portfolio_session&lt;/code&gt; cookie&amp;#39;s contents — &lt;code&gt;userId&lt;/code&gt;, &lt;code&gt;userEmail&lt;/code&gt;,
+&lt;code&gt;userAvatar&lt;/code&gt;, and (if the vault was unlocked) &lt;code&gt;encryptionKey&lt;/code&gt; — in one call.
+No request body. Idempotent: calling this with no session, an expired session,
+or an already-cleared session all succeed identically; there&amp;#39;s no session state
+to check beforehand, so this route never returns 401.&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH ewCFMV"><p>Destroys the <code>portfolio_session</code> cookie&#39;s contents — <code>userId</code>, <code>userEmail</code>,
+<code>userAvatar</code>, and (if the vault was unlocked) <code>encryptionKey</code> — in one call.
+No request body. Idempotent: calling this with no session, an expired session,
+or an already-cleared session all succeed identically; there&#39;s no session state
+to check beforehand, so this route never returns 401.</p>
+</div></div><div><h3 class="sc-fINhYD hgNHCh">Responses</h3><div><button class="sc-cbuLjy iSTZHA"><svg class="sc-dYjPD gngmNp" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg><strong class="sc-fXmTIC cqDULz">200<!-- --> </strong><div html="&lt;p&gt;Session cleared.&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa sc-ciCrSJ fiNpIH dNfUH dDDioG"><p>Session cleared.</p>
+</div></button></div></div></div><div class="sc-jSppWd sc-gKkgUA fpMlmc bdQQyo"><div class="sc-fXwuWv fYxpnv"><button class="sc-jWMFtl jzaJhV"><span type="post" class="sc-eEFuoE hOENFc http-verb post">post</span><span class="sc-FpjRO dsIRaZ">/api/auth/signout</span><svg class="sc-dYjPD bQKUih" style="margin-right:-25px" version="1.1" viewBox="0 0 24 24" x="0" xmlns="http://www.w3.org/2000/svg" y="0" aria-hidden="true"><polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon></svg></button><div aria-hidden="true" class="sc-fmtEmb tUxhh"><div class="sc-ljIcGq bAnPPh"><div html="&lt;p&gt;Local development&lt;/p&gt;
+" class="sc-iJSMbW sc-cBEgGa fiNpIH bAoMjv"><p>Local development</p>
+</div><div tabindex="0" role="button"><div class="sc-jlJOIR PEJyb"><span>http://localhost:3000</span>/api/auth/signout</div></div></div></div></div><div><h3 class="sc-kEbgWM iamDfj"> <!-- -->Response samples<!-- --> </h3><div class="sc-cxxQMU kibfTX" data-rttabs="true"><ul class="react-tabs__tab-list" role="tablist"><li class="tab-success react-tabs__tab--selected" role="tab" id="tab_R_2eeqa_0" aria-selected="true" aria-disabled="false" aria-controls="panel_R_2eeqa_0" tabindex="0" data-rttab="true">200</li></ul><div class="react-tabs__tab-panel react-tabs__tab-panel--selected" role="tabpanel" id="panel_R_2eeqa_0" aria-labelledby="tab_R_2eeqa_0"><div><div class="sc-cNSlRw bMFMGt"><span class="sc-bBzIOb BuCyN">Content type</span><div class="sc-dPqFhK kgKexQ">application/json</div></div><div class="sc-hUheUT jUCYlq"><div class="sc-cTZdpT hHzuQA"><div class="sc-giQkEn dzKJV"><button><div class="sc-jcgtOs feYhXE">Copy</div></button></div><div tabindex="0" class="sc-iJSMbW fiNpIH sc-jNDflC jgTAJz"><div class="redoc-json"><code><button class="collapser" aria-label="collapse"></button><span class="token punctuation">{</span><span class="ellipsis"></span><ul class="obj collapsible"><li><div class="hoverable "><span class="property token string">"success"</span>: <span class="token boolean">true</span></div></li></ul><span class="token punctuation">}</span></code></div></div></div></div></div></div></div></div></div></div></div></div><div class="sc-ekVkVN bjzTxL"></div></div></div>
+      <script>
+      const __redoc_state = {"menu":{"activeItemIdx":-1},"spec":{"data":{"openapi":"3.0.3","info":{"title":"WealthVault API","version":"1.0.0","description":"OAuth sign-in, vault-unlock, and profile routes for WealthVault, generated from\n`user-creation-api.md` and `unlock-api.md`.\n\nScope: this spec covers the four OAuth providers' initiate + callback routes,\n`POST /api/auth/unlock`, and `PATCH /api/auth/avatar`.\n\nWealthVault has no dedicated \"create a user\" endpoint: a `users` row is created\nor updated as a side effect of a successful OAuth callback (a Prisma `upsert`),\ndetailed below. There is also no generic \"edit profile\" endpoint — `fullName` and\n`username` are only ever refreshed via that same OAuth login upsert; `avatar` is\nthe one user detail with its own dedicated update route (`PATCH /api/auth/avatar`).\n\n### What every OAuth callback writes to `users` (the upsert)\n\n| Column | On create (new `username`) | On update (returning user) |\n|---|---|---|\n| `id` | auto-generated `uuid()` | unchanged |\n| `fullName` | from the provider profile | refreshed from the provider profile |\n| `username` | provider-derived identity string (email, or bare handle for X) — this is the upsert key | unchanged |\n| `auth_platformId` | FK to `auth_platforms.id`, resolved from the provider | refreshed |\n| `avatar` | provider's photo URL, or omitted entirely for Apple | refreshed (Google/LinkedIn/X only — never for Apple) |\n| `subscriptionPlanId` | FK to `subscription_plans.id`, always the `FREE` row's id | **never touched** — a returning user keeps whatever tier they're on |\n| `verifier` | left `NULL` (set later by `POST /api/auth/unlock`) | untouched |\n| `createdAt` / `updatedAt` | set automatically by Prisma | `updatedAt` refreshed |\n\n### What a successful callback writes to the session cookie\n\nEvery callback seals a `portfolio_session` cookie (see the `SessionCookie` security\nscheme below) containing:\n\n| Field | Value |\n|---|---|\n| `userId` | the `User.id` of the row just created/updated |\n| `userName` | `User.fullName` |\n| `userEmail` | `User.username` |\n| `userAvatar` | provider avatar URL, or `\"\"` for Apple/X-without-image |\n\n`subscription` is deliberately not included in this cookie.\n\n### Failure redirect codes (`/?error=<code>`)\n\nOn any of these, no row is created or modified in `users` — the upsert is either\nnever reached, or its result is discarded because the route already returned:\n\n| Code | When |\n|---|---|\n| `access_denied` (or whatever code the provider sent) | User declined consent on the provider's screen |\n| `missing_params` | Callback arrived without `code` or `state` |\n| `invalid_state` | CSRF check failed, or (X only) the PKCE `x_code_verifier` cookie was missing |\n| `token_exchange_failed` | The provider rejected the authorization code |\n| `invalid_user_info` | Provider's profile endpoint didn't return the required fields (Google/X/LinkedIn only — Apple has no equivalent check) |\n| `server_error` | Any unhandled exception, including a failed upsert |\n"},"servers":[{"url":"http://localhost:3000","description":"Local development"}],"tags":[{"name":"Google","description":"Google OAuth sign-in"},{"name":"Apple","description":"Apple OAuth sign-in"},{"name":"X (Twitter)","description":"X (Twitter) OAuth sign-in"},{"name":"LinkedIn","description":"LinkedIn OAuth sign-in"},{"name":"Unlock","description":"Vault passphrase setup/verification, run after OAuth sign-in"},{"name":"Profile","description":"Updating an existing user's own details"},{"name":"Session","description":"Ending an existing session"}],"x-tagGroups":[{"name":"Authentication","tags":["Google","Apple","X (Twitter)","LinkedIn"]},{"name":"Vault","tags":["Unlock"]},{"name":"Profile","tags":["Profile"]},{"name":"Session","tags":["Session"]}],"security":[],"paths":{"/api/auth/google":{"get":{"summary":"Start Google OAuth sign-in","operationId":"startGoogleSignIn","tags":["Google"],"responses":{"302":{"description":"Redirect to Google's consent screen.","headers":{"Location":{"schema":{"type":"string"},"description":"Google's OAuth 2.0 authorization URL."},"Set-Cookie":{"schema":{"type":"string"},"example":"oauth_state=<token>; HttpOnly; Max-Age=600"}}}}}},"/api/auth/google/callback":{"get":{"summary":"Complete Google OAuth sign-in and upsert the user row","operationId":"completeGoogleSignIn","tags":["Google"],"parameters":[{"$ref":"#/components/parameters/OAuthCode"},{"$ref":"#/components/parameters/OAuthState"},{"$ref":"#/components/parameters/OAuthError"},{"$ref":"#/components/parameters/OAuthStateCookie"}],"description":"Profile fetch (server-side): `GET https://www.googleapis.com/oauth2/v3/userinfo`\n→ `email` (→ `username`), `given_name`/`family_name` (→ `fullName`), `picture` (→ `avatar`).\n\nDatabase effect on `users` (full table in the Info section above):\n`auth_platformId` set to the `GOOGLE` row's id, `avatar` set.\n","responses":{"302":{"description":"Success → redirect to `/unlock` with a sealed `portfolio_session` cookie (fields\nlisted in the Info section above), or failure → redirect to `/?error=<code>`\n(full list of codes in the Info section above).\n","headers":{"Location":{"schema":{"type":"string"}},"Set-Cookie":{"schema":{"type":"string"}}}}}}},"/api/auth/apple":{"get":{"summary":"Start Apple OAuth sign-in","operationId":"startAppleSignIn","tags":["Apple"],"responses":{"302":{"description":"Redirect to Apple's consent screen (`response_mode=form_post`).","headers":{"Location":{"schema":{"type":"string"},"description":"Apple's OAuth 2.0 authorization URL."},"Set-Cookie":{"schema":{"type":"string"},"example":"oauth_state=<token>; HttpOnly; Max-Age=600"}}}}}},"/api/auth/apple/callback":{"post":{"summary":"Complete Apple OAuth sign-in and upsert the user row","operationId":"completeAppleSignIn","tags":["Apple"],"description":"Apple is the one provider that calls its callback with `POST` + a form-encoded\nbody instead of `GET` + a query string, per Apple's `response_mode=form_post`.\n\nProfile fetch: decoded `id_token` JWT `email` claim (→ `username`, falls back to\n`apple_{sub}@apple.com` since Apple omits `email` on repeat logins) + the one-time\n`user` field (→ `fullName`, first login only).\n\nDatabase effect on `users` (full table in the Info section above):\n`auth_platformId` set to the `APPLE` row's id, `avatar` **never** set (Apple exposes\nno profile picture).\n","parameters":[{"$ref":"#/components/parameters/OAuthStateCookie"}],"requestBody":{"required":true,"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","required":["code","state"],"properties":{"code":{"type":"string","description":"Authorization code from Apple"},"state":{"type":"string","description":"Must match the `oauth_state` cookie"},"error":{"type":"string","description":"Present if the user declined consent"},"user":{"type":"string","description":"JSON string, sent only on the user's first-ever authorization; contains `name.firstName`/`name.lastName`"}}}}}},"responses":{"302":{"description":"Success → redirect to `/unlock` with a sealed `portfolio_session` cookie (fields\nlisted in the Info section above), or failure → redirect to `/?error=<code>`\n(full list of codes in the Info section above).\n","headers":{"Location":{"schema":{"type":"string"}},"Set-Cookie":{"schema":{"type":"string"}}}}}}},"/api/auth/x":{"get":{"summary":"Start X (Twitter) OAuth sign-in","operationId":"startXSignIn","tags":["X (Twitter)"],"responses":{"302":{"description":"Redirect to X's consent screen.","headers":{"Location":{"schema":{"type":"string"},"description":"X's OAuth 2.0 authorization URL."},"Set-Cookie":{"schema":{"type":"string"},"example":"oauth_state=<token>; HttpOnly; Max-Age=600\nx_code_verifier=<verifier>; HttpOnly; Max-Age=600\n","description":"Two cookies are set — `oauth_state`, and the PKCE (S256) `x_code_verifier`."}}}}}},"/api/auth/x/callback":{"get":{"summary":"Complete X OAuth sign-in and upsert the user row","operationId":"completeXSignIn","tags":["X (Twitter)"],"parameters":[{"$ref":"#/components/parameters/OAuthCode"},{"$ref":"#/components/parameters/OAuthState"},{"$ref":"#/components/parameters/OAuthError"},{"$ref":"#/components/parameters/OAuthStateCookie"},{"$ref":"#/components/parameters/XCodeVerifierCookie"}],"description":"Profile fetch: `GET https://api.twitter.com/2/users/me` → `username` handle\n(→ `username`, **not** an email), `name` (→ `fullName`), `profile_image_url` (→ `avatar`).\n\nDatabase effect on `users` (full table in the Info section above):\n`auth_platformId` set to the `X` row's id, `avatar` set. `username` is the bare X\nhandle here, not an email, since X's API doesn't expose the account's email address.\n","responses":{"302":{"description":"Success → redirect to `/unlock` with a sealed `portfolio_session` cookie (fields\nlisted in the Info section above), or failure → redirect to `/?error=<code>`\n(full list of codes in the Info section above).\n","headers":{"Location":{"schema":{"type":"string"}},"Set-Cookie":{"schema":{"type":"string"}}}}}}},"/api/auth/linkedin":{"get":{"summary":"Start LinkedIn OAuth sign-in","operationId":"startLinkedInSignIn","tags":["LinkedIn"],"responses":{"302":{"description":"Redirect to LinkedIn's consent screen.","headers":{"Location":{"schema":{"type":"string"},"description":"LinkedIn's OAuth 2.0 authorization URL."},"Set-Cookie":{"schema":{"type":"string"},"example":"oauth_state=<token>; HttpOnly; Max-Age=600"}}}}}},"/api/auth/linkedin/callback":{"get":{"summary":"Complete LinkedIn OAuth sign-in and upsert the user row","operationId":"completeLinkedInSignIn","tags":["LinkedIn"],"parameters":[{"$ref":"#/components/parameters/OAuthCode"},{"$ref":"#/components/parameters/OAuthState"},{"$ref":"#/components/parameters/OAuthError"},{"$ref":"#/components/parameters/OAuthStateCookie"}],"description":"Profile fetch: `GET https://api.linkedin.com/v2/userinfo` (OIDC) → `email`\n(→ `username`), `given_name`/`family_name` (→ `fullName`), `picture` (→ `avatar`).\n\nDatabase effect on `users` (full table in the Info section above):\n`auth_platformId` set to the `LINKEDIN` row's id, `avatar` set.\n","responses":{"302":{"description":"Success → redirect to `/unlock` with a sealed `portfolio_session` cookie (fields\nlisted in the Info section above), or failure → redirect to `/?error=<code>`\n(full list of codes in the Info section above).\n","headers":{"Location":{"schema":{"type":"string"}},"Set-Cookie":{"schema":{"type":"string"}}}}}}},"/api/auth/unlock":{"post":{"summary":"Verify a returning user's passphrase, or establish a first-time user's passphrase","operationId":"unlockVault","tags":["Unlock"],"security":[{"SessionCookie":[]}],"description":"There is exactly one route for both signup and login of the vault passphrase —\nit silently branches into a first-time (create) or returning (verify) path based\non whether the signed-in user's `verifier` column is currently `NULL`. Requires an\nexisting OAuth session (`session.userId`); this is the second of two distinct\nauthentication steps (OAuth proves *who you are*, this proves *you know the vault\npassphrase*).\n","requestBody":{"required":true,"content":{"application/json":{"schema":{"type":"object","required":["passphrase"],"properties":{"passphrase":{"type":"string","description":"The vault passphrase, plaintext, sent once over HTTPS. Never persisted as plaintext anywhere — see the `UnlockResult` schema."}}}}}},"responses":{"200":{"description":"Passphrase accepted.","content":{"application/json":{"schema":{"$ref":"#/components/schemas/UnlockResult"}}}},"400":{"description":"Missing passphrase, or (first-time only) the passphrase failed server-side strength validation.","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Error"},"examples":{"passphraseRequired":{"summary":"Request body had no passphrase field","value":{"error":"Passphrase required"}},"tooShort":{"summary":"First-time only — failed strength validation","value":{"error":"Passphrase must be at least 12 characters"}}}}}},"401":{"description":"No valid session, or (returning user only) the passphrase didn't match.","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Error"},"examples":{"unauthorized":{"summary":"No valid session","value":{"error":"Unauthorized"}},"invalidPassphrase":{"summary":"Returning user — derived key didn't match the stored verifier","value":{"error":"Invalid passphrase"}}}}}},"404":{"description":"session.userId doesn't correspond to any row in users (stale session after account deletion).","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Error"},"example":{"error":"User not found"}}}},"500":{"description":"Any unhandled exception.","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Error"},"example":{"error":"Failed to unlock"}}}}}}},"/api/auth/avatar":{"patch":{"summary":"Update the current user's avatar","operationId":"updateAvatar","tags":["Profile"],"security":[{"SessionCookie":[]}],"description":"Overwrites `users.avatar` with a client-uploaded image and keeps the session's\n`userAvatar` in sync, replacing whatever avatar the OAuth provider originally\nsupplied. Independent of the unlock flow — can be called before or after\n`POST /api/auth/unlock`.\n\nDatabase effect: `UPDATE users SET avatar = <data URL> WHERE id = :userId`.\n","requestBody":{"required":true,"content":{"application/json":{"schema":{"type":"object","required":["avatar"],"properties":{"avatar":{"type":"string","description":"A base64 data URL (`data:image/...;base64,...`). Must be under ~500,000 characters (~350 KB of image data)."}}}}}},"responses":{"200":{"description":"Avatar saved.","content":{"application/json":{"schema":{"type":"object","required":["success"],"properties":{"success":{"type":"boolean","enum":[true]}}}}}},"400":{"description":"Missing/malformed avatar data, or the image exceeds the size limit.","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Error"},"examples":{"invalidData":{"summary":"Missing, or doesn't start with data:image/","value":{"error":"Invalid avatar data"}},"tooLarge":{"summary":"Exceeds the ~350 KB limit","value":{"error":"Image too large (max ~350 KB)"}}}}}},"401":{"description":"No valid session.","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Error"},"example":{"error":"Unauthorized"}}}}}}},"/api/auth/signout":{"post":{"summary":"End the current session","operationId":"signOut","tags":["Session"],"description":"Destroys the `portfolio_session` cookie's contents — `userId`, `userEmail`,\n`userAvatar`, and (if the vault was unlocked) `encryptionKey` — in one call.\nNo request body. Idempotent: calling this with no session, an expired session,\nor an already-cleared session all succeed identically; there's no session state\nto check beforehand, so this route never returns 401.\n","responses":{"200":{"description":"Session cleared.","headers":{"Set-Cookie":{"schema":{"type":"string"},"example":"portfolio_session=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax"}},"content":{"application/json":{"schema":{"type":"object","required":["success"],"properties":{"success":{"type":"boolean","enum":[true]}}}}}}}}}},"components":{"parameters":{"OAuthCode":{"name":"code","in":"query","required":true,"schema":{"type":"string"},"description":"Authorization code from the provider."},"OAuthState":{"name":"state","in":"query","required":true,"schema":{"type":"string"},"description":"Must match the `oauth_state` cookie (CSRF check)."},"OAuthError":{"name":"error","in":"query","required":false,"schema":{"type":"string"},"description":"Present if the user declined consent."},"OAuthStateCookie":{"name":"oauth_state","in":"cookie","required":true,"schema":{"type":"string"},"description":"Set by the corresponding `GET /api/auth/<provider>` initiate route."},"XCodeVerifierCookie":{"name":"x_code_verifier","in":"cookie","required":true,"schema":{"type":"string"},"description":"PKCE verifier cookie set by `GET /api/auth/x`; the callback fails without it."}},"securitySchemes":{"SessionCookie":{"type":"apiKey","in":"cookie","name":"portfolio_session","description":"Sealed iron-session cookie set by any OAuth callback route; must contain userId. Missing or expired → 401 Unauthorized."}},"schemas":{"UnlockResult":{"type":"object","required":["success","firstTime"],"properties":{"success":{"type":"boolean","enum":[true]},"firstTime":{"type":"boolean","description":"Reflects the state of user.verifier before this request. True exactly once per user — the very first successful unlock — false on every subsequent unlock."}}},"Error":{"type":"object","required":["error"],"properties":{"error":{"type":"string"}}}}}}},"searchIndex":{"store":["tag/Google","tag/Google/operation/startGoogleSignIn","tag/Google/operation/completeGoogleSignIn","tag/Apple","tag/Apple/operation/startAppleSignIn","tag/Apple/operation/completeAppleSignIn","tag/X-(Twitter)","tag/X-(Twitter)/operation/startXSignIn","tag/X-(Twitter)/operation/completeXSignIn","tag/LinkedIn","tag/LinkedIn/operation/startLinkedInSignIn","tag/LinkedIn/operation/completeLinkedInSignIn","tag/Unlock","tag/Unlock/operation/unlockVault","tag/Profile","tag/Profile/operation/updateAvatar","tag/Session","tag/Session/operation/signOut"],"index":{"version":"2.3.9","fields":["title","description"],"fieldVectors":[["title/0",[0,1.773]],["description/0",[0,1.871,1,0.307,2,0.516]],["title/1",[0,1.211,1,0.199,2,0.334,3,1.407]],["description/1",[4,4.13]],["title/2",[0,0.919,1,0.151,2,0.253,5,1.068,6,1.068,7,0.514,8,1.068]],["description/2",[0,0.948,7,0.53,9,0.948,10,1.101,11,1.941,12,1.941,13,1.392,14,1.101,15,1.101,16,1.55,17,1.101,18,1.293,19,1.217,20,0.948,21,0.948,22,1.101,23,1.101,24,1.101,25,1.101,26,1.101,27,1.101,28,1.407,29,1.101,30,0.948,31,1.941]],["title/3",[32,1.773]],["description/3",[1,0.307,2,0.516,32,1.871]],["title/4",[1,0.199,2,0.334,3,1.407,32,1.211]],["description/4",[33,4.13]],["title/5",[1,0.151,2,0.253,5,1.068,6,1.068,7,0.514,8,1.068,32,0.919]],["description/5",[7,0.548,9,0.981,10,0.695,13,1.194,14,1.14,15,0.695,17,0.695,18,0.816,19,0.517,20,0.598,21,0.598,22,0.695,23,0.695,24,0.695,25,0.695,26,0.695,27,0.695,28,0.981,29,0.695,30,0.598,32,1.443,34,0.816,35,0.978,36,0.816,37,1.225,38,0.978,39,1.225,40,0.978,41,1.225,42,1.225,43,1.225,44,1.225,45,1.225,46,1.225,47,1.225,48,1.225,49,1.225,50,1.225,51,1.225,52,1.225,53,1.225,54,1.225,55,1.225,56,1.605,57,1.225,58,1.225,59,1.225,60,0.978,61,0.978,62,1.225]],["title/6",[63,1.535,64,2.095]],["description/6",[1,0.297,2,0.498,63,1.806,64,2.464]],["title/7",[1,0.18,2,0.302,3,1.272,63,1.095,64,1.494]],["description/7",[65,4.13]],["title/8",[1,0.151,2,0.253,5,1.068,6,1.068,7,0.514,8,1.068,63,0.919]],["description/8",[7,0.422,9,0.755,10,0.877,13,1.237,14,1.693,15,1.693,17,0.877,19,1.023,20,0.755,21,0.755,22,0.877,23,0.877,24,0.877,25,0.877,26,0.877,27,0.877,28,1.182,29,0.877,30,0.755,61,1.235,63,1.182,66,1.545,67,2.421,68,1.545,69,1.545,70,1.545,71,1.545,72,1.545,73,1.545,74,1.545,75,1.545,76,1.545,77,1.545]],["title/9",[78,1.773]],["description/9",[1,0.307,2,0.516,78,1.871]],["title/10",[1,0.199,2,0.334,3,1.407,78,1.211]],["description/10",[79,4.13]],["title/11",[1,0.151,2,0.253,5,1.068,6,1.068,7,0.514,8,1.068,78,0.919]],["description/11",[7,0.53,9,0.948,10,1.101,13,1.392,14,1.101,15,1.101,16,1.55,17,1.101,18,1.293,19,1.217,20,0.948,21,0.948,22,1.101,23,1.101,24,1.101,25,1.101,26,1.101,27,1.101,28,1.407,29,1.101,30,0.948,78,0.948,80,1.941,81,1.941,82,1.941]],["title/12",[83,2.419]],["description/12",[1,0.277,2,0.465,84,2.304,85,2.304,86,3.457,87,3.457]],["title/13",[85,1.77,88,1.392,89,1.161,90,1.507,91,1.742,92,1.392]],["description/13",[1,0.201,13,0.592,34,1.077,56,1.291,84,1.67,85,1.67,88,2.002,89,1.077,90,0.917,92,1.291,93,1.616,94,1.291,95,1.616,96,1.616,97,1.616,98,1.616,99,1.616,100,1.616,101,1.616,102,1.616,103,1.616,104,1.616,105,1.077,106,1.616,107,1.616,108,1.077,109,0.789,110,1.616,111,1.616,112,1.616,113,1.616,114,1.616,115,1.616,116,2.507,117,1.616,118,1.291]],["title/14",[9,1.773]],["description/14",[90,2.098,108,2.464,119,2.464,120,3.698]],["title/15",[19,1.047,90,1.407,105,1.652,119,1.652]],["description/15",[1,0.14,7,0.478,13,1.181,19,1.125,20,0.854,21,0.854,28,0.854,30,0.854,35,1.397,36,1.165,38,1.397,83,1.165,118,1.397,119,1.165,121,1.749,122,1.749,123,1.749,124,1.749,125,1.749,126,1.749,127,1.397,128,1.749,129,1.749,130,1.749,131,1.749,132,1.749,133,1.749,134,1.749,135,1.749,136,1.749,137,1.749,138,1.397,139,1.749]],["title/16",[109,1.773]],["description/16",[108,2.553,109,1.871,140,3.061]],["title/17",[105,1.847,109,1.354,140,2.215]],["description/17",[13,0.988,34,1.185,36,1.798,40,1.421,60,1.421,83,1.185,84,1.185,89,1.185,94,1.421,109,1.776,127,1.421,138,1.421,141,1.778,142,1.778,143,1.778,144,1.778,145,1.778,146,1.778,147,1.778,148,1.778,149,1.778,150,1.778,151,1.778,152,1.778,153,1.778,154,1.778,155,1.778,156,1.778,157,1.778,158,1.778]]],"invertedIndex":[["",{"_index":13,"title":{},"description":{"2":{},"5":{},"8":{},"11":{},"13":{},"15":{},"17":{}}}],["401",{"_index":157,"title":{},"description":{"17":{}}}],["abov",{"_index":26,"title":{},"description":{"2":{},"5":{},"8":{},"11":{}}}],["account'",{"_index":75,"title":{},"description":{"8":{}}}],["address",{"_index":76,"title":{},"description":{"8":{}}}],["already-clear",{"_index":150,"title":{},"description":{"17":{}}}],["api",{"_index":73,"title":{},"description":{"8":{}}}],["api/auth/appl",{"_index":33,"title":{},"description":{"4":{}}}],["api/auth/apple/callback",{"_index":62,"title":{},"description":{"5":{}}}],["api/auth/avatar",{"_index":139,"title":{},"description":{"15":{}}}],["api/auth/googl",{"_index":4,"title":{},"description":{"1":{}}}],["api/auth/google/callback",{"_index":31,"title":{},"description":{"2":{}}}],["api/auth/linkedin",{"_index":79,"title":{},"description":{"10":{}}}],["api/auth/linkedin/callback",{"_index":82,"title":{},"description":{"11":{}}}],["api/auth/signout",{"_index":158,"title":{},"description":{"17":{}}}],["api/auth/unlock",{"_index":118,"title":{},"description":{"13":{},"15":{}}}],["api/auth/x",{"_index":65,"title":{},"description":{"7":{}}}],["api/auth/x/callback",{"_index":77,"title":{},"description":{"8":{}}}],["appl",{"_index":32,"title":{"3":{},"4":{},"5":{}},"description":{"3":{},"5":{}}}],["apple'",{"_index":45,"title":{},"description":{"5":{}}}],["apple_{sub}@apple.com",{"_index":53,"title":{},"description":{"5":{}}}],["auth_platformid",{"_index":27,"title":{},"description":{"2":{},"5":{},"8":{},"11":{}}}],["authent",{"_index":114,"title":{},"description":{"13":{}}}],["avatar",{"_index":19,"title":{"15":{}},"description":{"2":{},"5":{},"8":{},"11":{},"15":{}}}],["back",{"_index":52,"title":{},"description":{"5":{}}}],["bare",{"_index":70,"title":{},"description":{"8":{}}}],["base",{"_index":101,"title":{},"description":{"13":{}}}],["befor",{"_index":135,"title":{},"description":{"15":{}}}],["beforehand",{"_index":156,"title":{},"description":{"17":{}}}],["bodi",{"_index":40,"title":{},"description":{"5":{},"17":{}}}],["both",{"_index":95,"title":{},"description":{"13":{}}}],["branch",{"_index":98,"title":{},"description":{"13":{}}}],["call",{"_index":36,"title":{},"description":{"5":{},"15":{},"17":{}}}],["callback",{"_index":37,"title":{},"description":{"5":{}}}],["check",{"_index":155,"title":{},"description":{"17":{}}}],["claim",{"_index":50,"title":{},"description":{"5":{}}}],["client-upload",{"_index":123,"title":{},"description":{"15":{}}}],["column",{"_index":104,"title":{},"description":{"13":{}}}],["complet",{"_index":5,"title":{"2":{},"5":{},"8":{},"11":{}},"description":{}}],["content",{"_index":144,"title":{},"description":{"17":{}}}],["cookie'",{"_index":143,"title":{},"description":{"17":{}}}],["creat",{"_index":99,"title":{},"description":{"13":{}}}],["current",{"_index":105,"title":{"15":{},"17":{}},"description":{"13":{}}}],["data",{"_index":136,"title":{},"description":{"15":{}}}],["databas",{"_index":20,"title":{},"description":{"2":{},"5":{},"8":{},"11":{},"15":{}}}],["decod",{"_index":47,"title":{},"description":{"5":{}}}],["destroy",{"_index":141,"title":{},"description":{"17":{}}}],["detail",{"_index":120,"title":{},"description":{"14":{}}}],["distinct",{"_index":113,"title":{},"description":{"13":{}}}],["doesn't",{"_index":74,"title":{},"description":{"8":{}}}],["effect",{"_index":21,"title":{},"description":{"2":{},"5":{},"8":{},"11":{},"15":{}}}],["email",{"_index":14,"title":{},"description":{"2":{},"5":{},"8":{},"11":{}}}],["encryptionkey",{"_index":146,"title":{},"description":{"17":{}}}],["end",{"_index":140,"title":{"17":{}},"description":{"16":{}}}],["establish",{"_index":91,"title":{"13":{}},"description":{}}],["exactli",{"_index":93,"title":{},"description":{"13":{}}}],["exist",{"_index":108,"title":{},"description":{"13":{},"14":{},"16":{}}}],["expir",{"_index":149,"title":{},"description":{"17":{}}}],["expos",{"_index":61,"title":{},"description":{"5":{},"8":{}}}],["fall",{"_index":51,"title":{},"description":{"5":{}}}],["fetch",{"_index":10,"title":{},"description":{"2":{},"5":{},"8":{},"11":{}}}],["field",{"_index":58,"title":{},"description":{"5":{}}}],["first",{"_index":59,"title":{},"description":{"5":{}}}],["first-tim",{"_index":92,"title":{"13":{}},"description":{"13":{}}}],["flow",{"_index":134,"title":{},"description":{"15":{}}}],["form-encod",{"_index":39,"title":{},"description":{"5":{}}}],["full",{"_index":22,"title":{},"description":{"2":{},"5":{},"8":{},"11":{}}}],["fullnam",{"_index":17,"title":{},"description":{"2":{},"5":{},"8":{},"11":{}}}],["given_name`/`family_nam",{"_index":16,"title":{},"description":{"2":{},"11":{}}}],["googl",{"_index":0,"title":{"0":{},"1":{},"2":{}},"description":{"0":{},"2":{}}}],["handl",{"_index":67,"title":{},"description":{"8":{}}}],["here",{"_index":71,"title":{},"description":{"8":{}}}],["https://api.linkedin.com/v2/userinfo",{"_index":80,"title":{},"description":{"11":{}}}],["https://api.twitter.com/2/users/m",{"_index":66,"title":{},"description":{"8":{}}}],["https://www.googleapis.com/oauth2/v3/userinfo",{"_index":12,"title":{},"description":{"2":{}}}],["id",{"_index":30,"title":{},"description":{"2":{},"5":{},"8":{},"11":{},"15":{}}}],["id_token",{"_index":48,"title":{},"description":{"5":{}}}],["idempot",{"_index":148,"title":{},"description":{"17":{}}}],["ident",{"_index":152,"title":{},"description":{"17":{}}}],["imag",{"_index":124,"title":{},"description":{"15":{}}}],["independ",{"_index":133,"title":{},"description":{"15":{}}}],["info",{"_index":24,"title":{},"description":{"2":{},"5":{},"8":{},"11":{}}}],["instead",{"_index":41,"title":{},"description":{"5":{}}}],["jwt",{"_index":49,"title":{},"description":{"5":{}}}],["keep",{"_index":125,"title":{},"description":{"15":{}}}],["know",{"_index":117,"title":{},"description":{"13":{}}}],["linkedin",{"_index":78,"title":{"9":{},"10":{},"11":{}},"description":{"9":{},"11":{}}}],["login",{"_index":56,"title":{},"description":{"5":{},"13":{}}}],["name",{"_index":68,"title":{},"description":{"8":{}}}],["never",{"_index":60,"title":{},"description":{"5":{},"17":{}}}],["null",{"_index":106,"title":{},"description":{"13":{}}}],["oauth",{"_index":1,"title":{"1":{},"2":{},"4":{},"5":{},"7":{},"8":{},"10":{},"11":{}},"description":{"0":{},"3":{},"6":{},"9":{},"12":{},"13":{},"15":{}}}],["oidc",{"_index":81,"title":{},"description":{"11":{}}}],["omit",{"_index":54,"title":{},"description":{"5":{}}}],["on",{"_index":34,"title":{},"description":{"5":{},"13":{},"17":{}}}],["one-tim",{"_index":57,"title":{},"description":{"5":{}}}],["origin",{"_index":131,"title":{},"description":{"15":{}}}],["overwrit",{"_index":121,"title":{},"description":{"15":{}}}],["passphras",{"_index":85,"title":{"13":{}},"description":{"12":{},"13":{}}}],["path",{"_index":100,"title":{},"description":{"13":{}}}],["per",{"_index":44,"title":{},"description":{"5":{}}}],["pictur",{"_index":18,"title":{},"description":{"2":{},"5":{},"11":{}}}],["portfolio_sess",{"_index":142,"title":{},"description":{"17":{}}}],["post",{"_index":38,"title":{},"description":{"5":{},"15":{}}}],["profil",{"_index":9,"title":{"14":{}},"description":{"2":{},"5":{},"8":{},"11":{}}}],["profile_image_url",{"_index":69,"title":{},"description":{"8":{}}}],["prove",{"_index":116,"title":{},"description":{"13":{}}}],["provid",{"_index":35,"title":{},"description":{"5":{},"15":{}}}],["queri",{"_index":42,"title":{},"description":{"5":{}}}],["repeat",{"_index":55,"title":{},"description":{"5":{}}}],["replac",{"_index":129,"title":{},"description":{"15":{}}}],["request",{"_index":147,"title":{},"description":{"17":{}}}],["requir",{"_index":107,"title":{},"description":{"13":{}}}],["response_mode=form_post",{"_index":46,"title":{},"description":{"5":{}}}],["return",{"_index":89,"title":{"13":{}},"description":{"13":{},"17":{}}}],["rout",{"_index":94,"title":{},"description":{"13":{},"17":{}}}],["row",{"_index":8,"title":{"2":{},"5":{},"8":{},"11":{}},"description":{}}],["row'",{"_index":29,"title":{},"description":{"2":{},"5":{},"8":{},"11":{}}}],["run",{"_index":87,"title":{},"description":{"12":{}}}],["second",{"_index":111,"title":{},"description":{"13":{}}}],["section",{"_index":25,"title":{},"description":{"2":{},"5":{},"8":{},"11":{}}}],["server-sid",{"_index":11,"title":{},"description":{"2":{}}}],["session",{"_index":109,"title":{"16":{},"17":{}},"description":{"13":{},"16":{},"17":{}}}],["session'",{"_index":126,"title":{},"description":{"15":{}}}],["session.userid",{"_index":110,"title":{},"description":{"13":{}}}],["set",{"_index":28,"title":{},"description":{"2":{},"5":{},"8":{},"11":{},"15":{}}}],["setup/verif",{"_index":86,"title":{},"description":{"12":{}}}],["sign-in",{"_index":2,"title":{"1":{},"2":{},"4":{},"5":{},"7":{},"8":{},"10":{},"11":{}},"description":{"0":{},"3":{},"6":{},"9":{},"12":{}}}],["signed-in",{"_index":103,"title":{},"description":{"13":{}}}],["signup",{"_index":96,"title":{},"description":{"13":{}}}],["silent",{"_index":97,"title":{},"description":{"13":{}}}],["start",{"_index":3,"title":{"1":{},"4":{},"7":{},"10":{}},"description":{}}],["state",{"_index":154,"title":{},"description":{"17":{}}}],["step",{"_index":115,"title":{},"description":{"13":{}}}],["string",{"_index":43,"title":{},"description":{"5":{}}}],["succe",{"_index":151,"title":{},"description":{"17":{}}}],["suppli",{"_index":132,"title":{},"description":{"15":{}}}],["sync",{"_index":128,"title":{},"description":{"15":{}}}],["tabl",{"_index":23,"title":{},"description":{"2":{},"5":{},"8":{},"11":{}}}],["there'",{"_index":153,"title":{},"description":{"17":{}}}],["twitter",{"_index":64,"title":{"6":{},"7":{}},"description":{"6":{}}}],["two",{"_index":112,"title":{},"description":{"13":{}}}],["unlock",{"_index":83,"title":{"12":{}},"description":{"15":{},"17":{}}}],["updat",{"_index":119,"title":{"15":{}},"description":{"14":{},"15":{}}}],["upsert",{"_index":6,"title":{"2":{},"5":{},"8":{},"11":{}},"description":{}}],["url",{"_index":137,"title":{},"description":{"15":{}}}],["user",{"_index":7,"title":{"2":{},"5":{},"8":{},"11":{}},"description":{"2":{},"5":{},"8":{},"11":{},"15":{}}}],["user'",{"_index":90,"title":{"13":{},"15":{}},"description":{"13":{},"14":{}}}],["useravatar",{"_index":127,"title":{},"description":{"15":{},"17":{}}}],["useremail",{"_index":145,"title":{},"description":{"17":{}}}],["userid",{"_index":138,"title":{},"description":{"15":{},"17":{}}}],["usernam",{"_index":15,"title":{},"description":{"2":{},"5":{},"8":{},"11":{}}}],["users.avatar",{"_index":122,"title":{},"description":{"15":{}}}],["vault",{"_index":84,"title":{},"description":{"12":{},"13":{},"17":{}}}],["verifi",{"_index":88,"title":{"13":{}},"description":{"13":{}}}],["whatev",{"_index":130,"title":{},"description":{"15":{}}}],["whether",{"_index":102,"title":{},"description":{"13":{}}}],["x",{"_index":63,"title":{"6":{},"7":{},"8":{}},"description":{"6":{},"8":{}}}],["x'",{"_index":72,"title":{},"description":{"8":{}}}]],"pipeline":[]}},"options":{}};
+
+      var container = document.getElementById('redoc');
+      Redoc.hydrate(__redoc_state, container);
+
+      </script>
+</body>
+
+</html>

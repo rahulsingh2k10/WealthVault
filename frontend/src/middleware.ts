@@ -31,7 +31,8 @@ export async function middleware(request: NextRequest) {
     pathname === "/api/auth/lock" ||
     pathname === "/api/auth/me" ||
     pathname === "/api/auth/avatar" ||
-    pathname === "/api/auth/signout"
+    pathname === "/api/auth/signout" ||
+    pathname.startsWith("/api-docs/")
   ) {
     return NextResponse.next();
   }
