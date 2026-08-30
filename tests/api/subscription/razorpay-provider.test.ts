@@ -44,15 +44,19 @@ describe("verifyWebhookSignature", () => {
 describe("normalizeWebhookEvent", () => {
   function evt(event: string, sub: Record<string, unknown>) {
     return JSON.stringify({
-      id: "evt_1",
+      entity: "event",
+      account_id: "acc_test",
       event,
+      contains: ["subscription"],
       payload: { subscription: { entity: { id: "sub_1", status: "active", plan_id: "plan_1", ...sub } } },
+      created_at: 1735689600,
     });
   }
 
   test("subscription.activated → kind 'activated', dates parsed from unix seconds", () => {
     const n = provider.normalizeWebhookEvent(
       evt("subscription.activated", { status: "active", current_start: 1735689600, current_end: 1738368000, charge_at: 1738368000, paid_count: 1 }),
+      "evt_1",
     );
     expect(n.kind).toBe("activated");
     expect(n.status).toBe("active");
@@ -62,26 +66,31 @@ describe("normalizeWebhookEvent", () => {
     expect(n.currentEnd?.toISOString()).toBe("2025-02-01T00:00:00.000Z");
   });
 
+  test("eventId comes from the header arg, not the body", () => {
+    const n = provider.normalizeWebhookEvent(evt("subscription.charged", { paid_count: 2 }), "evt_from_header");
+    expect(n.eventId).toBe("evt_from_header");
+  });
+
   test("subscription.charged → kind 'charged'", () => {
-    expect(provider.normalizeWebhookEvent(evt("subscription.charged", { paid_count: 2 })).kind).toBe("charged");
+    expect(provider.normalizeWebhookEvent(evt("subscription.charged", { paid_count: 2 }), "evt_1").kind).toBe("charged");
   });
   test("subscription.pending → kind 'pending'", () => {
-    expect(provider.normalizeWebhookEvent(evt("subscription.pending", { status: "pending" })).kind).toBe("pending");
+    expect(provider.normalizeWebhookEvent(evt("subscription.pending", { status: "pending" }), "evt_1").kind).toBe("pending");
   });
   test("subscription.halted → kind 'halted'", () => {
-    expect(provider.normalizeWebhookEvent(evt("subscription.halted", { status: "halted" })).kind).toBe("halted");
+    expect(provider.normalizeWebhookEvent(evt("subscription.halted", { status: "halted" }), "evt_1").kind).toBe("halted");
   });
   test("subscription.cancelled → kind 'cancelled'", () => {
-    expect(provider.normalizeWebhookEvent(evt("subscription.cancelled", { status: "cancelled" })).kind).toBe("cancelled");
+    expect(provider.normalizeWebhookEvent(evt("subscription.cancelled", { status: "cancelled" }), "evt_1").kind).toBe("cancelled");
   });
   test("subscription.completed → kind 'completed'", () => {
-    expect(provider.normalizeWebhookEvent(evt("subscription.completed", { status: "completed" })).kind).toBe("completed");
+    expect(provider.normalizeWebhookEvent(evt("subscription.completed", { status: "completed" }), "evt_1").kind).toBe("completed");
   });
   test("subscription.authenticated → kind 'authenticated'", () => {
-    expect(provider.normalizeWebhookEvent(evt("subscription.authenticated", { status: "authenticated" })).kind).toBe("authenticated");
+    expect(provider.normalizeWebhookEvent(evt("subscription.authenticated", { status: "authenticated" }), "evt_1").kind).toBe("authenticated");
   });
   test("unknown event → kind 'ignored'", () => {
-    expect(provider.normalizeWebhookEvent(evt("payment.captured", {})).kind).toBe("ignored");
+    expect(provider.normalizeWebhookEvent(evt("payment.captured", {}), "evt_1").kind).toBe("ignored");
   });
 });
 

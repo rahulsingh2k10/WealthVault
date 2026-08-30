@@ -38,12 +38,12 @@ export class FakeProvider implements PaymentProvider {
     return createHmac("sha256", RAZORPAY_WEBHOOK_SECRET).update(rawBody).digest("hex") === signatureHeader;
   }
 
-  normalizeWebhookEvent(rawBody: string): NormalizedWebhookEvent {
+  normalizeWebhookEvent(rawBody: string, eventId: string | null): NormalizedWebhookEvent {
     // Reuse RazorpayProvider's (pure, standalone) parsing logic directly —
     // NOT `new RazorpayProvider()`, which now throws if real Razorpay keys
     // aren't set (see Task 3's fail-fast fix), which would defeat the point
     // of a fake provider in tests that don't set them.
-    return normalizeRazorpayWebhookEvent(rawBody);
+    return normalizeRazorpayWebhookEvent(rawBody, eventId);
   }
 
   async cancelAtCycleEnd(): Promise<void> {

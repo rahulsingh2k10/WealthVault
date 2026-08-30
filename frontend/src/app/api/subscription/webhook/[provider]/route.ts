@@ -8,6 +8,12 @@ export async function POST(req: NextRequest, { params }: { params: { provider: s
   if (params.provider !== "razorpay") {
     return NextResponse.json({ error: "unknown provider" }, { status: 404 });
   }
+
+  if (!process.env.RAZORPAY_WEBHOOK_SECRET && process.env.PAYMENTS_PROVIDER !== "fake") {
+    console.error("[subscription] RAZORPAY_WEBHOOK_SECRET is not set — refusing to process webhooks with a guessable fallback secret");
+    return NextResponse.json({ error: "webhook not configured" }, { status: 500 });
+  }
+
   const raw = await req.text();
   const provider = getProvider("razorpay");
 
@@ -15,7 +21,7 @@ export async function POST(req: NextRequest, { params }: { params: { provider: s
     return NextResponse.json({ error: "bad signature" }, { status: 400 });
   }
 
-  const evt = provider.normalizeWebhookEvent(raw);
+  const evt = provider.normalizeWebhookEvent(raw, req.headers.get("x-razorpay-event-id"));
 
   // Idempotency: create the row up front. On a real duplicate (unique
   // constraint), only skip reprocessing if a PRIOR attempt actually finished

@@ -31,7 +31,7 @@ describeOrSkip("applySubscriptionEvent", () => {
     try {
       const row = await createSubscriptionRow(user.id, { tier: "ANNUAL", status: "created", currentEnd: null, paidCount: 0 });
       const nowSec = Math.floor(Date.now() / 1000);
-      const { body } = signedWebhook("subscription.activated", {
+      const { body, eventId } = signedWebhook("subscription.activated", {
         id: row.providerSubscriptionId,
         status: "active",
         current_start: nowSec,
@@ -39,7 +39,7 @@ describeOrSkip("applySubscriptionEvent", () => {
         charge_at: nowSec + 30 * 86400,
         paid_count: 1,
       });
-      const evt = normalizeRazorpayWebhookEvent(body);
+      const evt = normalizeRazorpayWebhookEvent(body, eventId);
 
       await applySubscriptionEvent(evt);
 
@@ -62,8 +62,8 @@ describeOrSkip("applySubscriptionEvent", () => {
     const user = await createTestUser();
     try {
       const row = await createSubscriptionRow(user.id, { tier: "MONTHLY", status: "active", paidCount: 2 });
-      const { body } = signedWebhook("subscription.charged", { id: row.providerSubscriptionId, paid_count: 9 });
-      const evt = normalizeRazorpayWebhookEvent(body);
+      const { body, eventId } = signedWebhook("subscription.charged", { id: row.providerSubscriptionId, paid_count: 9 });
+      const evt = normalizeRazorpayWebhookEvent(body, eventId);
 
       await applySubscriptionEvent(evt);
 
@@ -78,8 +78,8 @@ describeOrSkip("applySubscriptionEvent", () => {
     const user = await createTestUser();
     try {
       const row = await createSubscriptionRow(user.id, { tier: "QUARTERLY", status: "active" });
-      const { body } = signedWebhook("subscription.pending", { id: row.providerSubscriptionId, status: "pending" });
-      const evt = normalizeRazorpayWebhookEvent(body);
+      const { body, eventId } = signedWebhook("subscription.pending", { id: row.providerSubscriptionId, status: "pending" });
+      const evt = normalizeRazorpayWebhookEvent(body, eventId);
 
       await applySubscriptionEvent(evt);
 
@@ -96,8 +96,8 @@ describeOrSkip("applySubscriptionEvent", () => {
     const user = await createTestUser();
     try {
       const row = await createSubscriptionRow(user.id, { tier: "MONTHLY", status: "active", currentEnd: new Date(Date.now() + 10 * 86400_000) });
-      const { body } = signedWebhook("subscription.halted", { id: row.providerSubscriptionId, status: "halted" });
-      const evt = normalizeRazorpayWebhookEvent(body);
+      const { body, eventId } = signedWebhook("subscription.halted", { id: row.providerSubscriptionId, status: "halted" });
+      const evt = normalizeRazorpayWebhookEvent(body, eventId);
 
       await applySubscriptionEvent(evt);
 
@@ -113,8 +113,8 @@ describeOrSkip("applySubscriptionEvent", () => {
     try {
       const row = await createSubscriptionRow(user.id, { tier: "ANNUAL", status: "active" });
       const futureSec = Math.floor(Date.now() / 1000) + 20 * 86400;
-      const { body } = signedWebhook("subscription.cancelled", { id: row.providerSubscriptionId, status: "cancelled", current_end: futureSec });
-      const evt = normalizeRazorpayWebhookEvent(body);
+      const { body, eventId } = signedWebhook("subscription.cancelled", { id: row.providerSubscriptionId, status: "cancelled", current_end: futureSec });
+      const evt = normalizeRazorpayWebhookEvent(body, eventId);
 
       await applySubscriptionEvent(evt);
 
@@ -124,20 +124,50 @@ describeOrSkip("applySubscriptionEvent", () => {
       await deleteTestUser(user.id);
     }
   });
+
+  test("missing event-id header → normalize does not throw, eventId is stable across identical bodies", () => {
+    const { body } = signedWebhook("subscription.charged", { id: "sub_no_header", paid_count: 1 });
+    const a = normalizeRazorpayWebhookEvent(body, null);
+    const b = normalizeRazorpayWebhookEvent(body, null);
+    expect(a.eventId).toBeTruthy();
+    expect(a.eventId).toBe(b.eventId);
+  });
+
+  test("late non-terminal event does not resurrect an ended terminal subscription", async () => {
+    const prisma = getTestPrisma();
+    const user = await createTestUser();
+    try {
+      const row = await createSubscriptionRow(user.id, { tier: "MONTHLY", status: "halted", paidCount: 3 });
+      await prisma.subscription.update({ where: { id: row.id }, data: { endedAt: new Date() } });
+
+      const { body, eventId } = signedWebhook("subscription.charged", { id: row.providerSubscriptionId, status: "active", paid_count: 9 });
+      const evt = normalizeRazorpayWebhookEvent(body, eventId);
+
+      await applySubscriptionEvent(evt);
+
+      const updated = await prisma.subscription.findUniqueOrThrow({ where: { id: row.id } });
+      expect(updated.status).toBe("halted");
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
 });
 
 describeOrSkip("POST /api/subscription/webhook/[provider]", () => {
-  async function postWebhook(body: string, signature: string | null) {
+  async function postWebhook(body: string, signature: string | null, eventId?: string) {
+    const headers: Record<string, string> = {};
+    if (signature) headers["x-razorpay-signature"] = signature;
+    if (eventId) headers["x-razorpay-event-id"] = eventId;
     return fetch(`${TEST_SERVER_URL}/api/subscription/webhook/razorpay`, {
       method: "POST",
-      headers: signature ? { "x-razorpay-signature": signature } : {},
+      headers,
       body,
     });
   }
 
   test("bad signature → 400", async () => {
-    const { body } = signedWebhook("subscription.charged", { id: "sub_bad_sig", paid_count: 1 });
-    const res = await postWebhook(body, "not_a_real_signature");
+    const { body, eventId } = signedWebhook("subscription.charged", { id: "sub_bad_sig", paid_count: 1 });
+    const res = await postWebhook(body, "not_a_real_signature", eventId);
     expect(res.status).toBe(400);
   });
 
@@ -146,9 +176,9 @@ describeOrSkip("POST /api/subscription/webhook/[provider]", () => {
     const user = await createTestUser();
     try {
       const row = await createSubscriptionRow(user.id, { tier: "MONTHLY", status: "active", paidCount: 0 });
-      const { body, signature } = signedWebhook("subscription.charged", { id: row.providerSubscriptionId, paid_count: 4 });
+      const { body, signature, eventId } = signedWebhook("subscription.charged", { id: row.providerSubscriptionId, paid_count: 4 });
 
-      const first = await postWebhook(body, signature);
+      const first = await postWebhook(body, signature, eventId);
       expect(first.status).toBe(200);
       const firstJson = await first.json();
       expect(firstJson.duplicate).toBeFalsy();
@@ -156,7 +186,7 @@ describeOrSkip("POST /api/subscription/webhook/[provider]", () => {
       const afterFirst = await prisma.subscription.findUniqueOrThrow({ where: { id: row.id } });
       expect(afterFirst.paidCount).toBe(4);
 
-      const second = await postWebhook(body, signature);
+      const second = await postWebhook(body, signature, eventId);
       expect(second.status).toBe(200);
       const secondJson = await second.json();
       expect(secondJson.duplicate).toBe(true);
@@ -177,7 +207,7 @@ describeOrSkip("POST /api/subscription/webhook/[provider]", () => {
 
       await prisma.processedWebhookEvent.create({ data: { provider: "razorpay", eventId, status: "processing" } });
 
-      const res = await postWebhook(body, signature);
+      const res = await postWebhook(body, signature, eventId);
       expect(res.status).toBe(200);
       const json = await res.json();
       expect(json.duplicate).toBeFalsy();
@@ -199,7 +229,7 @@ describeOrSkip("POST /api/subscription/webhook/[provider]", () => {
       await prisma.processedWebhookEvent.create({ data: { provider: "razorpay", eventId, status: "done" } });
       const before = await prisma.subscription.findUniqueOrThrow({ where: { id: row.id } });
 
-      const res = await postWebhook(body, signature);
+      const res = await postWebhook(body, signature, eventId);
       expect(res.status).toBe(200);
       const json = await res.json();
       expect(json.duplicate).toBe(true);
@@ -213,15 +243,15 @@ describeOrSkip("POST /api/subscription/webhook/[provider]", () => {
   });
 
   test("valid signature but tampered body → 400", async () => {
-    const { body, signature } = signedWebhook("subscription.charged", { id: "sub_tampered", paid_count: 1 });
+    const { body, signature, eventId } = signedWebhook("subscription.charged", { id: "sub_tampered", paid_count: 1 });
     const tampered = body.replace('"paid_count":1', '"paid_count":9');
-    const res = await postWebhook(tampered, signature);
+    const res = await postWebhook(tampered, signature, eventId);
     expect(res.status).toBe(400);
   });
 
   test("missing signature header → 400", async () => {
-    const { body } = signedWebhook("subscription.charged", { id: "sub_no_sig", paid_count: 1 });
-    const res = await postWebhook(body, null);
+    const { body, eventId } = signedWebhook("subscription.charged", { id: "sub_no_sig", paid_count: 1 });
+    const res = await postWebhook(body, null, eventId);
     expect(res.status).toBe(400);
   });
 });

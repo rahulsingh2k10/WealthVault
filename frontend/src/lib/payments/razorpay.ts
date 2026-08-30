@@ -1,5 +1,5 @@
 import Razorpay from "razorpay";
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { RAZORPAY_WEBHOOK_SECRET } from "./webhookSecret";
 import type {
   CreateSubscriptionInput,
@@ -20,6 +20,10 @@ function safeEqualHex(a: string, b: string): boolean {
   const bb = Buffer.from(b, "hex");
   if (ba.length !== bb.length || ba.length === 0) return false;
   return timingSafeEqual(ba, bb);
+}
+
+function sha256Hex(s: string): string {
+  return createHash("sha256").update(s).digest("hex");
 }
 
 function unixToDate(v: unknown): Date | null {
@@ -43,9 +47,8 @@ const EVENT_KIND: Record<string, WebhookEventKind> = {
  * constructing a RazorpayProvider (which requires real RAZORPAY_KEY_ID/SECRET
  * at construction time).
  */
-export function normalizeRazorpayWebhookEvent(rawBody: string): NormalizedWebhookEvent {
+export function normalizeRazorpayWebhookEvent(rawBody: string, eventId: string | null): NormalizedWebhookEvent {
   const body = JSON.parse(rawBody) as {
-    id: string;
     event: string;
     payload?: { subscription?: { entity?: Record<string, unknown> } };
   };
@@ -53,7 +56,7 @@ export function normalizeRazorpayWebhookEvent(rawBody: string): NormalizedWebhoo
   const kind = EVENT_KIND[body.event] ?? "ignored";
   return {
     kind,
-    eventId: body.id,
+    eventId: eventId || sha256Hex(rawBody),
     providerSubscriptionId: String(e.id ?? ""),
     status: String(e.status ?? ""),
     paidCount: typeof e.paid_count === "number" ? e.paid_count : undefined,
@@ -91,8 +94,8 @@ export class RazorpayProvider implements PaymentProvider {
     return safeEqualHex(hmacHex(RAZORPAY_WEBHOOK_SECRET, rawBody), signatureHeader);
   }
 
-  normalizeWebhookEvent(rawBody: string): NormalizedWebhookEvent {
-    return normalizeRazorpayWebhookEvent(rawBody);
+  normalizeWebhookEvent(rawBody: string, eventId: string | null): NormalizedWebhookEvent {
+    return normalizeRazorpayWebhookEvent(rawBody, eventId);
   }
 
   async ensureCustomer(user: EnsureCustomerUser): Promise<string> {

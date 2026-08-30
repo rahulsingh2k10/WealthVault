@@ -82,6 +82,14 @@ export async function applySubscriptionEvent(evt: NormalizedWebhookEvent): Promi
     return;
   }
 
+  // A subscription that has already reached a terminal state (halted/completed/
+  // expired, with endedAt set) must not be resurrected by a late or out-of-order
+  // non-terminal event.
+  if (TERMINAL.has(row.status) && row.endedAt && !TERMINAL.has(evt.status)) {
+    console.warn("[subscription] ignoring non-terminal webhook for an ended subscription", evt.providerSubscriptionId, evt.status);
+    return;
+  }
+
   await prisma.subscription.update({
     where: { id: row.id },
     data: {

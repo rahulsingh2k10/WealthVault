@@ -126,7 +126,7 @@ test.describe("Razorpay subscription flow", () => {
       });
       const res = await page.request.post("/api/subscription/webhook/razorpay", {
         data: body,
-        headers: { "x-razorpay-signature": signature, "content-type": "application/json" },
+        headers: { "x-razorpay-signature": signature, "x-razorpay-event-id": eventId, "content-type": "application/json" },
       });
       expect(res.status()).toBe(200);
       await getTestPrisma().processedWebhookEvent.deleteMany({ where: { eventId } });
@@ -171,8 +171,8 @@ test.describe("Razorpay subscription flow", () => {
 
   test("a webhook with a bad signature is rejected with 400", async ({ page }) => {
     const res = await page.request.post("/api/subscription/webhook/razorpay", {
-      data: JSON.stringify({ id: "evt_x", event: "subscription.activated", payload: {} }),
-      headers: { "x-razorpay-signature": "deadbeef", "content-type": "application/json" },
+      data: JSON.stringify({ entity: "event", event: "subscription.activated", payload: {} }),
+      headers: { "x-razorpay-signature": "deadbeef", "x-razorpay-event-id": "evt_x", "content-type": "application/json" },
     });
     expect(res.status()).toBe(400);
   });
