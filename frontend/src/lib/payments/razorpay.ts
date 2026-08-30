@@ -37,6 +37,34 @@ const EVENT_KIND: Record<string, WebhookEventKind> = {
   "subscription.updated": "updated",
 };
 
+/**
+ * Pure — does not touch `this`, so it's exported standalone rather than only
+ * as a RazorpayProvider method. FakeProvider reuses this directly instead of
+ * constructing a RazorpayProvider (which requires real RAZORPAY_KEY_ID/SECRET
+ * at construction time).
+ */
+export function normalizeRazorpayWebhookEvent(rawBody: string): NormalizedWebhookEvent {
+  const body = JSON.parse(rawBody) as {
+    id: string;
+    event: string;
+    payload?: { subscription?: { entity?: Record<string, unknown> } };
+  };
+  const e = body.payload?.subscription?.entity ?? {};
+  const kind = EVENT_KIND[body.event] ?? "ignored";
+  return {
+    kind,
+    eventId: body.id,
+    providerSubscriptionId: String(e.id ?? ""),
+    status: String(e.status ?? ""),
+    paidCount: typeof e.paid_count === "number" ? e.paid_count : undefined,
+    currentStart: unixToDate(e.current_start),
+    currentEnd: unixToDate(e.current_end),
+    chargeAt: unixToDate(e.charge_at),
+    cancelAtCycleEnd: kind === "cancelled" ? Boolean(e.current_end) : undefined,
+    providerPlanId: e.plan_id ? String(e.plan_id) : undefined,
+  };
+}
+
 export class RazorpayProvider implements PaymentProvider {
   readonly name: ProviderName = "razorpay";
   private client: Razorpay;
@@ -64,25 +92,7 @@ export class RazorpayProvider implements PaymentProvider {
   }
 
   normalizeWebhookEvent(rawBody: string): NormalizedWebhookEvent {
-    const body = JSON.parse(rawBody) as {
-      id: string;
-      event: string;
-      payload?: { subscription?: { entity?: Record<string, unknown> } };
-    };
-    const e = body.payload?.subscription?.entity ?? {};
-    const kind = EVENT_KIND[body.event] ?? "ignored";
-    return {
-      kind,
-      eventId: body.id,
-      providerSubscriptionId: String(e.id ?? ""),
-      status: String(e.status ?? ""),
-      paidCount: typeof e.paid_count === "number" ? e.paid_count : undefined,
-      currentStart: unixToDate(e.current_start),
-      currentEnd: unixToDate(e.current_end),
-      chargeAt: unixToDate(e.charge_at),
-      cancelAtCycleEnd: kind === "cancelled" ? Boolean(e.current_end) : undefined,
-      providerPlanId: e.plan_id ? String(e.plan_id) : undefined,
-    };
+    return normalizeRazorpayWebhookEvent(rawBody);
   }
 
   async ensureCustomer(user: EnsureCustomerUser): Promise<string> {
