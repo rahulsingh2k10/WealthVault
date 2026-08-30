@@ -474,17 +474,52 @@ const EVENT_KIND: Record<string, WebhookEventKind> = {
   "subscription.updated": "updated",
 };
 
+/**
+ * Pure — does not touch `this`, so it's exported standalone rather than only
+ * as a RazorpayProvider method. FakeProvider (Task 4) reuses this directly
+ * instead of constructing a RazorpayProvider (which now requires real
+ * RAZORPAY_KEY_ID/SECRET at construction time — see the constructor below).
+ */
+export function normalizeRazorpayWebhookEvent(rawBody: string): NormalizedWebhookEvent {
+  const body = JSON.parse(rawBody) as {
+    id: string;
+    event: string;
+    payload?: { subscription?: { entity?: Record<string, unknown> } };
+  };
+  const e = body.payload?.subscription?.entity ?? {};
+  const kind = EVENT_KIND[body.event] ?? "ignored";
+  return {
+    kind,
+    eventId: body.id,
+    providerSubscriptionId: String(e.id ?? ""),
+    status: String(e.status ?? ""),
+    paidCount: typeof e.paid_count === "number" ? e.paid_count : undefined,
+    currentStart: unixToDate(e.current_start),
+    currentEnd: unixToDate(e.current_end),
+    chargeAt: unixToDate(e.charge_at),
+    cancelAtCycleEnd: kind === "cancelled" ? Boolean(e.current_end) : undefined,
+    providerPlanId: e.plan_id ? String(e.plan_id) : undefined,
+  };
+}
+
 export class RazorpayProvider implements PaymentProvider {
   readonly name: ProviderName = "razorpay";
   private client: Razorpay;
   private keySecret: string;
 
   constructor() {
-    this.keySecret = process.env.RAZORPAY_KEY_SECRET ?? "";
-    this.client = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID ?? "",
-      key_secret: this.keySecret,
-    });
+    // Fail fast rather than defaulting to "" — an empty-string HMAC key is
+    // guessable, so a misconfigured deployment would silently accept forged
+    // signatures instead of rejecting all of them.
+    const keyId = process.env.RAZORPAY_KEY_ID;
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    if (!keyId || !keySecret) {
+      throw new Error(
+        "RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET must be set — refusing to construct a RazorpayProvider with a missing/empty key.",
+      );
+    }
+    this.keySecret = keySecret;
+    this.client = new Razorpay({ key_id: keyId, key_secret: keySecret });
   }
 
   verifyCheckoutSignature({ paymentId, subscriptionId, signature }: { paymentId: string; subscriptionId: string; signature: string }): boolean {
@@ -497,25 +532,7 @@ export class RazorpayProvider implements PaymentProvider {
   }
 
   normalizeWebhookEvent(rawBody: string): NormalizedWebhookEvent {
-    const body = JSON.parse(rawBody) as {
-      id: string;
-      event: string;
-      payload?: { subscription?: { entity?: Record<string, unknown> } };
-    };
-    const e = body.payload?.subscription?.entity ?? {};
-    const kind = EVENT_KIND[body.event] ?? "ignored";
-    return {
-      kind,
-      eventId: body.id,
-      providerSubscriptionId: String(e.id ?? ""),
-      status: String(e.status ?? ""),
-      paidCount: typeof e.paid_count === "number" ? e.paid_count : undefined,
-      currentStart: unixToDate(e.current_start),
-      currentEnd: unixToDate(e.current_end),
-      chargeAt: unixToDate(e.charge_at),
-      cancelAtCycleEnd: kind === "cancelled" ? Boolean(e.current_end) : undefined,
-      providerPlanId: e.plan_id ? String(e.plan_id) : undefined,
-    };
+    return normalizeRazorpayWebhookEvent(rawBody);
   }
 
   async ensureCustomer(user: EnsureCustomerUser): Promise<string> {
@@ -588,6 +605,7 @@ git commit -m "$(printf 'Add RazorpayProvider: HMAC verify + webhook normalisati
 ```ts
 import { createHmac } from "node:crypto";
 import { RAZORPAY_WEBHOOK_SECRET } from "./webhookSecret";
+import { normalizeRazorpayWebhookEvent } from "./razorpay";
 import type {
   CreateSubscriptionInput,
   CreatedSubscription,
@@ -626,10 +644,11 @@ export class FakeProvider implements PaymentProvider {
   }
 
   normalizeWebhookEvent(rawBody: string): NormalizedWebhookEvent {
-    // identical shape handling to RazorpayProvider — reuse it
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { RazorpayProvider } = require("./razorpay") as typeof import("./razorpay");
-    return new RazorpayProvider().normalizeWebhookEvent(rawBody);
+    // Reuse RazorpayProvider's (pure, standalone) parsing logic directly —
+    // NOT `new RazorpayProvider()`, which now throws if real Razorpay keys
+    // aren't set (see Task 3's fail-fast fix), which would defeat the point
+    // of a fake provider in tests that don't set them.
+    return normalizeRazorpayWebhookEvent(rawBody);
   }
 
   async cancelAtCycleEnd(): Promise<void> {
