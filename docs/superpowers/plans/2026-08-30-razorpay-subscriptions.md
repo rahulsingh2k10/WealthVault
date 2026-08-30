@@ -227,7 +227,7 @@ git commit -m "$(printf 'Subscription schema (db push): Subscription + Processed
 
 - [ ] **Step 1: Add the SDK**
 
-Run: `cd frontend && npm install razorpay@2.9.6`
+Run: `cd frontend && npm install razorpay@2.9.8 --save-exact`
 (Pin exactly. It's a server-only dep. `npm install` updates `package.json` + lockfile.)
 
 - [ ] **Step 2: Create `frontend/src/lib/payments/types.ts`** — verbatim:
