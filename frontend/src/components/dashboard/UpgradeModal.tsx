@@ -65,7 +65,7 @@ export function UpgradeModal({ open, plans, memberCount, onClose, onSubscribed }
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape" && submittingTier === null) onClose();
     };
     document.addEventListener("keydown", onKey);
     const prevOverflow = document.body.style.overflow;
@@ -74,7 +74,7 @@ export function UpgradeModal({ open, plans, memberCount, onClose, onSubscribed }
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prevOverflow;
     };
-  }, [open, onClose]);
+  }, [open, onClose, submittingTier]);
 
   useEffect(() => {
     if (!open) return;
@@ -127,11 +127,14 @@ export function UpgradeModal({ open, plans, memberCount, onClose, onSubscribed }
       }
       const { checkout } = (await res.json()) as { checkout: CheckoutParams };
       const done = await startCheckout(checkout, async (r) => {
-        await fetch("/api/subscription/verify", {
+        const verifyRes = await fetch("/api/subscription/verify", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify(r),
         });
+        if (!verifyRes.ok) {
+          throw new Error("verify_failed");
+        }
       });
       if (done) {
         onClose();
@@ -139,8 +142,14 @@ export function UpgradeModal({ open, plans, memberCount, onClose, onSubscribed }
       } else {
         setSubmittingTier(null);
       }
-    } catch {
-      setCheckoutError("Something went wrong starting checkout. Please try again.");
+    } catch (e) {
+      if (e instanceof Error && e.message === "verify_failed") {
+        setCheckoutError(
+          "Your payment may have gone through, but we couldn't confirm it. Please check your email or contact support before trying again.",
+        );
+      } else {
+        setCheckoutError("Something went wrong starting checkout. Please try again.");
+      }
       setSubmittingTier(null);
     }
   };
@@ -157,7 +166,7 @@ export function UpgradeModal({ open, plans, memberCount, onClose, onSubscribed }
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: reduceMotion ? 0 : 0.35 }}
-            onClick={onClose}
+            onClick={() => { if (submittingTier === null) onClose(); }}
           />
           <motion.div
             key="upgrade-panel"
@@ -181,7 +190,7 @@ export function UpgradeModal({ open, plans, memberCount, onClose, onSubscribed }
               }}
             >
               <button
-                onClick={onClose}
+                onClick={() => { if (submittingTier === null) onClose(); }}
                 aria-label="Close"
                 className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-lg text-[color:var(--ui-text-muted)] hover:text-[color:var(--ui-text-sec)]"
                 style={{ background: "var(--ui-subtle-bg)" }}

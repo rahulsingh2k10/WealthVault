@@ -32,14 +32,18 @@ export async function startCheckout(
   const RP = (window as unknown as { Razorpay: RazorpayCtor }).Razorpay;
   const { keyId, subscriptionId, name } = params.razorpay;
 
-  return new Promise<boolean>((resolve) => {
+  return new Promise<boolean>((resolve, reject) => {
     const rzp = new RP({
       key: keyId,
       subscription_id: subscriptionId,
       name,
       handler: async (resp: { razorpay_payment_id: string; razorpay_subscription_id: string; razorpay_signature: string }) => {
-        await onVerified(resp);
-        resolve(true);
+        try {
+          await onVerified(resp);
+          resolve(true);
+        } catch (e) {
+          reject(e);
+        }
       },
       modal: { ondismiss: () => resolve(false) },
     });
