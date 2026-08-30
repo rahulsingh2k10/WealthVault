@@ -475,6 +475,7 @@ A `FakeProvider` implementing `PaymentProvider` deterministically. `getProvider`
 - Dunning / reminder emails (Razorpay does its own; we only surface a banner).
 - Live-mode go-live: KYC, live keys, re-create the 3 Plans in live mode, point the webhook at production. Documented checklist, not built.
 - An admin UI to edit `SubscriptionPlan` pricing / `razorpayPlanId` (SQL / seed edit for now).
+- **Checkout loading-state polish** (found in Task 12 review): while one plan's checkout is submitting, all 3 CTAs disable but only the clicked one relabels to "Starting…" — the other two just dim with no shared cue, which can read as "the modal froze" rather than "something is loading elsewhere." Non-blocking; a shared status line or a spinner on the active button would read more clearly. Also noted: neither the loading nor the error state uses `aria-busy`/`aria-live`/`role="alert"` — matches this codebase's existing convention (`unlock/page.tsx` has the same gap), so not a regression, but worth a joint a11y pass across both flows later.
 
 ---
 
