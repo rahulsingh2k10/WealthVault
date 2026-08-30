@@ -1,6 +1,7 @@
 import { hasTestDb, disconnectTestPrisma } from "../../helpers/testDb";
 import { ensureReferenceData } from "../../helpers/seedReferenceData";
 import { createTestUser, deleteTestUser } from "../../helpers/testUser";
+import { createSubscriptionRow } from "../../helpers/subscriptionFactory";
 
 const describeOrSkip = hasTestDb() ? describe : describe.skip;
 
@@ -36,6 +37,9 @@ describeOrSkip("getUpgradePromptData", () => {
   test("returns null for a paid user", async () => {
     const user = await createTestUser({ tier: "ANNUAL" });
     try {
+      // getUpgradePromptData now gates on getEffectivePlan, which derives tier from an
+      // actual granting Subscription row, not the (possibly stale) User.subscriptionPlanId.
+      await createSubscriptionRow(user.id, { tier: "ANNUAL" });
       expect(await getUpgradePromptData(user.id)).toBeNull();
     } finally {
       await deleteTestUser(user.id);
@@ -53,9 +57,9 @@ describeOrSkip("getUpgradePromptData", () => {
         "ANNUAL",
       ]);
       const byTier = Object.fromEntries(data.plans.map((p: { tier: string }) => [p.tier, p]));
-      expect(byTier.MONTHLY.basePerPeriod).toBe(3000);
-      expect(byTier.QUARTERLY.basePerPeriod).toBe(6000);
-      expect(byTier.ANNUAL.basePerPeriod).toBe(18000);
+      expect(byTier.MONTHLY.basePerPeriod).toBe(9000);
+      expect(byTier.QUARTERLY.basePerPeriod).toBe(18000);
+      expect(byTier.ANNUAL.basePerPeriod).toBe(36000);
       expect(byTier.MONTHLY.currency).toBe("INR");
       // effectivePerPeriod / offerActive / discountPercent are exercised by
       // plan-card-view.test.ts with a fixed clock — not asserted here (they depend

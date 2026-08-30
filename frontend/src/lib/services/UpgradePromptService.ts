@@ -1,13 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import type { SubscriptionPlan } from "@prisma/client";
+import { getEffectivePlan } from "./SubscriptionService";
 
 export type PaidTier = "MONTHLY" | "QUARTERLY" | "ANNUAL";
-
-const BILLING_MONTHS: Record<PaidTier, 1 | 3 | 12> = {
-  MONTHLY: 1,
-  QUARTERLY: 3,
-  ANNUAL: 12,
-};
 
 export interface PlanCardView {
   tier: PaidTier;
@@ -37,6 +32,10 @@ export interface UpgradePromptData {
  */
 export function buildPlanCardView(plan: SubscriptionPlan, now: Date): PlanCardView {
   const tier = plan.tier as PaidTier;
+  if (plan.intervalMonths == null) {
+    throw new Error(`SubscriptionPlan ${plan.id} (${tier}) has no intervalMonths`);
+  }
+  const billingMonths = plan.intervalMonths as 1 | 3 | 12;
   const base = Number(plan.price);
   const offerPrice = plan.offerPrice == null ? null : Number(plan.offerPrice);
 
@@ -51,7 +50,7 @@ export function buildPlanCardView(plan: SubscriptionPlan, now: Date): PlanCardVi
 
   return {
     tier,
-    billingMonths: BILLING_MONTHS[tier],
+    billingMonths,
     currency: plan.currency,
     basePerPeriod: base,
     effectivePerPeriod: effective,
@@ -70,11 +69,11 @@ export async function getUpgradePromptData(
 ): Promise<UpgradePromptData | null> {
   if (!userId) return null;
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    include: { subscriptionPlan: true },
-  });
-  if (!user || user.subscriptionPlan.tier !== "FREE") return null;
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) return null;
+
+  const eff = await getEffectivePlan(userId);
+  if (eff.tier !== "FREE") return null;
 
   const now = new Date();
   const [rows, paidCount] = await Promise.all([
