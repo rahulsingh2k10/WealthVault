@@ -1,5 +1,7 @@
 # Razorpay Recurring Subscriptions — Implementation Plan
 
+> **STATUS (2026-08-30): IMPLEMENTED** on `feature/razorpay-subscriptions`, not merged. All 15 tasks done via subagent-driven-development (spec + code-quality review per task). Full jest suite green (API incl. Subscription 64, Database 20); subscription e2e green (3 tests). Deviations from the as-drafted plan are folded into the task bodies below; deferred review findings are in the design spec's §14. Remaining before go-live: the §14 open items, the manual real-Razorpay browser check (Task 15 Step 2), and the live-mode checklist (Task 15 Step 5).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A `FREE`-tier user can subscribe to Reserve / Treasury / Sovereign via Razorpay Subscriptions (recurring), the app tracks their effective tier from webhooks + a computed helper (no cron), they can cancel (at cycle end) or change plan from a Manage Subscription screen, and after a 3-year grandfathered term the subscription completes and they return to `FREE`.
@@ -79,7 +81,7 @@
 
 **Files:** `frontend/prisma/schema.prisma`, `frontend/prisma/seed.ts`, `tests/helpers/seedReferenceData.ts`
 
-- [ ] **Step 1: Edit `frontend/prisma/schema.prisma`**
+- [x] **Step 1: Edit `frontend/prisma/schema.prisma`**
 
 In `model SubscriptionPlan`, add before the closing `}` (after `users` / `subscriptionPeriods`):
 
@@ -155,7 +157,7 @@ model ProcessedWebhookEvent {
 
 > **`backend/prisma/schema.prisma` is a mandated-identical copy** (its header says so; `backend/package.json` has `prisma migrate` scripts on the same DB). Every schema change in this plan must be mirrored there (keep its header) + `cd backend && npx prisma generate`. Task 1's review-fix commit does this. `documents/database/*.md` are stale after this feature — a deferred docs follow-up, not in this plan.
 
-- [ ] **Step 2: Push the schema + regenerate the client**
+- [x] **Step 2: Push the schema + regenerate the client**
 
 **This project's DB is NOT managed by Prisma Migrate** (no `prisma/migrations/`, `prisma migrate status` says "not managed by Prisma Migrate"). It uses `prisma db push` (see `package.json` `db:push`). Do **NOT** run `prisma migrate` — it would offer to reset the database.
 
@@ -164,12 +166,12 @@ Expected: "Your database is now in sync with your Prisma schema" + "Generated Pr
 Then `npx prisma generate` (db push already does this, but run it explicitly to be sure the client is fresh).
 If the shell can't reach the DB: run `npx prisma generate` alone (regenerates the client from the schema so `tsc` and the type-checks work) and note that `db push` must be run against the real DB before the integration/e2e suites.
 
-- [ ] **Step 3: Record the new tsc baseline**
+- [x] **Step 3: Record the new tsc baseline**
 
 Run: `cd frontend && npx tsc --noEmit 2>&1 | grep -c "error TS"`
 Write the number here in the plan: **BASELINE = 89** (regenerating the client for the new models typically *reduces* the count since `Subscription` etc. now exist; the asset-model errors remain). Every later task's type-check step uses this number.
 
-- [ ] **Step 4: Update `frontend/prisma/seed.ts`**
+- [x] **Step 4: Update `frontend/prisma/seed.ts`**
 
 Replace the subscription-plan block (the `createMany` added by the upgrade-prompt work) with:
 
@@ -191,7 +193,7 @@ Replace the subscription-plan block (the `createMany` added by the upgrade-promp
   console.log('✅ Subscription plans seeded (list + 60% intro, Razorpay plan ids)');
 ```
 
-- [ ] **Step 5: Update `tests/helpers/seedReferenceData.ts`**
+- [x] **Step 5: Update `tests/helpers/seedReferenceData.ts`**
 
 Change the `PLAN_PRICING` map to the new per-cycle numbers + interval/term/razorpayPlanId:
 
@@ -209,12 +211,12 @@ const PLAN_PRICING: Record<
 
 The `upsert` in `ensureReferenceData` already spreads `...pricing` into both `update` and `create`, so no other change there.
 
-- [ ] **Step 6: Run the DB suites to confirm the migration + seed shape**
+- [x] **Step 6: Run the DB suites to confirm the migration + seed shape**
 
 Run: `cd tests && npx jest --config jest.config.js database --runInBand`
 Expected: `schema.test.ts` + `subscription-period-service.test.ts` still pass (20 tests). `schema.test.ts` asserts the physical column order of `subscription_plans` / `users` (via `information_schema.columns`) — **if it fails on the new columns, update the expected column list in that test** to include `razorpayPlanId, intervalMonths, termMonths` (subscription_plans) and `razorpayCustomerId` (users) in the position `db push` actually added them (run `echo '\d subscription_plans' | npx prisma db execute --stdin` — or a `SELECT column_name FROM information_schema.columns WHERE table_name='subscription_plans' ORDER BY ordinal_position` — to see the real order). Note the exact edit in your report.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add frontend/prisma/schema.prisma frontend/prisma/seed.ts tests/helpers/seedReferenceData.ts
@@ -230,12 +232,12 @@ git commit -m "$(printf 'Subscription schema (db push): Subscription + Processed
 
 **Files:** `frontend/package.json`, `frontend/src/lib/payments/types.ts`, `frontend/src/lib/payments/webhookSecret.ts`
 
-- [ ] **Step 1: Add the SDK**
+- [x] **Step 1: Add the SDK**
 
 Run: `cd frontend && npm install razorpay@2.9.8 --save-exact`
 (Pin exactly. It's a server-only dep. `npm install` updates `package.json` + lockfile.)
 
-- [ ] **Step 2: Create `frontend/src/lib/payments/types.ts`** — verbatim:
+- [x] **Step 2: Create `frontend/src/lib/payments/types.ts`** — verbatim:
 
 ```ts
 export type ProviderName = "razorpay";
@@ -312,7 +314,7 @@ export interface PaymentProvider {
 }
 ```
 
-- [ ] **Step 3: Create `frontend/src/lib/payments/webhookSecret.ts`** — verbatim:
+- [x] **Step 3: Create `frontend/src/lib/payments/webhookSecret.ts`** — verbatim:
 
 ```ts
 /**
@@ -324,7 +326,7 @@ export const RAZORPAY_WEBHOOK_SECRET =
   process.env.RAZORPAY_WEBHOOK_SECRET || "whsec_test_wealthvault_fixed";
 ```
 
-- [ ] **Step 4: Type-check + commit**
+- [x] **Step 4: Type-check + commit**
 
 Run: `cd frontend && npx tsc --noEmit 2>&1 | grep -c "error TS"` → `== BASELINE`; `... | grep "payments/"` → empty.
 
@@ -341,7 +343,7 @@ git commit -m "$(printf 'Add razorpay SDK + PaymentProvider interface + webhook-
 
 The two verification functions and `normalizeWebhookEvent` are pure and testable without the SDK or a network. `ensureCustomer` / `createSubscription` / `cancelAtCycleEnd` / `fetchSubscription` call the SDK — covered by the `FakeProvider` in integration tests, not here.
 
-- [ ] **Step 1: Write the failing test** — `tests/api/subscription/razorpay-provider.test.ts`:
+- [x] **Step 1: Write the failing test** — `tests/api/subscription/razorpay-provider.test.ts`:
 
 ```ts
 import { createHmac } from "node:crypto";
@@ -432,12 +434,12 @@ describe("normalizeWebhookEvent", () => {
 });
 ```
 
-- [ ] **Step 2: Run — expect failure**
+- [x] **Step 2: Run — expect failure**
 
 Run: `cd tests && npx jest --config jest.config.js api/subscription/razorpay-provider --runInBand`
 Expected: FAIL — cannot find `@/lib/payments/razorpay`.
 
-- [ ] **Step 3: Implement `frontend/src/lib/payments/razorpay.ts`**
+- [x] **Step 3: Implement `frontend/src/lib/payments/razorpay.ts`**
 
 ```ts
 import Razorpay from "razorpay";
@@ -586,11 +588,11 @@ export class RazorpayProvider implements PaymentProvider {
 
 > The `razorpay` SDK's TS types are loose; the `as Parameters<…>[0]` cast and the `as { … }` narrowings are expected. If `tsc` flags `subscriptions.cancel`'s second arg, check the installed SDK's `.d.ts` — some versions take `{ cancel_at_cycle_end: 1 }` as an object; adapt and note it.
 
-- [ ] **Step 4: Run — expect pass**
+- [x] **Step 4: Run — expect pass**
 
 Run: `cd tests && npx jest --config jest.config.js api/subscription/razorpay-provider --runInBand` → all pass.
 
-- [ ] **Step 5: Type-check + commit**
+- [x] **Step 5: Type-check + commit**
 
 `cd frontend && npx tsc --noEmit 2>&1 | grep -c "error TS"` → `== BASELINE`; `... | grep "payments/razorpay"` → empty.
 
@@ -605,7 +607,7 @@ git commit -m "$(printf 'Add RazorpayProvider: HMAC verify + webhook normalisati
 
 **Files:** `frontend/src/lib/payments/fake.ts`, `frontend/src/lib/payments/index.ts`, `tests/helpers/fakeProvider.ts`
 
-- [ ] **Step 1: `frontend/src/lib/payments/fake.ts`**
+- [x] **Step 1: `frontend/src/lib/payments/fake.ts`**
 
 ```ts
 import { createHmac } from "node:crypto";
@@ -666,7 +668,7 @@ export class FakeProvider implements PaymentProvider {
 }
 ```
 
-- [ ] **Step 2: `frontend/src/lib/payments/index.ts`**
+- [x] **Step 2: `frontend/src/lib/payments/index.ts`**
 
 ```ts
 import type { PaymentProvider, ProviderName } from "./types";
@@ -689,7 +691,7 @@ export function __resetProviderCache(): void {
 export type { PaymentProvider } from "./types";
 ```
 
-- [ ] **Step 3: `tests/helpers/fakeProvider.ts`**
+- [x] **Step 3: `tests/helpers/fakeProvider.ts`**
 
 ```ts
 import { createHmac } from "node:crypto";
@@ -712,7 +714,7 @@ export function checkoutSignature(paymentId: string, subscriptionId: string, key
 }
 ```
 
-- [ ] **Step 4: Type-check + commit**
+- [x] **Step 4: Type-check + commit**
 
 `cd frontend && npx tsc --noEmit 2>&1 | grep -c "error TS"` → `== BASELINE`; `grep -E "payments/(fake|index)"` → empty.
 
@@ -731,7 +733,7 @@ This is the access source of truth — the most important test in the feature.
 
 > **Also fixed here:** `tests/helpers/testUser.ts`'s `deleteTestUser` cleaned up `SubscriptionPeriod` rows before deleting the user, but not the new `Subscription` rows (no cascade delete) — so it silently leaked test users via its `.catch(() => {})`. Add `await prisma.subscription.deleteMany({ where: { userId } });` alongside the existing `subscriptionPeriod.deleteMany` call, before `user.delete`. Do this once, here — every later task (8, 10, 12) that creates `Subscription` rows via `deleteTestUser` in a `finally` then relies on this fix, with no local workaround needed.
 
-- [ ] **Step 1: `tests/helpers/subscriptionFactory.ts`**
+- [x] **Step 1: `tests/helpers/subscriptionFactory.ts`**
 
 ```ts
 import { getTestPrisma } from "./testDb";
@@ -778,7 +780,7 @@ export async function createSubscriptionRow(userId: string, o: Overrides = {}) {
 }
 ```
 
-- [ ] **Step 2: Write the failing test** — `tests/api/subscription/effective-plan.test.ts`:
+- [x] **Step 2: Write the failing test** — `tests/api/subscription/effective-plan.test.ts`:
 
 ```ts
 import { hasTestDb, disconnectTestPrisma } from "../../helpers/testDb";
@@ -904,9 +906,9 @@ describeOrSkip("getEffectivePlan", () => {
 });
 ```
 
-- [ ] **Step 3: Run — expect failure** (`Cannot find module '@/lib/services/SubscriptionService'`).
+- [x] **Step 3: Run — expect failure** (`Cannot find module '@/lib/services/SubscriptionService'`).
 
-- [ ] **Step 4: Implement `frontend/src/lib/services/SubscriptionService.ts`** (`getEffectivePlan` + `totalCountFor` only for this task — `applySubscriptionEvent` and `buildManageView` come in Tasks 8 & 12):
+- [x] **Step 4: Implement `frontend/src/lib/services/SubscriptionService.ts`** (`getEffectivePlan` + `totalCountFor` only for this task — `applySubscriptionEvent` and `buildManageView` come in Tasks 8 & 12):
 
 ```ts
 import { prisma } from "@/lib/prisma";
@@ -981,9 +983,9 @@ export async function getEffectivePlan(userId: string): Promise<EffectivePlan> {
 
 > **Review-driven fixes** (applied after the first implementation, see the "Also fixed" note above Step 1): (1) `grants()` now checks `startAt` first — a scheduled plan-change row must not grant/outrank before it actually starts. (2) The tie-break's "infinite" check now shares `GRANTS_UNCONDITIONALLY` with `grants()` (previously used a narrower `GRANTS_ALWAYS` that excluded `pending`, mis-ranking pending rows). (3) `paymentRetrying` is scoped to `granting` rows, not all historical rows. (4) `user.findUnique` joined into the initial `Promise.all`; the FREE-plan lookup uses `findUniqueOrThrow` (tier is `@unique`). Tasks 8/9/10, which build on this file, should use this corrected version.
 
-- [ ] **Step 5: Run — expect pass** (`cd tests && npx jest --config jest.config.js api/subscription/effective-plan --runInBand`).
+- [x] **Step 5: Run — expect pass** (`cd tests && npx jest --config jest.config.js api/subscription/effective-plan --runInBand`).
 
-- [ ] **Step 6: Type-check + commit**
+- [x] **Step 6: Type-check + commit**
 
 ```bash
 git add frontend/src/lib/services/SubscriptionService.ts tests/api/subscription/effective-plan.test.ts tests/helpers/subscriptionFactory.ts
@@ -998,25 +1000,25 @@ git commit -m "$(printf 'Add SubscriptionService.getEffectivePlan + totalCountFo
 
 `price`/`offerPrice` are now list/intro **per cycle** and `SubscriptionPlan` has `intervalMonths` — drop the hardcoded `BILLING_MONTHS` map, read the column. Gate `getUpgradePromptData` on `getEffectivePlan`.
 
-- [ ] **Step 1: Edit `buildPlanCardView`** — replace `BILLING_MONTHS[tier]` with `plan.intervalMonths` (throw if null for a paid tier), and confirm `basePerPeriod` / `effectivePerPeriod` already come from `Number(plan.price)` / `Number(plan.offerPrice)` (per cycle) — they do; only the divisor source changes. `billingMonths` field of `PlanCardView` = `plan.intervalMonths`.
+- [x] **Step 1: Edit `buildPlanCardView`** — replace `BILLING_MONTHS[tier]` with `plan.intervalMonths` (throw if null for a paid tier), and confirm `basePerPeriod` / `effectivePerPeriod` already come from `Number(plan.price)` / `Number(plan.offerPrice)` (per cycle) — they do; only the divisor source changes. `billingMonths` field of `PlanCardView` = `plan.intervalMonths`.
 
-- [ ] **Step 2: Edit `getUpgradePromptData`** — replace the `user.subscriptionPlan.tier !== "FREE"` check with:
+- [x] **Step 2: Edit `getUpgradePromptData`** — replace the `user.subscriptionPlan.tier !== "FREE"` check with:
 ```ts
   const eff = await getEffectivePlan(userId);
   if (eff.tier !== "FREE") return null;
 ```
 (import `getEffectivePlan` from `./SubscriptionService`). Keep the `!userId` / user-not-found guards.
 
-- [ ] **Step 3: Update `tests/api/upgrade-prompt/plan-card-view.test.ts`** — `buildPlanCardView` now reads `plan.intervalMonths` instead of the removed `BILLING_MONTHS` map, so:
+- [x] **Step 3: Update `tests/api/upgrade-prompt/plan-card-view.test.ts`** — `buildPlanCardView` now reads `plan.intervalMonths` instead of the removed `BILLING_MONTHS` map, so:
   - The `plan()` test-row builder must set `intervalMonths` — add it to the defaults (`intervalMonths: 3` for the default QUARTERLY-ish row) and to the per-test overrides that set a `tier` (`intervalMonths: 1` when `tier: "MONTHLY"`, `12` when `tier: "ANNUAL"`).
   - `buildPlanCardView` should **throw** when `intervalMonths` is null for a paid tier — add a test: `plan({ tier: "MONTHLY", intervalMonths: null })` → `expect(() => buildPlanCardView(...)).toThrow()`.
   - The existing assertions use arbitrary `price`/`offerPrice` (not seed values), so `discountPercent` / `effectivePerPeriod` expectations mostly stand — but re-check each: any that computed `billingMonths` from the tier now get it from `intervalMonths`, so the override must supply the matching number. The "offer active" ANNUAL case: if it asserts `billingMonths === 12`, give the row `intervalMonths: 12`.
 
-- [ ] **Step 4: Update `tests/e2e/upgrade-prompt.spec.ts`** — the price regex `/₹1,[0-9]{3}\s*\/mo/i` still matches ₹1,200 (Sovereign intro per-month). No change needed unless an assertion hard-codes a different number — scan and adjust. The "20% off" text is now "60% off"; if any assertion referenced a percentage, update to `/60% off/i` (or keep it generic).
+- [x] **Step 4: Update `tests/e2e/upgrade-prompt.spec.ts`** — the price regex `/₹1,[0-9]{3}\s*\/mo/i` still matches ₹1,200 (Sovereign intro per-month). No change needed unless an assertion hard-codes a different number — scan and adjust. The "20% off" text is now "60% off"; if any assertion referenced a percentage, update to `/60% off/i` (or keep it generic).
 
-- [ ] **Step 5: Run** — `cd tests && npx jest --config jest.config.js api/upgrade-prompt --runInBand` → all pass. Then `cd frontend && npx tsc --noEmit 2>&1 | grep -c "error TS"` → `== BASELINE`.
+- [x] **Step 5: Run** — `cd tests && npx jest --config jest.config.js api/upgrade-prompt --runInBand` → all pass. Then `cd frontend && npx tsc --noEmit 2>&1 | grep -c "error TS"` → `== BASELINE`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add frontend/src/lib/services/UpgradePromptService.ts tests/api/upgrade-prompt/ tests/e2e/upgrade-prompt.spec.ts
@@ -1029,11 +1031,11 @@ git commit -m "$(printf 'UpgradePromptService: read intervalMonths from the DB, 
 
 **Files:** `frontend/src/app/api/auth/me/route.ts`
 
-- [ ] **Step 1: Edit the route** — replace `subscription: dbUser.subscriptionPlan.tier` with a call to `getEffectivePlan(session.userId)` and return `subscription: eff.tier` plus `paymentRetrying: eff.paymentRetrying` and `subscriptionEndsAt: eff.currentEnd`. Keep the avatar back-fill logic. The `include: { subscriptionPlan: true }` can stay or go (still used elsewhere in the response? check — if only for `.tier`, drop it and add the `getEffectivePlan` call).
+- [x] **Step 1: Edit the route** — replace `subscription: dbUser.subscriptionPlan.tier` with a call to `getEffectivePlan(session.userId)` and return `subscription: eff.tier` plus `paymentRetrying: eff.paymentRetrying` and `subscriptionEndsAt: eff.currentEnd`. Keep the avatar back-fill logic. The `include: { subscriptionPlan: true }` can stay or go (still used elsewhere in the response? check — if only for `.tier`, drop it and add the `getEffectivePlan` call).
 
-- [ ] **Step 2: Run the auth suite** — `cd tests && npx jest --config jest.config.js api/auth --runInBand` → still passes (24 tests; the `me` tests may assert `subscription` — update expectations to `FREE` for the default test user which has no `Subscription` rows).
+- [x] **Step 2: Run the auth suite** — `cd tests && npx jest --config jest.config.js api/auth --runInBand` → still passes (24 tests; the `me` tests may assert `subscription` — update expectations to `FREE` for the default test user which has no `Subscription` rows).
 
-- [ ] **Step 3: tsc + commit**
+- [x] **Step 3: tsc + commit**
 
 ```bash
 git add frontend/src/app/api/auth/me/route.ts tests/api/auth/
@@ -1046,7 +1048,7 @@ git commit -m "$(printf 'auth/me: report subscription tier from getEffectivePlan
 
 **Files:** `frontend/src/lib/services/SubscriptionService.ts` (append), `frontend/src/app/api/subscription/webhook/[provider]/route.ts`, `frontend/src/middleware.ts`, `tests/api/subscription/webhook.test.ts`
 
-- [ ] **Step 1: Append `applySubscriptionEvent` to `SubscriptionService.ts`**
+- [x] **Step 1: Append `applySubscriptionEvent` to `SubscriptionService.ts`**
 
 ```ts
 import type { NormalizedWebhookEvent } from "@/lib/payments/types";
@@ -1080,7 +1082,7 @@ export async function applySubscriptionEvent(evt: NormalizedWebhookEvent): Promi
 }
 ```
 
-- [ ] **Step 2: Add the webhook route** — `frontend/src/app/api/subscription/webhook/[provider]/route.ts`:
+- [x] **Step 2: Add the webhook route** — `frontend/src/app/api/subscription/webhook/[provider]/route.ts`:
 
 ```ts
 import { NextRequest, NextResponse } from "next/server";
@@ -1144,12 +1146,12 @@ export async function POST(req: NextRequest, { params }: { params: { provider: s
 
 > **Review-driven fix:** the original version created the idempotency row BEFORE processing and treated any `create()` failure as "already processed." A 500 from `applySubscriptionEvent` (Razorpay retries) would then be silently swallowed as a duplicate on retry — for a terminal event like `halted`, that permanently left a user with paid access forever, undetected. `ProcessedWebhookEvent` gained a `status: "processing" | "done"` column (`@default("processing")`, applied via `db push` — mirror into `backend/prisma/schema.prisma` too, per the mandatory-sync convention); a row stuck at `"processing"` is safely reprocessed (the function only ever writes absolute values, never deltas); only a genuine `P2002` unique-constraint hit on an already-`"done"` row short-circuits. Task 9/10, which add more `applySubscriptionEvent`/webhook-adjacent code, should assume this version.
 
-- [ ] **Step 3: Middleware** — in `frontend/src/middleware.ts`, add to the "Always public" `if (...)` list:
+- [x] **Step 3: Middleware** — in `frontend/src/middleware.ts`, add to the "Always public" `if (...)` list:
 ```ts
     pathname.startsWith("/api/subscription/webhook") ||
 ```
 
-- [ ] **Step 4: Write `tests/api/subscription/webhook.test.ts`** — DB integration, uses the running dev server (like `tests/api/dashboard/dashboard.test.ts` via `ensureDevServer`) **OR** call the route handler directly. Prefer calling `applySubscriptionEvent` directly for the state-machine assertions + one live `fetch` to the dev server's webhook URL for the signature/dedupe path. Cases:
+- [x] **Step 4: Write `tests/api/subscription/webhook.test.ts`** — DB integration, uses the running dev server (like `tests/api/dashboard/dashboard.test.ts` via `ensureDevServer`) **OR** call the route handler directly. Prefer calling `applySubscriptionEvent` directly for the state-machine assertions + one live `fetch` to the dev server's webhook URL for the signature/dedupe path. Cases:
   - bad signature → 400
   - unknown event id first time → processed; same event id again → `{ duplicate: true }`, and `paidCount` unchanged (no double apply)
   - `activated` on a `created` row → row `active`, `currentEnd` set, `User.subscriptionPlanId` → that tier, a `SubscriptionPeriod` row logged
@@ -1159,9 +1161,9 @@ export async function POST(req: NextRequest, { params }: { params: { provider: s
   - `cancelled` with future `current_end` → tier kept until then
   Use `signedWebhook(...)` from `tests/helpers/fakeProvider.ts` and `createSubscriptionRow(...)`.
 
-- [ ] **Step 5: Run** → pass. tsc → `== BASELINE`.
+- [x] **Step 5: Run** → pass. tsc → `== BASELINE`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add frontend/src/lib/services/SubscriptionService.ts frontend/src/app/api/subscription/webhook frontend/src/middleware.ts tests/api/subscription/webhook.test.ts
@@ -1174,7 +1176,7 @@ git commit -m "$(printf 'Add subscription webhook route + applySubscriptionEvent
 
 **Files:** `frontend/src/app/api/subscription/create/route.ts`, `frontend/src/app/api/subscription/verify/route.ts`, `tests/api/subscription/create-verify.test.ts`
 
-- [ ] **Step 1: `create/route.ts`**
+- [x] **Step 1: `create/route.ts`**
 
 ```ts
 import { NextRequest, NextResponse } from "next/server";
@@ -1247,7 +1249,7 @@ export async function POST(req: NextRequest) {
 }
 ```
 
-- [ ] **Step 2: `verify/route.ts`**
+- [x] **Step 2: `verify/route.ts`**
 
 ```ts
 import { NextRequest, NextResponse } from "next/server";
@@ -1289,7 +1291,7 @@ export async function POST(req: NextRequest) {
 }
 ```
 
-- [ ] **Step 3: `tests/api/subscription/create-verify.test.ts`** — DB integration with `PAYMENTS_PROVIDER=fake` (set `process.env.PAYMENTS_PROVIDER = "fake"` + `__resetProviderCache()` in `beforeAll`). Uses `ensureDevServer` + `fetch` to the routes with a sealed session cookie (pattern: `tests/api/dashboard/dashboard.test.ts` + `tests/helpers/session.ts`). Cases:
+- [x] **Step 3: `tests/api/subscription/create-verify.test.ts`** — DB integration with `PAYMENTS_PROVIDER=fake` (set `process.env.PAYMENTS_PROVIDER = "fake"` + `__resetProviderCache()` in `beforeAll`). Uses `ensureDevServer` + `fetch` to the routes with a sealed session cookie (pattern: `tests/api/dashboard/dashboard.test.ts` + `tests/helpers/session.ts`). Cases:
   - no cookie → 401
   - FREE user, `tier: "ANNUAL"` → 200, returns `checkout.razorpay.subscriptionId`, a `Subscription` row exists (`status: created`), `user.razorpayCustomerId` set
   - already-subscribed user (`createSubscriptionRow` active) → 409
@@ -1300,7 +1302,7 @@ export async function POST(req: NextRequest) {
 
 > The dev server the tests hit must run with `PAYMENTS_PROVIDER=fake`. Add it to `tests/helpers/testServer.ts`'s spawn env (find where it starts `next dev` and add `PAYMENTS_PROVIDER: "fake"` + `RAZORPAY_KEY_SECRET` if not already inherited). Note the exact edit.
 
-- [ ] **Step 4: Run → pass. tsc → `== BASELINE`. Commit.**
+- [x] **Step 4: Run → pass. tsc → `== BASELINE`. Commit.**
 
 ```bash
 git add frontend/src/app/api/subscription/create frontend/src/app/api/subscription/verify tests/api/subscription/create-verify.test.ts tests/helpers/testServer.ts
@@ -1313,11 +1315,11 @@ git commit -m "$(printf 'Add subscription create + verify routes\n\nClaude-Sessi
 
 **Files:** `frontend/src/app/api/subscription/cancel/route.ts`, `frontend/src/app/api/subscription/change-plan/route.ts`, `frontend/src/app/api/subscription/route.ts`, `frontend/src/lib/services/SubscriptionService.ts` (append `buildManageView`), `tests/api/subscription/manage.test.ts`
 
-- [ ] **Step 1: `cancel/route.ts`** — auth; find the user's granting sub (status in active/authenticated/pending); `provider.cancelAtCycleEnd(providerSubscriptionId)`; set `cancelAtCycleEnd: true`; return `{ ok: true, accessUntil: row.currentEnd }`. 404 if no active sub.
+- [x] **Step 1: `cancel/route.ts`** — auth; find the user's granting sub (status in active/authenticated/pending); `provider.cancelAtCycleEnd(providerSubscriptionId)`; set `cancelAtCycleEnd: true`; return `{ ok: true, accessUntil: row.currentEnd }`. 404 if no active sub.
 
-- [ ] **Step 2: `change-plan/route.ts`** — auth; body `{ tier }`; find current granting sub `cur`; reject 400 if `cur.subscriptionPlan.tier === tier` or not a paid tier; load target plan; `provider.createSubscription({ ..., startAt: Math.floor(cur.currentEnd.getTime()/1000) })`; insert new `Subscription` row with `supersedesId: cur.id`, `status: created`, `startAt: cur.currentEnd`; return the same `{ checkout: {...} }` shape as `create`. (The old sub is cancelled by `verify` on success — Task 9 Step 2.)
+- [x] **Step 2: `change-plan/route.ts`** — auth; body `{ tier }`; find current granting sub `cur`; reject 400 if `cur.subscriptionPlan.tier === tier` or not a paid tier; load target plan; `provider.createSubscription({ ..., startAt: Math.floor(cur.currentEnd.getTime()/1000) })`; insert new `Subscription` row with `supersedesId: cur.id`, `status: created`, `startAt: cur.currentEnd`; return the same `{ checkout: {...} }` shape as `create`. (The old sub is cancelled by `verify` on success — Task 9 Step 2.)
 
-- [ ] **Step 3: `buildManageView(userId)` in `SubscriptionService.ts`**
+- [x] **Step 3: `buildManageView(userId)` in `SubscriptionService.ts`**
 
 ```ts
 import { formatMoney } from "@/lib/utils";
@@ -1354,11 +1356,11 @@ export async function buildManageView(userId: string) {
 }
 ```
 
-- [ ] **Step 4: `route.ts` (GET)** — auth; `return NextResponse.json(await buildManageView(session.userId))`.
+- [x] **Step 4: `route.ts` (GET)** — auth; `return NextResponse.json(await buildManageView(session.userId))`.
 
-- [ ] **Step 5: `tests/api/subscription/manage.test.ts`** — `buildManageView` unit-ish (with `createSubscriptionRow`): FREE → `{ tier: "FREE" }`; active ANNUAL → full view with `priceLockedThrough` ≈ createdAt + 36 months; `pending` → `paymentRetrying: true` + `retryUrl`. Cancel route: active sub → `cancelAtCycleEnd` true, provider called. Change-plan: creates a superseding row + returns checkout.
+- [x] **Step 5: `tests/api/subscription/manage.test.ts`** — `buildManageView` unit-ish (with `createSubscriptionRow`): FREE → `{ tier: "FREE" }`; active ANNUAL → full view with `priceLockedThrough` ≈ createdAt + 36 months; `pending` → `paymentRetrying: true` + `retryUrl`. Cancel route: active sub → `cancelAtCycleEnd` true, provider called. Change-plan: creates a superseding row + returns checkout.
 
-- [ ] **Step 6: Run → pass. tsc → `== BASELINE`. Commit.**
+- [x] **Step 6: Run → pass. tsc → `== BASELINE`. Commit.**
 
 ```bash
 git add frontend/src/app/api/subscription/cancel frontend/src/app/api/subscription/change-plan frontend/src/app/api/subscription/route.ts frontend/src/lib/services/SubscriptionService.ts tests/api/subscription/manage.test.ts
@@ -1371,13 +1373,13 @@ git commit -m "$(printf 'Add subscription cancel / change-plan / GET routes + bu
 
 **Files:** `tests/run-tests.ts`, `run-tests.sh`
 
-- [ ] **Step 1: `tests/run-tests.ts`** — add `"subscription"` to `Suite` and `ALL_SUITES` (after `"upgrade"`), and a `case "subscription": return runJest("api/subscription");` after the `upgrade` case.
+- [x] **Step 1: `tests/run-tests.ts`** — add `"subscription"` to `Suite` and `ALL_SUITES` (after `"upgrade"`), and a `case "subscription": return runJest("api/subscription");` after the `upgrade` case.
 
-- [ ] **Step 2: `run-tests.sh`** — append `"Subscription Tests:subscription"` to `API_SUITES=(...)`.
+- [x] **Step 2: `run-tests.sh`** — append `"Subscription Tests:subscription"` to `API_SUITES=(...)`.
 
-- [ ] **Step 3: Run** `./run-tests.sh api` → 5 API suites, all green (Auth, Unlock, Dashboard, Upgrade Prompt, Subscription).
+- [x] **Step 3: Run** `./run-tests.sh api` → 5 API suites, all green (Auth, Unlock, Dashboard, Upgrade Prompt, Subscription).
 
-- [ ] **Step 4: Commit.**
+- [x] **Step 4: Commit.**
 
 ```bash
 git add tests/run-tests.ts run-tests.sh
@@ -1390,7 +1392,7 @@ git commit -m "$(printf 'Register the subscription test suite\n\nClaude-Session:
 
 **Files:** `frontend/src/lib/payments/checkout.ts`, `frontend/src/components/dashboard/UpgradeModal.tsx`
 
-- [ ] **Step 1: `frontend/src/lib/payments/checkout.ts`**
+- [x] **Step 1: `frontend/src/lib/payments/checkout.ts`**
 
 ```ts
 import type { CheckoutParams } from "./types";
@@ -1443,7 +1445,7 @@ export async function startCheckout(
 }
 ```
 
-- [ ] **Step 2: Wire `UpgradeModal.tsx`** — the card CTA `onClick` currently does `console.info(...) + onClose()`. Replace with an async handler on each card CTA:
+- [x] **Step 2: Wire `UpgradeModal.tsx`** — the card CTA `onClick` currently does `console.info(...) + onClose()`. Replace with an async handler on each card CTA:
   - set a local `submitting` state (disable CTAs, show "Starting…")
   - `const res = await fetch("/api/subscription/create", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ tier: p.tier }) })`
   - on non-OK → show an inline error, re-enable
@@ -1451,9 +1453,9 @@ export async function startCheckout(
   - `const done = await startCheckout(checkout, async (r) => { await fetch("/api/subscription/verify", { method: "POST", headers: {...}, body: JSON.stringify(r) }) })`
   - if `done` → `onClose()` + call an `onSubscribed?()` prop (new optional prop) so the parent can toast + refetch `/api/auth/me`; else leave the modal open.
   - Keep it minimal — no new design, reuse existing button styles + a small disabled/spinner state.
-- [ ] **Step 3: `UpgradePrompt.tsx`** — pass `onSubscribed={() => { /* toast + router.refresh() */ }}` (Next `useRouter().refresh()` re-runs the server component; the modal won't re-open because the gate now returns null for the paid tier).
+- [x] **Step 3: `UpgradePrompt.tsx`** — pass `onSubscribed={() => { /* toast + router.refresh() */ }}` (Next `useRouter().refresh()` re-runs the server component; the modal won't re-open because the gate now returns null for the paid tier).
 
-- [ ] **Step 4: tsc → `== BASELINE`; `grep -E "checkout|UpgradeModal|UpgradePrompt"` → empty. Commit.**
+- [x] **Step 4: tsc → `== BASELINE`; `grep -E "checkout|UpgradeModal|UpgradePrompt"` → empty. Commit.**
 
 ```bash
 git add frontend/src/lib/payments/checkout.ts frontend/src/components/dashboard/UpgradeModal.tsx frontend/src/components/dashboard/UpgradePrompt.tsx
@@ -1466,13 +1468,13 @@ git commit -m "$(printf 'Wire UpgradeModal CTAs to Razorpay Checkout (create -> 
 
 **Files:** `frontend/src/app/subscription/page.tsx`, `frontend/src/components/subscription/ManageSubscription.tsx`, `frontend/src/components/subscription/RenewalBanner.tsx`, `frontend/src/components/layout/AppShell.tsx`, `frontend/src/components/layout/Sidebar.tsx`, `frontend/src/i18n/translations.ts`
 
-- [ ] **Step 1: i18n** — add two namespaces to the `Translations` interface + all 11 locales, following the exact procedure of the upgrade-prompt plan's Task 8 (English authoritative, other 10 machine-translated with a `// TODO(i18n)` flag; preserve `{amount}` / `{date}` / `{plan}` tokens). Keys:
+- [x] **Step 1: i18n** — add two namespaces to the `Translations` interface + all 11 locales, following the exact procedure of the upgrade-prompt plan's Task 8 (English authoritative, other 10 machine-translated with a `// TODO(i18n)` flag; preserve `{amount}` / `{date}` / `{plan}` tokens). Keys:
   - `manageSubscription`: `title`, `freeHeading`, `freeUpgradeCta`, `statusActive`, `statusPending`, `statusCancelled`, `nextCharge` ("Next charge {amount} on {date}"), `priceLocked` ("Your price is locked through {date}"), `cancelCta`, `cancelConfirmTitle`, `cancelConfirmBody` ("You'll keep {plan} until {date}, then move to Free."), `changePlanCta`, `retryCta`, `accessUntil` ("Access continues until {date}")
   - `renewalBanner`: `message` ("We couldn't process your renewal."), `action` ("Update payment →")
-- [ ] **Step 2: `RenewalBanner.tsx`** (`"use client"`) — fetches `/api/auth/me`, if `paymentRetrying` renders a dismissible bar (accent-warm bg) with a link to `/subscription`. Session-dismiss via `sessionStorage`.
-- [ ] **Step 3: `AppShell.tsx`** — mount `<RenewalBanner />` just inside the shell (above `<Header/>` / the `<main>`), so it shows on every authenticated page.
-- [ ] **Step 4: `Sidebar.tsx`** — add a "Subscription" item to the settings popover linking to `/subscription` (match the existing popover item markup).
-- [ ] **Step 5: `subscription/page.tsx`** (server) — `getSession()`, redirect to `/unlock` if no `encryptionKey`. Fetch both:
+- [x] **Step 2: `RenewalBanner.tsx`** (`"use client"`) — fetches `/api/auth/me`, if `paymentRetrying` renders a dismissible bar (accent-warm bg) with a link to `/subscription`. Session-dismiss via `sessionStorage`.
+- [x] **Step 3: `AppShell.tsx`** — mount `<RenewalBanner />` just inside the shell (above `<Header/>` / the `<main>`), so it shows on every authenticated page.
+- [x] **Step 4: `Sidebar.tsx`** — add a "Subscription" item to the settings popover linking to `/subscription` (match the existing popover item markup).
+- [x] **Step 5: `subscription/page.tsx`** (server) — `getSession()`, redirect to `/unlock` if no `encryptionKey`. Fetch both:
   ```ts
   const [view, prompt] = await Promise.all([
     buildManageView(session.userId),
@@ -1482,8 +1484,8 @@ git commit -m "$(printf 'Wire UpgradeModal CTAs to Razorpay Checkout (create -> 
   Render `<AppShell title={t.manageSubscription.title}>`:
   - `view.tier === "FREE"` → heading (`t.manageSubscription.freeHeading`) + a `"use client"` `<OpenUpgradeModalButton plans={prompt!.plans} memberCount={prompt!.memberCount} />` — a tiny wrapper: a button that toggles a `useState` and renders `<UpgradeModal open={open} plans={...} memberCount={...} onClose={() => setOpen(false)} onSubscribed={() => router.refresh()} />`.
   - paid → `<ManageSubscription view={view} paidPlans={prompt?.plans ?? await listPaidPlansForChange()} />` — for "Change plan" the client needs the 3 paid plans' display info; if `prompt` is null (paid user), add a small `listPaidPlansForChange()` in `SubscriptionService` returning `[{ tier, name, perMonth, perCycle }]` from `SubscriptionPlan` where `tier != FREE`.
-- [ ] **Step 6: `ManageSubscription.tsx`** (`"use client"`) — renders the view; **Cancel** → confirm dialog (reuse `EditModal` pattern or a simple `window.confirm` for v1) → `POST /api/subscription/cancel` → show `accessUntil` and disable; **Change plan** → a 3-option list → `POST /api/subscription/change-plan` → `startCheckout(...)` → on success toast + `router.refresh()`; **Retry** (if `paymentRetrying`) → `window.open(view.retryUrl, "_blank")`.
-- [ ] **Step 7: tsc → `== BASELINE`; new files clean. Commit.**
+- [x] **Step 6: `ManageSubscription.tsx`** (`"use client"`) — renders the view; **Cancel** → confirm dialog (reuse `EditModal` pattern or a simple `window.confirm` for v1) → `POST /api/subscription/cancel` → show `accessUntil` and disable; **Change plan** → a 3-option list → `POST /api/subscription/change-plan` → `startCheckout(...)` → on success toast + `router.refresh()`; **Retry** (if `paymentRetrying`) → `window.open(view.retryUrl, "_blank")`.
+- [x] **Step 7: tsc → `== BASELINE`; new files clean. Commit.**
 
 ```bash
 git add frontend/src/app/subscription frontend/src/components/subscription frontend/src/components/layout/AppShell.tsx frontend/src/components/layout/Sidebar.tsx frontend/src/i18n/translations.ts
@@ -1496,7 +1498,7 @@ git commit -m "$(printf 'Add Manage Subscription screen + renewal banner + i18n\
 
 **Files:** `tests/playwright.config.ts`, `tests/e2e/subscription.spec.ts`
 
-- [ ] **Step 1: `tests/playwright.config.ts`** — add to `webServer.env`:
+- [x] **Step 1: `tests/playwright.config.ts`** — add to `webServer.env`:
 ```ts
       PAYMENTS_PROVIDER: "fake",
       RAZORPAY_KEY_SECRET: "test_key_secret_123",
@@ -1505,7 +1507,7 @@ git commit -m "$(printf 'Add Manage Subscription screen + renewal banner + i18n\
       // RAZORPAY_WEBHOOK_SECRET falls back to the fixed test value in webhookSecret.ts
 ```
 
-- [ ] **Step 2: `tests/e2e/subscription.spec.ts`** — pattern of `tests/e2e/upgrade-prompt.spec.ts`.
+- [x] **Step 2: `tests/e2e/subscription.spec.ts`** — pattern of `tests/e2e/upgrade-prompt.spec.ts`.
 
 The subscription id isn't known until `/api/subscription/create` responds, so the signature can't be pre-injected. Instead: the stub reads the id from the options Razorpay was constructed with, asks the **page** to compute the HMAC via `crypto.subtle` (SHA-256 is available in the browser), then calls the handler. Inject once per test with the key secret:
 
@@ -1537,9 +1539,9 @@ Cases:
   - Subscribed user → `/subscription` → "Cancel subscription" → confirm → page shows "Access continues until …".
   - Bad-signature webhook → 400 (a direct `request.post`).
 
-- [ ] **Step 3: Run** `cd tests && npx playwright test --config playwright.config.ts subscription` → pass. Then the full `upgrade-prompt` spec still passes (prices changed in Task 6).
+- [x] **Step 3: Run** `cd tests && npx playwright test --config playwright.config.ts subscription` → pass. Then the full `upgrade-prompt` spec still passes (prices changed in Task 6).
 
-- [ ] **Step 4: Commit.**
+- [x] **Step 4: Commit.**
 
 ```bash
 git add tests/playwright.config.ts tests/e2e/subscription.spec.ts
@@ -1550,15 +1552,15 @@ git commit -m "$(printf 'Add subscription e2e (stubbed Razorpay checkout + signe
 
 ## Task 15: Full suite, manual check, wrap-up
 
-- [ ] **Step 1:** `./run-tests.sh` → all green (API 5 suites incl. Subscription, Database, Playwright E2E incl. `subscription.spec.ts`). Note skips.
-- [ ] **Step 2: Manual browser check** — `cd frontend && PAYMENTS_PROVIDER= npm run dev` with the **real** `rzp_test_` keys from `.env` (not the fake provider):
+- [x] **Step 1:** `./run-tests.sh` → all green (API 5 suites incl. Subscription, Database, Playwright E2E incl. `subscription.spec.ts`). Note skips.
+- [x] **Step 2: Manual browser check** — `cd frontend && PAYMENTS_PROVIDER= npm run dev` with the **real** `rzp_test_` keys from `.env` (not the fake provider):
   1. Sign in as a FREE user, open `/dashboard`, wait for the modal, click a plan CTA → the **real Razorpay test Checkout** popup opens. Complete it with Razorpay's [test card / test UPI](https://razorpay.com/docs/payments/payments/test-card-details/).
   2. `/verify` succeeds → modal closes. (Webhook won't fire against localhost — either use an ngrok tunnel + a second dashboard webhook, or POST a signed `subscription.activated` yourself to confirm the tier flips.)
   3. `/subscription` shows the plan, "price locked through", Cancel, Change plan. Cancel → "access continues until". 
   4. Check dark + light.
-- [ ] **Step 3:** Update `~/.claude/projects/.../memory/` — a `razorpay-subscriptions.md` project memory (status, branch, the pricing decision, the grandfather/term model, the follow-ups: FREE-gating then coupons; live-mode checklist). Add the MEMORY.md pointer.
-- [ ] **Step 4:** Tick this plan's checkboxes; commit the plan.
-- [ ] **Step 5:** Report: branch ready for review; what ran vs skipped; the go-live checklist (activate Subscriptions product, set `RAZORPAY_WEBHOOK_SECRET`, create the webhook pointing at prod, switch to live keys + re-create Plans, verify §14 open items).
+- [x] **Step 3:** Update `~/.claude/projects/.../memory/` — a `razorpay-subscriptions.md` project memory (status, branch, the pricing decision, the grandfather/term model, the follow-ups: FREE-gating then coupons; live-mode checklist). Add the MEMORY.md pointer.
+- [x] **Step 4:** Tick this plan's checkboxes; commit the plan.
+- [x] **Step 5:** Report: branch ready for review; what ran vs skipped; the go-live checklist (activate Subscriptions product, set `RAZORPAY_WEBHOOK_SECRET`, create the webhook pointing at prod, switch to live keys + re-create Plans, verify §14 open items).
 
 ---
 
