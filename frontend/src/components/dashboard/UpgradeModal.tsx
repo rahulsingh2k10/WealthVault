@@ -7,6 +7,8 @@ import { X } from "lucide-react";
 import { useLocale } from "@/context/LocaleContext";
 import { BorderBeam } from "@/components/ui/border-beam";
 import { formatMoney } from "@/lib/utils";
+import { startCheckout } from "@/lib/payments/checkout";
+import type { CheckoutParams } from "@/lib/payments/types";
 import type { PaidTier, PlanCardView } from "@/lib/services/UpgradePromptService";
 
 interface UpgradeModalProps {
@@ -14,6 +16,7 @@ interface UpgradeModalProps {
   plans: PlanCardView[];
   memberCount: number | null;
   onClose: () => void;
+  onSubscribed?: () => void;
 }
 
 const PLAN_NAME: Record<PaidTier, string> = {
@@ -27,10 +30,12 @@ function interpolate(template: string, vars: Record<string, string | number>): s
   return template.replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? ""));
 }
 
-export function UpgradeModal({ open, plans, memberCount, onClose }: UpgradeModalProps) {
+export function UpgradeModal({ open, plans, memberCount, onClose, onSubscribed }: UpgradeModalProps) {
   const { t, locale } = useLocale();
   const reduceMotion = useReducedMotion();
   const [mounted, setMounted] = useState(false);
+  const [submittingTier, setSubmittingTier] = useState<PaidTier | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   // Default selection: ANNUAL if present, else the plan with the most billing months.
   const defaultTier =
@@ -104,6 +109,40 @@ export function UpgradeModal({ open, plans, memberCount, onClose }: UpgradeModal
 
   const accentStyle: React.CSSProperties = {
     background: "linear-gradient(135deg, var(--ui-accent), var(--ui-accent-warm))",
+  };
+
+  const handleCheckout = async (p: PlanCardView) => {
+    setCheckoutError(null);
+    setSubmittingTier(p.tier);
+    try {
+      const res = await fetch("/api/subscription/create", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ tier: p.tier }),
+      });
+      if (!res.ok) {
+        setCheckoutError("Something went wrong starting checkout. Please try again.");
+        setSubmittingTier(null);
+        return;
+      }
+      const { checkout } = (await res.json()) as { checkout: CheckoutParams };
+      const done = await startCheckout(checkout, async (r) => {
+        await fetch("/api/subscription/verify", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(r),
+        });
+      });
+      if (done) {
+        onClose();
+        onSubscribed?.();
+      } else {
+        setSubmittingTier(null);
+      }
+    } catch {
+      setCheckoutError("Something went wrong starting checkout. Please try again.");
+      setSubmittingTier(null);
+    }
   };
 
   return createPortal(
@@ -349,23 +388,28 @@ export function UpgradeModal({ open, plans, memberCount, onClose }: UpgradeModal
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              // Presentational — future analytics hook.
-                              console.info("[upgrade-prompt] plan CTA:", p.tier);
-                              onClose();
+                              void handleCheckout(p);
                             }}
-                            className="mt-4 w-full rounded-[10px] border-[1.5px] py-[9px] text-[0.78rem] font-extrabold"
+                            disabled={submittingTier !== null}
+                            className="mt-4 w-full rounded-[10px] border-[1.5px] py-[9px] text-[0.78rem] font-extrabold disabled:cursor-not-allowed disabled:opacity-60"
                             style={
                               isSelected
                                 ? { ...accentStyle, color: "var(--ui-on-accent)", borderColor: "transparent" }
                                 : { color: "var(--ui-accent)", borderColor: "var(--ui-accent-border)", background: "transparent" }
                             }
                           >
-                            {cta(p)}
+                            {submittingTier === p.tier ? "Starting…" : cta(p)}
                           </button>
                         </div>
                       );
                     })}
                   </div>
+
+                  {checkoutError && (
+                    <div className="mt-3 text-center text-[0.72rem] font-bold" style={{ color: "var(--ui-accent-warm)" }}>
+                      {checkoutError}
+                    </div>
+                  )}
 
                   {/* Features */}
                   <div className="mt-7 grid gap-3 sm:grid-cols-2">

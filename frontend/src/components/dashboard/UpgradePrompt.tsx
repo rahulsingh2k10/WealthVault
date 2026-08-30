@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { UpgradeModal } from "./UpgradeModal";
 import type { UpgradePromptData } from "@/lib/services/UpgradePromptService";
 
@@ -25,6 +26,7 @@ function resolveDelayMs(): number {
  */
 export function UpgradePrompt({ plans, memberCount }: UpgradePromptData) {
   const [open, setOpen] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     try {
@@ -45,5 +47,18 @@ export function UpgradePrompt({ plans, memberCount }: UpgradePromptData) {
     setOpen(false);
   };
 
-  return <UpgradeModal open={open} plans={plans} memberCount={memberCount} onClose={close} />;
+  return (
+    <UpgradeModal
+      open={open}
+      plans={plans}
+      memberCount={memberCount}
+      onClose={close}
+      onSubscribed={() => {
+        // No toast infrastructure exists yet in this codebase; router.refresh()
+        // re-runs the dashboard server component so the paid-tier gate naturally
+        // stops rendering this prompt.
+        router.refresh();
+      }}
+    />
+  );
 }
