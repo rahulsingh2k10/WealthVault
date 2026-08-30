@@ -145,10 +145,14 @@ model ProcessedWebhookEvent {
 }
 ```
 
-- [ ] **Step 2: Create the migration + regenerate the client**
+- [ ] **Step 2: Push the schema + regenerate the client**
 
-Run: `cd frontend && npx prisma migrate dev --name razorpay_subscriptions`
-Expected: a new folder under `frontend/prisma/migrations/`, "Your database is now in sync", and the client regenerated. If it prompts about data loss it should not — these are additive. If the shell can't reach the DB, run `npx prisma generate` at minimum and note the migration must be applied before the integration/e2e suites.
+**This project's DB is NOT managed by Prisma Migrate** (no `prisma/migrations/`, `prisma migrate status` says "not managed by Prisma Migrate"). It uses `prisma db push` (see `package.json` `db:push`). Do **NOT** run `prisma migrate` — it would offer to reset the database.
+
+Run: `cd frontend && npx prisma db push`
+Expected: "Your database is now in sync with your Prisma schema" + "Generated Prisma Client". The changes are purely additive (3 nullable columns on `subscription_plans`, 2 on `users`, 2 new tables) — `db push` applies them without data loss and **prompts nothing**. If it warns about data loss, STOP and report — something else is off.
+Then `npx prisma generate` (db push already does this, but run it explicitly to be sure the client is fresh).
+If the shell can't reach the DB: run `npx prisma generate` alone (regenerates the client from the schema so `tsc` and the type-checks work) and note that `db push` must be run against the real DB before the integration/e2e suites.
 
 - [ ] **Step 3: Record the new tsc baseline**
 
@@ -198,17 +202,17 @@ The `upsert` in `ensureReferenceData` already spreads `...pricing` into both `up
 - [ ] **Step 6: Run the DB suites to confirm the migration + seed shape**
 
 Run: `cd tests && npx jest --config jest.config.js database --runInBand`
-Expected: `schema.test.ts` + `subscription-period-service.test.ts` still pass (20 tests). `schema.test.ts` asserts column order of `subscription_plans` / `users` — **if it fails on the new columns, update the expected column list in that test** to include `razorpayPlanId, intervalMonths, termMonths` (subscription_plans) and `razorpayCustomerId` (users) at the position Prisma added them (end, before timestamps — check the migration SQL). Note the exact edit in your report.
+Expected: `schema.test.ts` + `subscription-period-service.test.ts` still pass (20 tests). `schema.test.ts` asserts the physical column order of `subscription_plans` / `users` (via `information_schema.columns`) — **if it fails on the new columns, update the expected column list in that test** to include `razorpayPlanId, intervalMonths, termMonths` (subscription_plans) and `razorpayCustomerId` (users) in the position `db push` actually added them (run `echo '\d subscription_plans' | npx prisma db execute --stdin` — or a `SELECT column_name FROM information_schema.columns WHERE table_name='subscription_plans' ORDER BY ordinal_position` — to see the real order). Note the exact edit in your report.
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add frontend/prisma/schema.prisma frontend/prisma/migrations frontend/prisma/seed.ts tests/helpers/seedReferenceData.ts
+git add frontend/prisma/schema.prisma frontend/prisma/seed.ts tests/helpers/seedReferenceData.ts
 git add tests/database/schema.test.ts   # only if Step 6 edited it
-git commit -m "$(printf 'Subscription schema: Subscription + ProcessedWebhookEvent models, plan interval/term/razorpayPlanId\n\nClaude-Session: https://claude.ai/code/session_01AYKJrkWLstJJtCobh7tMaB')"
+git commit -m "$(printf 'Subscription schema (db push): Subscription + ProcessedWebhookEvent models, plan interval/term/razorpayPlanId\n\nClaude-Session: https://claude.ai/code/session_01AYKJrkWLstJJtCobh7tMaB')"
 ```
 
-> The generated Prisma client lives in `frontend/node_modules/.prisma` (not committed). If this project vendors it elsewhere, check `git status` after `prisma generate` and add only tracked, intended paths.
+> `db push` writes no migration files. The generated client lives in `frontend/node_modules/.prisma` (not committed). `git status` after the push should show only `schema.prisma` + `seed.ts` (+ maybe the test helper / test) as changed — nothing under `prisma/migrations/`.
 
 ---
 
