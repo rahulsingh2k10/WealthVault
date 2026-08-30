@@ -12,13 +12,16 @@ test.afterAll(async () => {
   await disconnectTestPrisma();
 });
 
-// The stubbed Razorpay checkout signs the payment with this secret in-page; it
-// must match RAZORPAY_KEY_SECRET in playwright.config.ts so FakeProvider's
-// verifyCheckoutSignature (same HMAC scheme) accepts it on /api/subscription/verify.
-const KEY_SECRET = "test_key_secret_123";
-// `signedWebhook` signs with RAZORPAY_WEBHOOK_SECRET. Both the dev server (Next
-// .env loading) and this runner (loadFrontendEnv in playwright.config.ts) read
-// the same value from frontend/.env, so the signatures match.
+// The stubbed Razorpay checkout signs the payment with this secret in-page. It
+// must resolve to exactly what FakeProvider uses server-side —
+// `process.env.RAZORPAY_KEY_SECRET || "test_key_secret_123"` (see fake.ts) — so
+// /api/subscription/verify accepts the signature. loadFrontendEnv() in
+// playwright.config.ts puts frontend/.env's value on process.env here, and the
+// dev server reads the same file, so they match whether the server is spawned
+// fresh or reused from the jest testServer.
+const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || "test_key_secret_123";
+// `signedWebhook` signs with RAZORPAY_WEBHOOK_SECRET, resolved the same way on
+// both sides (webhookSecret.ts vs frontend/.env), so those signatures match too.
 
 // Whether the dev server under test actually runs with PAYMENTS_PROVIDER=fake.
 // playwright.config.ts sets it, but `reuseExistingServer: true` means a pre-existing
