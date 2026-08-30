@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { getEffectivePlan } from "@/lib/services/SubscriptionService";
 
 export async function GET() {
   const session = await getSession();
@@ -10,7 +11,7 @@ export async function GET() {
 
   const dbUser = await prisma.user.findUnique({
     where: { id: session.userId },
-    include: { subscriptionPlan: true, authPlatform: true },
+    include: { authPlatform: true },
   });
   if (!dbUser) {
     return NextResponse.json({ user: null });
@@ -27,6 +28,8 @@ export async function GET() {
     });
   }
 
+  const eff = await getEffectivePlan(session.userId);
+
   return NextResponse.json({
     user: {
       id: dbUser.id,
@@ -34,7 +37,9 @@ export async function GET() {
       email: dbUser.username,
       avatar,
       platform: dbUser.authPlatform.platform,
-      subscription: dbUser.subscriptionPlan.tier,
+      subscription: eff.tier,
+      paymentRetrying: eff.paymentRetrying,
+      subscriptionEndsAt: eff.currentEnd?.toISOString() ?? null,
     },
   });
 }
