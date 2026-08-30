@@ -97,6 +97,8 @@ In `model User`, add after `subscriptionPeriods`:
   subscriptions       Subscription[]
 ```
 
+**Name collision:** `schema.prisma` already has `enum Subscription { FREE MONTHLY QUARTERLY ANNUAL }` (the type of `SubscriptionPlan.tier`). A `model Subscription` cannot coexist with it. **Rename the enum to `Tier` and add `@@map("Subscription")`** so the Postgres enum type name is unchanged (purely additive — `db push` shows no DROP). Nothing in `src/` or `tests/` imports the Prisma enum by name (verified), so this is safe. The generated client now exports `Tier` (same 4 values). All later tasks that reference the Prisma tier enum type use `Tier`.
+
 Add two new models at the end of the file:
 
 ```prisma
