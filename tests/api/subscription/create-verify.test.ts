@@ -96,6 +96,23 @@ describeOrSkip("POST /api/subscription/create", () => {
       await deleteTestUser(user.id);
     }
   });
+
+  test("malformed JSON body → clean error response, not a crash", async () => {
+    const user = await createTestUser();
+    try {
+      const cookie = await cookieFor(user.id);
+      const res = await fetch(`${TEST_SERVER_URL}/api/subscription/create`, {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie },
+        body: "not json",
+      });
+      expect([400, 500]).toContain(res.status);
+      const json = await res.json();
+      expect(json.error).toEqual(expect.any(String));
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
 });
 
 describeOrSkip("POST /api/subscription/verify", () => {
@@ -159,6 +176,57 @@ describeOrSkip("POST /api/subscription/verify", () => {
     } finally {
       await deleteTestUser(userA.id);
       await deleteTestUser(userB.id);
+    }
+  });
+
+  test("verify on a row with supersedesId cancels the old subscription", async () => {
+    const prisma = getTestPrisma();
+    const user = await createTestUser();
+    try {
+      const oldRow = await createSubscriptionRow(user.id, { status: "active" });
+      const newRow = await createSubscriptionRow(user.id, { status: "created", supersedesId: oldRow.id });
+      const cookie = await cookieFor(user.id);
+      const paymentId = "pay_test_supersede";
+      const signature = checkoutSignature(paymentId, newRow.providerSubscriptionId);
+
+      const res = await postVerify(cookie, {
+        razorpay_payment_id: paymentId,
+        razorpay_subscription_id: newRow.providerSubscriptionId,
+        razorpay_signature: signature,
+      });
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json).toEqual({ ok: true });
+
+      const updatedOld = await prisma.subscription.findUniqueOrThrow({ where: { id: oldRow.id } });
+      expect(updatedOld.cancelAtCycleEnd).toBe(true);
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
+  test("re-verifying the same subscription twice is a safe no-op", async () => {
+    const user = await createTestUser();
+    try {
+      const row = await createSubscriptionRow(user.id, { status: "created" });
+      const cookie = await cookieFor(user.id);
+      const paymentId = "pay_test_idempotent";
+      const signature = checkoutSignature(paymentId, row.providerSubscriptionId);
+      const payload = {
+        razorpay_payment_id: paymentId,
+        razorpay_subscription_id: row.providerSubscriptionId,
+        razorpay_signature: signature,
+      };
+
+      const res1 = await postVerify(cookie, payload);
+      expect(res1.status).toBe(200);
+      expect(await res1.json()).toEqual({ ok: true });
+
+      const res2 = await postVerify(cookie, payload);
+      expect(res2.status).toBe(200);
+      expect(await res2.json()).toEqual({ ok: true });
+    } finally {
+      await deleteTestUser(user.id);
     }
   });
 });
