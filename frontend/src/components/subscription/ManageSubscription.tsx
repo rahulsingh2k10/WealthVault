@@ -152,7 +152,7 @@ export function ManageSubscription({ view, paidPlans }: ManageSubscriptionProps)
           )}
           <button
             onClick={handleCancel}
-            disabled={cancelling || alreadyCancelled}
+            disabled={cancelling || alreadyCancelled || changingTier !== null}
             className="rounded-lg border px-4 py-2 text-[0.78rem] font-bold disabled:cursor-not-allowed disabled:opacity-50"
             style={{ borderColor: "var(--ui-card-border)", color: "var(--ui-text-sec)" }}
           >
@@ -177,7 +177,7 @@ export function ManageSubscription({ view, paidPlans }: ManageSubscriptionProps)
               <button
                 key={p.tier}
                 onClick={() => handleChangePlan(p.tier)}
-                disabled={changingTier !== null}
+                disabled={changingTier !== null || cancelling}
                 className="flex w-full items-center justify-between rounded-lg border px-4 py-2.5 text-left text-[0.82rem] disabled:cursor-not-allowed disabled:opacity-60"
                 style={{ borderColor: "var(--ui-card-border)" }}
               >

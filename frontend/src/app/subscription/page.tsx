@@ -5,6 +5,7 @@ import { getUpgradePromptData } from '@/lib/services/UpgradePromptService'
 import { buildManageView, listPaidPlansForChange } from '@/lib/services/SubscriptionService'
 import { ManageSubscription } from '@/components/subscription/ManageSubscription'
 import { OpenUpgradeModalButton } from '@/components/subscription/OpenUpgradeModalButton'
+import { FreeTierHeading } from '@/components/subscription/FreeTierHeading'
 
 export default async function SubscriptionPage() {
   const session = await getSession()
@@ -19,9 +20,7 @@ export default async function SubscriptionPage() {
     <AppShell title="Manage Subscription">
       {view.tier === 'FREE' ? (
         <div>
-          <h2 className="mb-4 text-lg font-bold text-[color:var(--ui-text-pri)]">
-            You&apos;re on the Free plan
-          </h2>
+          <FreeTierHeading />
           {prompt ? (
             <OpenUpgradeModalButton plans={prompt.plans} memberCount={prompt.memberCount} />
           ) : (
