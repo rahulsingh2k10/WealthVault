@@ -440,7 +440,7 @@ export function UpgradeModal({ open, plans, memberCount, onClose, onSubscribed }
                   <span><span aria-hidden>✦ </span>{t.upgrade.trustMoneyBack}</span>
                 </div>
                 <button
-                  onClick={onClose}
+                  onClick={() => { if (submittingTier === null) onClose(); }}
                   className="mx-auto mb-6 mt-2 block text-[0.78rem] text-[color:var(--ui-text-muted)] underline"
                 >
                   {t.upgrade.maybeLater}
