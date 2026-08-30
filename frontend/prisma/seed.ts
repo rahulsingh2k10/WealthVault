@@ -47,21 +47,21 @@ async function main() {
   });
   console.log("✅ Nav config seeded");
 
-  // Seed subscription plan pricing — PLACEHOLDER values, real pricing not finalized.
-  // `price` / `offerPrice` are per billing period, whole INR. The launch offer
-  // (20% off Treasury & Sovereign) is a placeholder too — set the real prices and
-  // window before going live.
+  // Subscription plans — per-cycle amounts in whole INR.
+  //   price      = list amount charged per billing cycle
+  //   offerPrice = current intro amount (60% off) charged per cycle — matches the live Razorpay Plans
+  // razorpayPlanId comes from the RAZORPAY_PLAN_ID_* env (test values in frontend/.env).
   const offerStart = new Date('2026-08-01T00:00:00Z');
   const offerEnd = new Date('2026-09-30T23:59:59Z');
   await prisma.subscriptionPlan.createMany({
     data: [
-      { tier: 'FREE',      price: 0,     offerPrice: null,  currency: 'INR', isActive: true },
-      { tier: 'MONTHLY',   price: 3000,  offerPrice: null,  currency: 'INR', isActive: true },                                              // Reserve   ₹3,000/mo
-      { tier: 'QUARTERLY', price: 6000,  offerPrice: 4800,  currency: 'INR', isActive: true, offerStartDate: offerStart, offerEndDate: offerEnd }, // Treasury  ₹2,000 → ₹1,600/mo
-      { tier: 'ANNUAL',    price: 18000, offerPrice: 14400, currency: 'INR', isActive: true, offerStartDate: offerStart, offerEndDate: offerEnd }, // Sovereign ₹1,500 → ₹1,200/mo
+      { tier: 'FREE',      price: 0,     offerPrice: null,  currency: 'INR', isActive: true, intervalMonths: null, termMonths: null, razorpayPlanId: null },
+      { tier: 'MONTHLY',   price: 9000,  offerPrice: 3600,  currency: 'INR', isActive: true, intervalMonths: 1,  termMonths: 36, razorpayPlanId: process.env.RAZORPAY_PLAN_ID_MONTHLY ?? null,   offerStartDate: offerStart, offerEndDate: offerEnd },
+      { tier: 'QUARTERLY', price: 18000, offerPrice: 7200,  currency: 'INR', isActive: true, intervalMonths: 3,  termMonths: 36, razorpayPlanId: process.env.RAZORPAY_PLAN_ID_QUARTERLY ?? null, offerStartDate: offerStart, offerEndDate: offerEnd },
+      { tier: 'ANNUAL',    price: 36000, offerPrice: 14400, currency: 'INR', isActive: true, intervalMonths: 12, termMonths: 36, razorpayPlanId: process.env.RAZORPAY_PLAN_ID_ANNUAL ?? null,    offerStartDate: offerStart, offerEndDate: offerEnd },
     ],
   });
-  console.log("✅ Subscription plans seeded (placeholder pricing + launch offer)");
+  console.log('✅ Subscription plans seeded (list + 60% intro, Razorpay plan ids)');
 
   // Store passphrase verifier
   await prisma.appConfig.create({

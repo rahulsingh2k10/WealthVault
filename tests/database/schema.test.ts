@@ -31,6 +31,7 @@ describeOrSkip("users table", () => {
       "verifier",
       "createdAt",
       "updatedAt",
+      "razorpayCustomerId",
     ]);
   });
 
@@ -181,6 +182,9 @@ describeOrSkip("subscription_plans table", () => {
       "isActive",
       "createdAt",
       "updatedAt",
+      "intervalMonths",
+      "razorpayPlanId",
+      "termMonths",
     ]);
   });
 

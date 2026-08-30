@@ -11,12 +11,12 @@ const OFFER_END = new Date("2026-09-30T23:59:59Z");
 
 const PLAN_PRICING: Record<
   Tier,
-  { price: number; offerPrice: number | null; offerStartDate: Date | null; offerEndDate: Date | null }
+  { price: number; offerPrice: number | null; offerStartDate: Date | null; offerEndDate: Date | null; intervalMonths: number | null; termMonths: number | null; razorpayPlanId: string | null }
 > = {
-  FREE:      { price: 0,     offerPrice: null,  offerStartDate: null,        offerEndDate: null },
-  MONTHLY:   { price: 3000,  offerPrice: null,  offerStartDate: null,        offerEndDate: null },
-  QUARTERLY: { price: 6000,  offerPrice: 4800,  offerStartDate: OFFER_START, offerEndDate: OFFER_END },
-  ANNUAL:    { price: 18000, offerPrice: 14400, offerStartDate: OFFER_START, offerEndDate: OFFER_END },
+  FREE:      { price: 0,     offerPrice: null,  offerStartDate: null,        offerEndDate: null,        intervalMonths: null, termMonths: null, razorpayPlanId: null },
+  MONTHLY:   { price: 9000,  offerPrice: 3600,  offerStartDate: OFFER_START, offerEndDate: OFFER_END,   intervalMonths: 1,   termMonths: 36,   razorpayPlanId: 'plan_test_monthly' },
+  QUARTERLY: { price: 18000, offerPrice: 7200,  offerStartDate: OFFER_START, offerEndDate: OFFER_END,   intervalMonths: 3,   termMonths: 36,   razorpayPlanId: 'plan_test_quarterly' },
+  ANNUAL:    { price: 36000, offerPrice: 14400, offerStartDate: OFFER_START, offerEndDate: OFFER_END,   intervalMonths: 12,  termMonths: 36,   razorpayPlanId: 'plan_test_annual' },
 };
 
 export async function ensureReferenceData(): Promise<void> {

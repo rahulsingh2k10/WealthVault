@@ -157,7 +157,7 @@ If the shell can't reach the DB: run `npx prisma generate` alone (regenerates th
 - [ ] **Step 3: Record the new tsc baseline**
 
 Run: `cd frontend && npx tsc --noEmit 2>&1 | grep -c "error TS"`
-Write the number here in the plan: **BASELINE = ____** (regenerating the client for the new models typically *reduces* the count since `Subscription` etc. now exist; the asset-model errors remain). Every later task's type-check step uses this number.
+Write the number here in the plan: **BASELINE = 89** (regenerating the client for the new models typically *reduces* the count since `Subscription` etc. now exist; the asset-model errors remain). Every later task's type-check step uses this number.
 
 - [ ] **Step 4: Update `frontend/prisma/seed.ts`**
 
