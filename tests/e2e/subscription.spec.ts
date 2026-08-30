@@ -16,6 +16,9 @@ test.afterAll(async () => {
 // must match RAZORPAY_KEY_SECRET in playwright.config.ts so FakeProvider's
 // verifyCheckoutSignature (same HMAC scheme) accepts it on /api/subscription/verify.
 const KEY_SECRET = "test_key_secret_123";
+// `signedWebhook` signs with RAZORPAY_WEBHOOK_SECRET. Both the dev server (Next
+// .env loading) and this runner (loadFrontendEnv in playwright.config.ts) read
+// the same value from frontend/.env, so the signatures match.
 
 // Whether the dev server under test actually runs with PAYMENTS_PROVIDER=fake.
 // playwright.config.ts sets it, but `reuseExistingServer: true` means a pre-existing
@@ -71,10 +74,14 @@ test.describe("Razorpay subscription flow", () => {
         headers: { cookie: `${SESSION_COOKIE_NAME}=${sealed}`, "content-type": "application/json" },
         data: { tier: "ANNUAL" },
       });
-      if (res.ok()) {
-        const body = (await res.json()) as { checkout?: { razorpay?: { subscriptionId?: string } } };
-        fakeProviderActive = !!body.checkout?.razorpay?.subscriptionId?.startsWith("sub_fake_");
+      if (!res.ok()) {
+        // A failed probe is a real problem (misconfigured plan, seed failure, the
+        // stale-Prisma baseline reaching these models) — surface it loudly rather
+        // than silently downgrading to "fake provider not active" and skipping.
+        throw new Error(`subscription probe failed: ${res.status()} ${await res.text()}`);
       }
+      const body = (await res.json()) as { checkout?: { razorpay?: { subscriptionId?: string } } };
+      fakeProviderActive = !!body.checkout?.razorpay?.subscriptionId?.startsWith("sub_fake_");
     } finally {
       await deleteTestUser(probe.id);
     }
@@ -107,7 +114,7 @@ test.describe("Razorpay subscription flow", () => {
       });
       expect(sub?.providerSubscriptionId).toMatch(/^sub_fake_/);
 
-      const { body, signature } = signedWebhook("subscription.activated", {
+      const { body, signature, eventId } = signedWebhook("subscription.activated", {
         id: sub!.providerSubscriptionId,
         current_end: Math.floor(Date.now() / 1000) + 400 * 24 * 3600,
       });
@@ -116,6 +123,7 @@ test.describe("Razorpay subscription flow", () => {
         headers: { "x-razorpay-signature": signature, "content-type": "application/json" },
       });
       expect(res.status()).toBe(200);
+      await getTestPrisma().processedWebhookEvent.deleteMany({ where: { eventId } });
 
       // A paid user no longer sees the upgrade prompt.
       await page.goto("/dashboard?wvUpgradePromptDelayMs=150");

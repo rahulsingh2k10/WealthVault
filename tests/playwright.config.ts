@@ -26,7 +26,8 @@ export default defineConfig({
       RAZORPAY_KEY_SECRET: "test_key_secret_123",
       RAZORPAY_KEY_ID: "rzp_test_e2e",
       NEXT_PUBLIC_RAZORPAY_KEY_ID: "rzp_test_e2e",
-      // RAZORPAY_WEBHOOK_SECRET falls back to the fixed test value in webhookSecret.ts
+      // RAZORPAY_WEBHOOK_SECRET is not set here — the dev server and the test
+      // runner both read the same value from frontend/.env, so webhook signatures match.
     },
   },
 });
