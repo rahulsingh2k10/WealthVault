@@ -102,6 +102,82 @@ describeOrSkip("getEffectivePlan", () => {
     }
   });
 
+  test("tie-break: infinite-granting row beats a finite-granting row", async () => {
+    const user = await createTestUser();
+    try {
+      await createSubscriptionRow(user.id, {
+        tier: "MONTHLY",
+        status: "active",
+        currentEnd: null,
+        createdAt: new Date(Date.now() - 10 * 86400_000),
+      });
+      await createSubscriptionRow(user.id, {
+        tier: "QUARTERLY",
+        status: "cancelled",
+        currentEnd: new Date(Date.now() + 10 * 86400_000),
+      });
+      expect((await getEffectivePlan(user.id)).tier).toBe("MONTHLY");
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
+  test("pending with currentEnd: null wins its tie-break", async () => {
+    const user = await createTestUser();
+    try {
+      await createSubscriptionRow(user.id, { tier: "MONTHLY", status: "pending", currentEnd: null });
+      await createSubscriptionRow(user.id, {
+        tier: "QUARTERLY",
+        status: "cancelled",
+        currentEnd: new Date(Date.now() + 300 * 86400_000),
+      });
+      expect((await getEffectivePlan(user.id)).tier).toBe("MONTHLY");
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
+  test("pending grants regardless of a past currentEnd", async () => {
+    const user = await createTestUser();
+    try {
+      await createSubscriptionRow(user.id, { tier: "MONTHLY", status: "pending", currentEnd: new Date(Date.now() - 86400_000) });
+      expect((await getEffectivePlan(user.id)).tier).toBe("MONTHLY");
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
+  test("expired status does not grant → FREE", async () => {
+    const user = await createTestUser();
+    try {
+      await createSubscriptionRow(user.id, { status: "expired" });
+      expect((await getEffectivePlan(user.id)).tier).toBe("FREE");
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
+  test("scheduled (future startAt) row does not grant yet", async () => {
+    const user = await createTestUser();
+    try {
+      await createSubscriptionRow(user.id, {
+        tier: "MONTHLY",
+        status: "active",
+        currentEnd: new Date(Date.now() + 5 * 86400_000),
+        createdAt: new Date(Date.now() - 10 * 86400_000),
+      });
+      await createSubscriptionRow(user.id, {
+        tier: "ANNUAL",
+        status: "authenticated",
+        currentEnd: null,
+        startAt: new Date(Date.now() + 5 * 86400_000),
+      });
+      expect((await getEffectivePlan(user.id)).tier).toBe("MONTHLY");
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
   test("lazy reconciliation: stale User.subscriptionPlanId gets corrected to FREE", async () => {
     const { getTestPrisma } = require("../../helpers/testDb");
     const { getPlanId } = require("../../helpers/seedReferenceData");
