@@ -167,4 +167,61 @@ describeOrSkip("POST /api/subscription/webhook/[provider]", () => {
       await deleteTestUser(user.id);
     }
   });
+
+  test("stuck 'processing' row (crashed prior attempt) is reprocessed, not treated as done", async () => {
+    const prisma = getTestPrisma();
+    const user = await createTestUser();
+    try {
+      const row = await createSubscriptionRow(user.id, { tier: "MONTHLY", status: "active", paidCount: 0 });
+      const { body, signature, eventId } = signedWebhook("subscription.charged", { id: row.providerSubscriptionId, paid_count: 7 });
+
+      await prisma.processedWebhookEvent.create({ data: { provider: "razorpay", eventId, status: "processing" } });
+
+      const res = await postWebhook(body, signature);
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.duplicate).toBeFalsy();
+
+      const updated = await prisma.subscription.findUniqueOrThrow({ where: { id: row.id } });
+      expect(updated.paidCount).toBe(7);
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
+  test("'done' row is genuinely skipped, not reprocessed", async () => {
+    const prisma = getTestPrisma();
+    const user = await createTestUser();
+    try {
+      const row = await createSubscriptionRow(user.id, { tier: "MONTHLY", status: "active", paidCount: 3 });
+      const { body, signature, eventId } = signedWebhook("subscription.charged", { id: row.providerSubscriptionId, paid_count: 8 });
+
+      await prisma.processedWebhookEvent.create({ data: { provider: "razorpay", eventId, status: "done" } });
+      const before = await prisma.subscription.findUniqueOrThrow({ where: { id: row.id } });
+
+      const res = await postWebhook(body, signature);
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.duplicate).toBe(true);
+
+      const after = await prisma.subscription.findUniqueOrThrow({ where: { id: row.id } });
+      expect(after.paidCount).toBe(before.paidCount);
+      expect(after.updatedAt.toISOString()).toBe(before.updatedAt.toISOString());
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
+  test("valid signature but tampered body → 400", async () => {
+    const { body, signature } = signedWebhook("subscription.charged", { id: "sub_tampered", paid_count: 1 });
+    const tampered = body.replace('"paid_count":1', '"paid_count":9');
+    const res = await postWebhook(tampered, signature);
+    expect(res.status).toBe(400);
+  });
+
+  test("missing signature header → 400", async () => {
+    const { body } = signedWebhook("subscription.charged", { id: "sub_no_sig", paid_count: 1 });
+    const res = await postWebhook(body, null);
+    expect(res.status).toBe(400);
+  });
 });

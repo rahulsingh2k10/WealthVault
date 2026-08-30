@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getProvider } from "@/lib/payments";
 import { applySubscriptionEvent } from "@/lib/services/SubscriptionService";
@@ -16,11 +17,28 @@ export async function POST(req: NextRequest, { params }: { params: { provider: s
 
   const evt = provider.normalizeWebhookEvent(raw);
 
-  // idempotency
+  // Idempotency: create the row up front. On a real duplicate (unique
+  // constraint), only skip reprocessing if a PRIOR attempt actually finished
+  // ("done") — a row stuck at "processing" means a prior attempt crashed
+  // before completing, and it's safe (and necessary) to retry, because
+  // applySubscriptionEvent writes absolute values, never deltas.
+  let alreadyDone = false;
   try {
     await prisma.processedWebhookEvent.create({ data: { provider: "razorpay", eventId: evt.eventId } });
-  } catch {
-    return NextResponse.json({ ok: true, duplicate: true }); // already processed
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      const existing = await prisma.processedWebhookEvent.findUnique({
+        where: { provider_eventId: { provider: "razorpay", eventId: evt.eventId } },
+      });
+      alreadyDone = existing?.status === "done";
+    } else {
+      console.error("[subscription] webhook idempotency check failed", e);
+      return NextResponse.json({ error: "idempotency check failed" }, { status: 500 });
+    }
+  }
+
+  if (alreadyDone) {
+    return NextResponse.json({ ok: true, duplicate: true });
   }
 
   try {
@@ -29,6 +47,11 @@ export async function POST(req: NextRequest, { params }: { params: { provider: s
     console.error("[subscription] webhook processing failed", e);
     return NextResponse.json({ error: "processing failed" }, { status: 500 });
   }
+
+  await prisma.processedWebhookEvent.updateMany({
+    where: { provider: "razorpay", eventId: evt.eventId },
+    data: { status: "done" },
+  });
 
   return NextResponse.json({ ok: true });
 }

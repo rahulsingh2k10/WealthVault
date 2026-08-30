@@ -140,6 +140,11 @@ model ProcessedWebhookEvent {
   id        String   @id @default(uuid())
   provider  String   @default("razorpay")
   eventId   String
+  // "processing" until applySubscriptionEvent succeeds, then "done". A row
+  // stuck at "processing" (a prior attempt crashed mid-way) is safe to
+  // reprocess — applySubscriptionEvent writes absolute values from the
+  // webhook payload, never deltas, so re-running it is idempotent.
+  status    String   @default("processing")
   createdAt DateTime @default(now())
 
   @@unique([provider, eventId])
