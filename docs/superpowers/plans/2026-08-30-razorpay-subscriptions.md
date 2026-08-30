@@ -720,9 +720,11 @@ git commit -m "$(printf 'Add FakeProvider + getProvider registry (PAYMENTS_PROVI
 
 ## Task 5: `SubscriptionService` — `totalCountFor` + `getEffectivePlan` (TDD)
 
-**Files:** `frontend/src/lib/services/SubscriptionService.ts`, `tests/api/subscription/effective-plan.test.ts`, `tests/helpers/subscriptionFactory.ts`
+**Files:** `frontend/src/lib/services/SubscriptionService.ts`, `tests/api/subscription/effective-plan.test.ts`, `tests/helpers/subscriptionFactory.ts`, `tests/helpers/testUser.ts`
 
 This is the access source of truth — the most important test in the feature.
+
+> **Also fixed here:** `tests/helpers/testUser.ts`'s `deleteTestUser` cleaned up `SubscriptionPeriod` rows before deleting the user, but not the new `Subscription` rows (no cascade delete) — so it silently leaked test users via its `.catch(() => {})`. Add `await prisma.subscription.deleteMany({ where: { userId } });` alongside the existing `subscriptionPeriod.deleteMany` call, before `user.delete`. Do this once, here — every later task (8, 10, 12) that creates `Subscription` rows via `deleteTestUser` in a `finally` then relies on this fix, with no local workaround needed.
 
 - [ ] **Step 1: `tests/helpers/subscriptionFactory.ts`**
 
