@@ -20,6 +20,13 @@ export default defineConfig({
     url: `http://localhost:${PORT}`,
     reuseExistingServer: true,
     timeout: 60000,
-    env: { DATABASE_URL: process.env.TEST_DATABASE_URL ?? "" },
+    env: {
+      DATABASE_URL: process.env.TEST_DATABASE_URL ?? "",
+      PAYMENTS_PROVIDER: "fake",
+      RAZORPAY_KEY_SECRET: "test_key_secret_123",
+      RAZORPAY_KEY_ID: "rzp_test_e2e",
+      NEXT_PUBLIC_RAZORPAY_KEY_ID: "rzp_test_e2e",
+      // RAZORPAY_WEBHOOK_SECRET falls back to the fixed test value in webhookSecret.ts
+    },
   },
 });
