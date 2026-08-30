@@ -84,3 +84,31 @@ describe("normalizeWebhookEvent", () => {
     expect(provider.normalizeWebhookEvent(evt("payment.captured", {})).kind).toBe("ignored");
   });
 });
+
+describe("RazorpayProvider construction", () => {
+  test("throws if RAZORPAY_KEY_SECRET is missing", () => {
+    const prevId = process.env.RAZORPAY_KEY_ID;
+    const prevSecret = process.env.RAZORPAY_KEY_SECRET;
+    process.env.RAZORPAY_KEY_ID = "rzp_test_x";
+    delete process.env.RAZORPAY_KEY_SECRET;
+    try {
+      expect(() => new RazorpayProvider()).toThrow();
+    } finally {
+      process.env.RAZORPAY_KEY_ID = prevId;
+      process.env.RAZORPAY_KEY_SECRET = prevSecret;
+    }
+  });
+
+  test("throws if RAZORPAY_KEY_ID is missing", () => {
+    const prevId = process.env.RAZORPAY_KEY_ID;
+    const prevSecret = process.env.RAZORPAY_KEY_SECRET;
+    delete process.env.RAZORPAY_KEY_ID;
+    process.env.RAZORPAY_KEY_SECRET = "test_key_secret_123";
+    try {
+      expect(() => new RazorpayProvider()).toThrow();
+    } finally {
+      process.env.RAZORPAY_KEY_ID = prevId;
+      process.env.RAZORPAY_KEY_SECRET = prevSecret;
+    }
+  });
+});

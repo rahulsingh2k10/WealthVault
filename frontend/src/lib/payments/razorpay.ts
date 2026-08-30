@@ -43,11 +43,15 @@ export class RazorpayProvider implements PaymentProvider {
   private keySecret: string;
 
   constructor() {
-    this.keySecret = process.env.RAZORPAY_KEY_SECRET ?? "";
-    this.client = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID ?? "",
-      key_secret: this.keySecret,
-    });
+    const keyId = process.env.RAZORPAY_KEY_ID;
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    if (!keyId || !keySecret) {
+      throw new Error(
+        "RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET must be set — refusing to construct a RazorpayProvider with a missing/empty key (this would silently sign and verify with a guessable key).",
+      );
+    }
+    this.keySecret = keySecret;
+    this.client = new Razorpay({ key_id: keyId, key_secret: keySecret });
   }
 
   verifyCheckoutSignature({ paymentId, subscriptionId, signature }: { paymentId: string; subscriptionId: string; signature: string }): boolean {
