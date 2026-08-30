@@ -71,6 +71,28 @@ export interface Translations {
     trustCancel: string;
     trustMoneyBack: string;
   };
+  // TODO(i18n): manageSubscription.* strings are AI-translated — need native-speaker review
+  manageSubscription: {
+    title: string;
+    freeHeading: string;
+    freeUpgradeCta: string;
+    statusActive: string;
+    statusPending: string;
+    statusCancelled: string;
+    nextCharge: string;
+    priceLocked: string;
+    cancelCta: string;
+    cancelConfirmTitle: string;
+    cancelConfirmBody: string;
+    changePlanCta: string;
+    retryCta: string;
+    accessUntil: string;
+  };
+  // TODO(i18n): renewalBanner.* strings are AI-translated — need native-speaker review
+  renewalBanner: {
+    message: string;
+    action: string;
+  };
 }
 
 export const LOCALES: { code: Locale; label: string; native: string }[] = [
@@ -145,6 +167,26 @@ const translations: Record<Locale, Translations> = {
       trustCancel: "Cancel anytime",
       trustMoneyBack: "7-day money-back",
     },
+    manageSubscription: {
+      title: "Manage Subscription",
+      freeHeading: "You're on the Free plan",
+      freeUpgradeCta: "Upgrade",
+      statusActive: "Active",
+      statusPending: "Payment pending",
+      statusCancelled: "Cancelled",
+      nextCharge: "Next charge {amount} on {date}",
+      priceLocked: "Your price is locked through {date}",
+      cancelCta: "Cancel subscription",
+      cancelConfirmTitle: "Cancel subscription?",
+      cancelConfirmBody: "You'll keep {plan} until {date}, then move to Free.",
+      changePlanCta: "Change plan",
+      retryCta: "Retry payment",
+      accessUntil: "Access continues until {date}",
+    },
+    renewalBanner: {
+      message: "We couldn't process your renewal.",
+      action: "Update payment →",
+    },
   },
 
   "fr-FR": {
@@ -203,6 +245,26 @@ const translations: Record<Locale, Translations> = {
       trustEncrypted: "Chiffré de bout en bout",
       trustCancel: "Résiliable à tout moment",
       trustMoneyBack: "Remboursé sous 7 jours",
+    },
+    manageSubscription: {
+      title: "Gérer l'abonnement",
+      freeHeading: "Vous êtes sur l'offre Gratuite",
+      freeUpgradeCta: "Passer à l'offre supérieure",
+      statusActive: "Actif",
+      statusPending: "Paiement en attente",
+      statusCancelled: "Annulé",
+      nextCharge: "Prochain prélèvement de {amount} le {date}",
+      priceLocked: "Votre tarif est bloqué jusqu'au {date}",
+      cancelCta: "Annuler l'abonnement",
+      cancelConfirmTitle: "Annuler l'abonnement ?",
+      cancelConfirmBody: "Vous conserverez {plan} jusqu'au {date}, puis vous passerez à l'offre Gratuite.",
+      changePlanCta: "Changer de formule",
+      retryCta: "Réessayer le paiement",
+      accessUntil: "L'accès continue jusqu'au {date}",
+    },
+    renewalBanner: {
+      message: "Nous n'avons pas pu traiter votre renouvellement.",
+      action: "Mettre à jour le paiement →",
     },
   },
 
@@ -263,6 +325,26 @@ const translations: Record<Locale, Translations> = {
       trustCancel: "Jederzeit kündbar",
       trustMoneyBack: "7 Tage Geld-zurück",
     },
+    manageSubscription: {
+      title: "Abonnement verwalten",
+      freeHeading: "Sie nutzen den kostenlosen Plan",
+      freeUpgradeCta: "Upgrade",
+      statusActive: "Aktiv",
+      statusPending: "Zahlung ausstehend",
+      statusCancelled: "Gekündigt",
+      nextCharge: "Nächste Abbuchung {amount} am {date}",
+      priceLocked: "Ihr Preis ist bis {date} gesichert",
+      cancelCta: "Abonnement kündigen",
+      cancelConfirmTitle: "Abonnement kündigen?",
+      cancelConfirmBody: "Sie behalten {plan} bis {date}, danach wechseln Sie zu Kostenlos.",
+      changePlanCta: "Plan ändern",
+      retryCta: "Zahlung erneut versuchen",
+      accessUntil: "Zugriff besteht weiter bis {date}",
+    },
+    renewalBanner: {
+      message: "Wir konnten Ihre Verlängerung nicht verarbeiten.",
+      action: "Zahlung aktualisieren →",
+    },
   },
 
   "hi-IN": {
@@ -321,6 +403,26 @@ const translations: Record<Locale, Translations> = {
       trustEncrypted: "एंड-टू-एंड एन्क्रिप्टेड",
       trustCancel: "कभी भी रद्द करें",
       trustMoneyBack: "7-दिन मनी-बैक",
+    },
+    manageSubscription: {
+      title: "सदस्यता प्रबंधित करें",
+      freeHeading: "आप निःशुल्क प्लान पर हैं",
+      freeUpgradeCta: "अपग्रेड करें",
+      statusActive: "सक्रिय",
+      statusPending: "भुगतान लंबित",
+      statusCancelled: "रद्द",
+      nextCharge: "अगला शुल्क {amount}, {date} को",
+      priceLocked: "आपका मूल्य {date} तक लॉक है",
+      cancelCta: "सदस्यता रद्द करें",
+      cancelConfirmTitle: "सदस्यता रद्द करें?",
+      cancelConfirmBody: "आप {date} तक {plan} बनाए रखेंगे, फिर निःशुल्क पर चले जाएंगे।",
+      changePlanCta: "प्लान बदलें",
+      retryCta: "भुगतान पुनः प्रयास करें",
+      accessUntil: "पहुंच {date} तक जारी रहेगी",
+    },
+    renewalBanner: {
+      message: "हम आपका नवीनीकरण संसाधित नहीं कर सके।",
+      action: "भुगतान अपडेट करें →",
     },
   },
 
@@ -381,6 +483,26 @@ const translations: Record<Locale, Translations> = {
       trustCancel: "Batalkan kapan saja",
       trustMoneyBack: "Jaminan uang kembali 7 hari",
     },
+    manageSubscription: {
+      title: "Kelola Langganan",
+      freeHeading: "Anda menggunakan paket Gratis",
+      freeUpgradeCta: "Upgrade",
+      statusActive: "Aktif",
+      statusPending: "Pembayaran tertunda",
+      statusCancelled: "Dibatalkan",
+      nextCharge: "Tagihan berikutnya {amount} pada {date}",
+      priceLocked: "Harga Anda terkunci hingga {date}",
+      cancelCta: "Batalkan langganan",
+      cancelConfirmTitle: "Batalkan langganan?",
+      cancelConfirmBody: "Anda akan tetap memiliki {plan} hingga {date}, lalu beralih ke Gratis.",
+      changePlanCta: "Ubah paket",
+      retryCta: "Coba lagi pembayaran",
+      accessUntil: "Akses berlanjut hingga {date}",
+    },
+    renewalBanner: {
+      message: "Kami tidak dapat memproses perpanjangan Anda.",
+      action: "Perbarui pembayaran →",
+    },
   },
 
   "it-IT": {
@@ -439,6 +561,26 @@ const translations: Record<Locale, Translations> = {
       trustEncrypted: "Crittografato end-to-end",
       trustCancel: "Disdici quando vuoi",
       trustMoneyBack: "Rimborso entro 7 giorni",
+    },
+    manageSubscription: {
+      title: "Gestisci abbonamento",
+      freeHeading: "Sei sul piano Gratuito",
+      freeUpgradeCta: "Esegui l'upgrade",
+      statusActive: "Attivo",
+      statusPending: "Pagamento in sospeso",
+      statusCancelled: "Annullato",
+      nextCharge: "Prossimo addebito {amount} il {date}",
+      priceLocked: "Il tuo prezzo è bloccato fino al {date}",
+      cancelCta: "Annulla abbonamento",
+      cancelConfirmTitle: "Annullare l'abbonamento?",
+      cancelConfirmBody: "Manterrai {plan} fino al {date}, poi passerai al piano Gratuito.",
+      changePlanCta: "Cambia piano",
+      retryCta: "Riprova il pagamento",
+      accessUntil: "L'accesso continua fino al {date}",
+    },
+    renewalBanner: {
+      message: "Non siamo riusciti a elaborare il tuo rinnovo.",
+      action: "Aggiorna pagamento →",
     },
   },
 
@@ -499,6 +641,26 @@ const translations: Record<Locale, Translations> = {
       trustCancel: "いつでも解約可能",
       trustMoneyBack: "7日間返金保証",
     },
+    manageSubscription: {
+      title: "サブスクリプション管理",
+      freeHeading: "現在は無料プランです",
+      freeUpgradeCta: "アップグレード",
+      statusActive: "有効",
+      statusPending: "支払い保留中",
+      statusCancelled: "解約済み",
+      nextCharge: "次回請求 {amount}({date})",
+      priceLocked: "料金は{date}まで固定されています",
+      cancelCta: "サブスクリプションを解約",
+      cancelConfirmTitle: "サブスクリプションを解約しますか?",
+      cancelConfirmBody: "{date}まで{plan}をご利用いただけます。その後、無料プランに移行します。",
+      changePlanCta: "プランを変更",
+      retryCta: "支払いを再試行",
+      accessUntil: "{date}までアクセスが継続します",
+    },
+    renewalBanner: {
+      message: "更新の処理ができませんでした。",
+      action: "支払い方法を更新 →",
+    },
   },
 
   "ko-KR": {
@@ -557,6 +719,26 @@ const translations: Record<Locale, Translations> = {
       trustEncrypted: "종단 간 암호화",
       trustCancel: "언제든 해지 가능",
       trustMoneyBack: "7일 환불 보장",
+    },
+    manageSubscription: {
+      title: "구독 관리",
+      freeHeading: "무료 요금제를 이용 중입니다",
+      freeUpgradeCta: "업그레이드",
+      statusActive: "활성",
+      statusPending: "결제 대기 중",
+      statusCancelled: "취소됨",
+      nextCharge: "다음 결제 {amount}, {date}",
+      priceLocked: "요금은 {date}까지 고정됩니다",
+      cancelCta: "구독 취소",
+      cancelConfirmTitle: "구독을 취소하시겠습니까?",
+      cancelConfirmBody: "{date}까지 {plan}을(를) 유지한 후 무료 요금제로 전환됩니다.",
+      changePlanCta: "요금제 변경",
+      retryCta: "결제 다시 시도",
+      accessUntil: "{date}까지 계속 이용 가능합니다",
+    },
+    renewalBanner: {
+      message: "갱신 결제를 처리하지 못했습니다.",
+      action: "결제 정보 업데이트 →",
     },
   },
 
@@ -617,6 +799,26 @@ const translations: Record<Locale, Translations> = {
       trustCancel: "Cancele quando quiser",
       trustMoneyBack: "Reembolso em 7 dias",
     },
+    manageSubscription: {
+      title: "Gerenciar assinatura",
+      freeHeading: "Você está no plano Gratuito",
+      freeUpgradeCta: "Fazer upgrade",
+      statusActive: "Ativa",
+      statusPending: "Pagamento pendente",
+      statusCancelled: "Cancelada",
+      nextCharge: "Próxima cobrança {amount} em {date}",
+      priceLocked: "Seu preço está travado até {date}",
+      cancelCta: "Cancelar assinatura",
+      cancelConfirmTitle: "Cancelar assinatura?",
+      cancelConfirmBody: "Você manterá {plan} até {date}, depois passará para o plano Gratuito.",
+      changePlanCta: "Mudar de plano",
+      retryCta: "Tentar pagamento novamente",
+      accessUntil: "O acesso continua até {date}",
+    },
+    renewalBanner: {
+      message: "Não conseguimos processar sua renovação.",
+      action: "Atualizar pagamento →",
+    },
   },
 
   "es-419": {
@@ -676,6 +878,26 @@ const translations: Record<Locale, Translations> = {
       trustCancel: "Cancela cuando quieras",
       trustMoneyBack: "Reembolso en 7 días",
     },
+    manageSubscription: {
+      title: "Gestionar suscripción",
+      freeHeading: "Estás en el plan Gratis",
+      freeUpgradeCta: "Mejorar plan",
+      statusActive: "Activa",
+      statusPending: "Pago pendiente",
+      statusCancelled: "Cancelada",
+      nextCharge: "Próximo cobro de {amount} el {date}",
+      priceLocked: "Tu precio está bloqueado hasta el {date}",
+      cancelCta: "Cancelar suscripción",
+      cancelConfirmTitle: "¿Cancelar la suscripción?",
+      cancelConfirmBody: "Conservarás {plan} hasta el {date} y luego pasarás al plan Gratis.",
+      changePlanCta: "Cambiar de plan",
+      retryCta: "Reintentar el pago",
+      accessUntil: "El acceso continúa hasta el {date}",
+    },
+    renewalBanner: {
+      message: "No pudimos procesar tu renovación.",
+      action: "Actualizar el pago →",
+    },
   },
 
   "es-ES": {
@@ -734,6 +956,26 @@ const translations: Record<Locale, Translations> = {
       trustEncrypted: "Cifrado de extremo a extremo",
       trustCancel: "Cancela cuando quieras",
       trustMoneyBack: "Reembolso en 7 días",
+    },
+    manageSubscription: {
+      title: "Gestionar suscripción",
+      freeHeading: "Estás en el plan Gratis",
+      freeUpgradeCta: "Mejorar plan",
+      statusActive: "Activa",
+      statusPending: "Pago pendiente",
+      statusCancelled: "Cancelada",
+      nextCharge: "Próximo cobro de {amount} el {date}",
+      priceLocked: "Tu precio está bloqueado hasta el {date}",
+      cancelCta: "Cancelar suscripción",
+      cancelConfirmTitle: "¿Cancelar la suscripción?",
+      cancelConfirmBody: "Conservarás {plan} hasta el {date} y luego pasarás al plan Gratis.",
+      changePlanCta: "Cambiar de plan",
+      retryCta: "Reintentar el pago",
+      accessUntil: "El acceso continúa hasta el {date}",
+    },
+    renewalBanner: {
+      message: "No pudimos procesar tu renovación.",
+      action: "Actualizar el pago →",
     },
   },
 };

@@ -129,3 +129,30 @@ export async function buildManageView(userId: string) {
     retryUrl: eff.paymentRetrying ? (active.providerData as { shortUrl?: string } | null)?.shortUrl ?? null : null,
   };
 }
+
+const PLAN_NAME: Record<string, string> = { MONTHLY: "Reserve", QUARTERLY: "Treasury", ANNUAL: "Sovereign" };
+
+export interface PaidPlanOption {
+  tier: string;
+  name: string;
+  perMonth: string;
+  perCycle: string;
+}
+
+/** Paid plans for the "Change plan" picker on the Manage Subscription screen. */
+export async function listPaidPlansForChange(): Promise<PaidPlanOption[]> {
+  const rows = await prisma.subscriptionPlan.findMany({
+    where: { isActive: true, tier: { not: "FREE" } },
+    orderBy: { tier: "asc" },
+  });
+
+  return rows.map((p) => {
+    const amount = Number(p.offerPrice ?? p.price);
+    return {
+      tier: p.tier,
+      name: PLAN_NAME[p.tier] ?? p.tier,
+      perMonth: formatMoney(Math.round(amount / (p.intervalMonths ?? 1)), p.currency),
+      perCycle: formatMoney(amount, p.currency),
+    };
+  });
+}
