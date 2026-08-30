@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     });
     if (!cur) return NextResponse.json({ error: "no active subscription" }, { status: 404 });
     if (cur.subscriptionPlan.tier === tier) return NextResponse.json({ error: "already on this plan" }, { status: 400 });
-    if (!cur.currentEnd) return NextResponse.json({ error: "current subscription has no end date" }, { status: 500 });
+    if (!cur.currentEnd) return NextResponse.json({ error: "subscription not yet active enough to schedule a plan change" }, { status: 409 });
 
     const [user, plan] = await Promise.all([
       prisma.user.findUniqueOrThrow({ where: { id: session.userId } }),

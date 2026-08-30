@@ -99,13 +99,11 @@ describeOrSkip("buildManageView", () => {
     }
   });
 
-  // Not one of the plan's 3 required cases — flagged during implementation as a
-  // known gap: `active` here is picked purely from `rows` (ordered createdAt desc)
-  // without checking `startAt`, unlike getEffectivePlan's `grants()`. So a scheduled
-  // (not-yet-started) plan-change row can shadow the still-effective old plan in the
-  // manage view. This test documents the CURRENT (buggy) behavior for the reviewer —
-  // it is not asserting this is correct.
-  test("KNOWN GAP: a newer scheduled (future startAt) row shadows the still-effective old plan", async () => {
+  // Not one of the plan's 3 required cases. buildManageView now reuses
+  // getEffectivePlan's chooseGrantingRow helper, so a scheduled (not-yet-started)
+  // plan-change row no longer shadows the still-effective old plan in the manage
+  // view — both functions agree on which row is "current".
+  test("a newer scheduled (future startAt) row does not shadow the still-effective old plan", async () => {
     const user = await createTestUser();
     try {
       const oldRow = await createSubscriptionRow(user.id, {
@@ -123,11 +121,11 @@ describeOrSkip("buildManageView", () => {
       });
 
       const view = await buildManageView(user.id);
-      // getEffectivePlan (the source of truth for access) still says MONTHLY:
+      // getEffectivePlan (the source of truth for access) says MONTHLY:
       const { getEffectivePlan } = require("@/lib/services/SubscriptionService");
       expect((await getEffectivePlan(user.id)).tier).toBe("MONTHLY");
-      // ...but buildManageView shows the not-yet-started ANNUAL row instead.
-      expect(view.tier).toBe("ANNUAL");
+      // ...and buildManageView now agrees, instead of showing the not-yet-started ANNUAL row.
+      expect(view.tier).toBe("MONTHLY");
     } finally {
       await deleteTestUser(user.id);
     }
@@ -210,6 +208,20 @@ describeOrSkip("POST /api/subscription/change-plan", () => {
       const cookie = await cookieFor(user.id);
       const res = await postChangePlan(cookie, { tier: "ANNUAL" });
       expect(res.status).toBe(404);
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
+  test("current subscription has null currentEnd → 409, not 500", async () => {
+    const user = await createTestUser();
+    try {
+      await createSubscriptionRow(user.id, { tier: "MONTHLY", status: "authenticated", currentEnd: null });
+      const cookie = await cookieFor(user.id);
+      const res = await postChangePlan(cookie, { tier: "ANNUAL" });
+      expect(res.status).toBe(409);
+      const json = await res.json();
+      expect(json.error).toEqual(expect.any(String));
     } finally {
       await deleteTestUser(user.id);
     }

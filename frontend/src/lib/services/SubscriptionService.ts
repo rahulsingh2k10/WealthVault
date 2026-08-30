@@ -19,6 +19,17 @@ function grants(row: Subscription, now: Date): boolean {
   return false;
 }
 
+function chooseGrantingRow<T extends Subscription>(rows: T[], now: Date): T | null {
+  const granting = rows.filter((r) => grants(r, now));
+  return (
+    granting.sort((a, b) => {
+      const ae = a.currentEnd?.getTime() ?? (GRANTS_UNCONDITIONALLY.has(a.status) ? Infinity : 0);
+      const be = b.currentEnd?.getTime() ?? (GRANTS_UNCONDITIONALLY.has(b.status) ? Infinity : 0);
+      return be - ae;
+    })[0] ?? null
+  );
+}
+
 export interface EffectivePlan {
   tier: string;
   subscriptionPlanId: string;
@@ -40,12 +51,7 @@ export async function getEffectivePlan(userId: string): Promise<EffectivePlan> {
 
   const granting = rows.filter((r) => grants(r, now));
   // prefer the one whose access extends furthest (or an always-granting row)
-  const chosen =
-    granting.sort((a, b) => {
-      const ae = a.currentEnd?.getTime() ?? (GRANTS_UNCONDITIONALLY.has(a.status) ? Infinity : 0);
-      const be = b.currentEnd?.getTime() ?? (GRANTS_UNCONDITIONALLY.has(b.status) ? Infinity : 0);
-      return be - ae;
-    })[0] ?? null;
+  const chosen = chooseGrantingRow(rows, now);
 
   const effective: EffectivePlan = chosen
     ? {
@@ -100,7 +106,7 @@ export async function buildManageView(userId: string) {
     orderBy: { createdAt: "desc" },
     include: { subscriptionPlan: true },
   });
-  const active = rows.find((r) => ["active", "authenticated", "pending"].includes(r.status)) ?? null;
+  const active = chooseGrantingRow(rows, new Date());
 
   if (!active) return { tier: "FREE" as const };
 
