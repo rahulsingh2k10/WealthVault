@@ -61,7 +61,7 @@ async function main() {
       { tier: 'ANNUAL',    price: 36000, offerPrice: 14400, currency: 'INR', isActive: true, intervalMonths: 12, termMonths: 36, razorpayPlanId: process.env.RAZORPAY_PLAN_ID_ANNUAL ?? null,    offerStartDate: offerStart, offerEndDate: offerEnd },
     ],
   });
-  console.log('✅ Subscription plans seeded (list + 60% intro, Razorpay plan ids)');
+  console.log("✅ Subscription plans seeded (list + 60% intro, Razorpay plan ids)");
 
   // Store passphrase verifier
   await prisma.appConfig.create({

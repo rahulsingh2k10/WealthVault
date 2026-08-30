@@ -5,7 +5,10 @@ export const PLATFORMS = ["GOOGLE", "APPLE", "X", "LINKEDIN"] as const;
 
 export type Tier = (typeof TIERS)[number];
 
-// Keep in lockstep with frontend/prisma/seed.ts — placeholder pricing + launch offer.
+// Keep in lockstep with frontend/prisma/seed.ts — pricing + launch offer.
+// The razorpayPlanId values here (plan_test_*) deliberately differ from seed.ts,
+// which uses real Razorpay test-mode Plan IDs from RAZORPAY_PLAN_ID_*, because
+// the payment provider is mocked in tests.
 const OFFER_START = new Date("2026-08-01T00:00:00Z");
 const OFFER_END = new Date("2026-09-30T23:59:59Z");
 
@@ -14,9 +17,9 @@ const PLAN_PRICING: Record<
   { price: number; offerPrice: number | null; offerStartDate: Date | null; offerEndDate: Date | null; intervalMonths: number | null; termMonths: number | null; razorpayPlanId: string | null }
 > = {
   FREE:      { price: 0,     offerPrice: null,  offerStartDate: null,        offerEndDate: null,        intervalMonths: null, termMonths: null, razorpayPlanId: null },
-  MONTHLY:   { price: 9000,  offerPrice: 3600,  offerStartDate: OFFER_START, offerEndDate: OFFER_END,   intervalMonths: 1,   termMonths: 36,   razorpayPlanId: 'plan_test_monthly' },
-  QUARTERLY: { price: 18000, offerPrice: 7200,  offerStartDate: OFFER_START, offerEndDate: OFFER_END,   intervalMonths: 3,   termMonths: 36,   razorpayPlanId: 'plan_test_quarterly' },
-  ANNUAL:    { price: 36000, offerPrice: 14400, offerStartDate: OFFER_START, offerEndDate: OFFER_END,   intervalMonths: 12,  termMonths: 36,   razorpayPlanId: 'plan_test_annual' },
+  MONTHLY:   { price: 9000,  offerPrice: 3600,  offerStartDate: OFFER_START, offerEndDate: OFFER_END,   intervalMonths: 1,   termMonths: 36,   razorpayPlanId: "plan_test_monthly" },
+  QUARTERLY: { price: 18000, offerPrice: 7200,  offerStartDate: OFFER_START, offerEndDate: OFFER_END,   intervalMonths: 3,   termMonths: 36,   razorpayPlanId: "plan_test_quarterly" },
+  ANNUAL:    { price: 36000, offerPrice: 14400, offerStartDate: OFFER_START, offerEndDate: OFFER_END,   intervalMonths: 12,  termMonths: 36,   razorpayPlanId: "plan_test_annual" },
 };
 
 export async function ensureReferenceData(): Promise<void> {
