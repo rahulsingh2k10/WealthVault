@@ -5,16 +5,6 @@ import { createSubscriptionRow } from "../../helpers/subscriptionFactory";
 
 const describeOrSkip = hasTestDb() ? describe : describe.skip;
 
-// Subscription.userId has no ON DELETE CASCADE (confirmed by trying deleteTestUser
-// alone: it left orphaned users + subscription rows behind, silently, because
-// deleteTestUser swallows delete errors). Delete Subscription rows for the user
-// before deleteTestUser in every test's cleanup.
-async function cleanupUser(userId: string): Promise<void> {
-  const prisma = getTestPrisma();
-  await prisma.subscription.deleteMany({ where: { userId } });
-  await deleteTestUser(userId);
-}
-
 beforeAll(async () => {
   if (hasTestDb()) {
     if (process.env.DATABASE_URL !== process.env.TEST_DATABASE_URL) {
@@ -43,7 +33,7 @@ describeOrSkip("getEffectivePlan", () => {
       const eff = await getEffectivePlan(user.id);
       expect(eff.tier).toBe("FREE");
     } finally {
-      await cleanupUser(user.id);
+      await deleteTestUser(user.id);
     }
   });
 
@@ -55,7 +45,7 @@ describeOrSkip("getEffectivePlan", () => {
       expect(eff.tier).toBe("ANNUAL");
       expect(eff.paymentRetrying).toBe(false);
     } finally {
-      await cleanupUser(user.id);
+      await deleteTestUser(user.id);
     }
   });
 
@@ -67,7 +57,7 @@ describeOrSkip("getEffectivePlan", () => {
       expect(eff.tier).toBe("MONTHLY");
       expect(eff.paymentRetrying).toBe(true);
     } finally {
-      await cleanupUser(user.id);
+      await deleteTestUser(user.id);
     }
   });
 
@@ -77,7 +67,7 @@ describeOrSkip("getEffectivePlan", () => {
       await createSubscriptionRow(user.id, { status: "halted", currentEnd: null });
       expect((await getEffectivePlan(user.id)).tier).toBe("FREE");
     } finally {
-      await cleanupUser(user.id);
+      await deleteTestUser(user.id);
     }
   });
 
@@ -87,7 +77,7 @@ describeOrSkip("getEffectivePlan", () => {
       await createSubscriptionRow(user.id, { tier: "ANNUAL", status: "cancelled", currentEnd: new Date(Date.now() + 5 * 86400_000) });
       expect((await getEffectivePlan(user.id)).tier).toBe("ANNUAL");
     } finally {
-      await cleanupUser(user.id);
+      await deleteTestUser(user.id);
     }
   });
 
@@ -97,7 +87,7 @@ describeOrSkip("getEffectivePlan", () => {
       await createSubscriptionRow(user.id, { status: "completed", currentEnd: new Date(Date.now() - 86400_000) });
       expect((await getEffectivePlan(user.id)).tier).toBe("FREE");
     } finally {
-      await cleanupUser(user.id);
+      await deleteTestUser(user.id);
     }
   });
 
@@ -108,7 +98,7 @@ describeOrSkip("getEffectivePlan", () => {
       await createSubscriptionRow(user.id, { tier: "ANNUAL", status: "active", currentEnd: new Date(Date.now() + 300 * 86400_000) });
       expect((await getEffectivePlan(user.id)).tier).toBe("ANNUAL");
     } finally {
-      await cleanupUser(user.id);
+      await deleteTestUser(user.id);
     }
   });
 
@@ -125,7 +115,7 @@ describeOrSkip("getEffectivePlan", () => {
       const after = await prisma.user.findUnique({ where: { id: user.id }, include: { subscriptionPlan: true } });
       expect(after.subscriptionPlan.tier).toBe("FREE");
     } finally {
-      await cleanupUser(user.id);
+      await deleteTestUser(user.id);
     }
   });
 });
