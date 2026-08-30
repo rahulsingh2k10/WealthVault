@@ -43,7 +43,7 @@ export async function ensureDevServer(): Promise<void> {
     ["next", "dev", "-p", String(TEST_SERVER_PORT)],
     {
       cwd: FRONTEND_DIR,
-      env: { ...process.env, DATABASE_URL: process.env.TEST_DATABASE_URL },
+      env: { ...process.env, DATABASE_URL: process.env.TEST_DATABASE_URL, PAYMENTS_PROVIDER: "fake" },
       stdio: "ignore",
       detached: true, // own process group, so the whole npx->next->next-server tree can be killed together
     }

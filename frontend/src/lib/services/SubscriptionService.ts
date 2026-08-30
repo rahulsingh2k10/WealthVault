@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { logSubscriptionPeriodIfChanged } from "@/lib/services/SubscriptionPeriodService";
 import type { Subscription } from "@prisma/client";
+import type { NormalizedWebhookEvent } from "@/lib/payments/types";
 
 export function totalCountFor(p: { termMonths: number | null; intervalMonths: number | null }): number {
   if (!p.termMonths || !p.intervalMonths) throw new Error("plan is missing termMonths/intervalMonths");
@@ -61,4 +62,32 @@ export async function getEffectivePlan(userId: string): Promise<EffectivePlan> {
   }
 
   return effective;
+}
+
+const TERMINAL = new Set(["halted", "completed", "expired"]);
+
+export async function applySubscriptionEvent(evt: NormalizedWebhookEvent): Promise<void> {
+  if (evt.kind === "ignored") return;
+
+  const row = await prisma.subscription.findUnique({ where: { providerSubscriptionId: evt.providerSubscriptionId } });
+  if (!row) {
+    console.warn("[subscription] webhook for unknown subscription", evt.providerSubscriptionId);
+    return;
+  }
+
+  await prisma.subscription.update({
+    where: { id: row.id },
+    data: {
+      status: evt.status || row.status,
+      paidCount: evt.paidCount ?? row.paidCount,
+      currentStart: evt.currentStart ?? row.currentStart,
+      currentEnd: evt.currentEnd ?? row.currentEnd,
+      chargeAt: evt.chargeAt ?? row.chargeAt,
+      cancelAtCycleEnd: evt.cancelAtCycleEnd ?? row.cancelAtCycleEnd,
+      endedAt: TERMINAL.has(evt.status) ? new Date() : row.endedAt,
+    },
+  });
+
+  // recompute + reconcile the user's effective tier across ALL their rows
+  await getEffectivePlan(row.userId);
 }
