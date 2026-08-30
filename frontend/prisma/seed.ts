@@ -47,16 +47,21 @@ async function main() {
   });
   console.log("✅ Nav config seeded");
 
-  // Seed subscription plan pricing — placeholder values, real pricing not finalized yet
+  // Seed subscription plan pricing — PLACEHOLDER values, real pricing not finalized.
+  // `price` / `offerPrice` are per billing period, whole INR. The launch offer
+  // (20% off Treasury & Sovereign) is a placeholder too — set the real prices and
+  // window before going live.
+  const offerStart = new Date('2026-08-01T00:00:00Z');
+  const offerEnd = new Date('2026-09-30T23:59:59Z');
   await prisma.subscriptionPlan.createMany({
     data: [
-      { tier: 'FREE',      price: 0, offerPrice: null, currency: 'INR', isActive: true },
-      { tier: 'MONTHLY',   price: 0, offerPrice: null, currency: 'INR', isActive: true },
-      { tier: 'QUARTERLY', price: 0, offerPrice: null, currency: 'INR', isActive: true },
-      { tier: 'ANNUAL',    price: 0, offerPrice: null, currency: 'INR', isActive: true },
+      { tier: 'FREE',      price: 0,     offerPrice: null,  currency: 'INR', isActive: true },
+      { tier: 'MONTHLY',   price: 3000,  offerPrice: null,  currency: 'INR', isActive: true },                                              // Reserve   ₹3,000/mo
+      { tier: 'QUARTERLY', price: 6000,  offerPrice: 4800,  currency: 'INR', isActive: true, offerStartDate: offerStart, offerEndDate: offerEnd }, // Treasury  ₹2,000 → ₹1,600/mo
+      { tier: 'ANNUAL',    price: 18000, offerPrice: 14400, currency: 'INR', isActive: true, offerStartDate: offerStart, offerEndDate: offerEnd }, // Sovereign ₹1,500 → ₹1,200/mo
     ],
   });
-  console.log("✅ Subscription plans seeded (placeholder pricing)");
+  console.log("✅ Subscription plans seeded (placeholder pricing + launch offer)");
 
   // Store passphrase verifier
   await prisma.appConfig.create({

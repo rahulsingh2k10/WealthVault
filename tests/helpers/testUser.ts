@@ -1,17 +1,19 @@
 import { randomUUID } from "crypto";
 import { getTestPrisma } from "./testDb";
-import { getFreePlanId, getPlatformId, PLATFORMS } from "./seedReferenceData";
+import { getPlanId, getPlatformId, PLATFORMS, type Tier } from "./seedReferenceData";
 
 export interface CreateTestUserOptions {
   platform?: (typeof PLATFORMS)[number];
   verifier?: string | null;
+  tier?: Tier;
 }
 
 export async function createTestUser(options: CreateTestUserOptions = {}) {
   const prisma = getTestPrisma();
   const platform = options.platform ?? "GOOGLE";
-  const [freePlanId, platformId] = await Promise.all([
-    getFreePlanId(),
+  const tier = options.tier ?? "FREE";
+  const [planId, platformId] = await Promise.all([
+    getPlanId(tier),
     getPlatformId(platform),
   ]);
 
@@ -20,7 +22,7 @@ export async function createTestUser(options: CreateTestUserOptions = {}) {
       fullName: "Test User",
       username: `test-user-${randomUUID()}@example.com`,
       auth_platformId: platformId,
-      subscriptionPlanId: freePlanId,
+      subscriptionPlanId: planId,
       verifier: options.verifier ?? null,
     },
   });

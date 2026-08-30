@@ -40,6 +40,7 @@
     --ui-accent-ring: rgba(107,33,168,0.10);
     --ui-accent-border: rgba(107,33,168,0.20);
     --ui-accent-avatar: linear-gradient(135deg, rgba(107,33,168,0.27), rgba(190,75,3,0.27));
+    --ui-on-accent: #ffffff;
 
     /* Misc surface tokens */
     --ui-card-shadow: 0 24px 80px rgba(0,0,0,0.14);
@@ -90,6 +91,7 @@
     --ui-accent-ring: rgba(245,200,66,0.10);
     --ui-accent-border: rgba(245,200,66,0.25);
     --ui-accent-avatar: linear-gradient(135deg, rgba(245,200,66,0.27), rgba(255,160,64,0.27));
+    --ui-on-accent: #1a1400;
 
     /* Misc surface tokens */
     --ui-card-shadow: 0 24px 80px rgba(0,0,0,0.55);
