@@ -141,12 +141,17 @@ model ProcessedWebhookEvent {
   id        String   @id @default(uuid())
   provider  String   @default("razorpay")
   eventId   String
+  // "processing" until applySubscriptionEvent succeeds, then "done" — see the
+  // Task 8 note below (added by that task's review fix, not Task 1 itself).
+  status    String   @default("processing")
   createdAt DateTime @default(now())
 
   @@unique([provider, eventId])
   @@map("processed_webhook_events")
 }
 ```
+
+> **Note:** `status` was added by a Task 8 review fix, after this model was first created — see Task 8's note for why. Listed here so Task 1, read on its own, matches the final schema.
 
 > **`backend/prisma/schema.prisma` is a mandated-identical copy** (its header says so; `backend/package.json` has `prisma migrate` scripts on the same DB). Every schema change in this plan must be mirrored there (keep its header) + `cd backend && npx prisma generate`. Task 1's review-fix commit does this. `documents/database/*.md` are stale after this feature — a deferred docs follow-up, not in this plan.
 
@@ -1079,6 +1084,7 @@ export async function applySubscriptionEvent(evt: NormalizedWebhookEvent): Promi
 
 ```ts
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getProvider } from "@/lib/payments";
 import { applySubscriptionEvent } from "@/lib/services/SubscriptionService";
@@ -1096,11 +1102,28 @@ export async function POST(req: NextRequest, { params }: { params: { provider: s
 
   const evt = provider.normalizeWebhookEvent(raw);
 
-  // idempotency
+  // Idempotency: create the row up front. On a real duplicate (unique
+  // constraint), only skip reprocessing if a PRIOR attempt actually finished
+  // ("done") — a row stuck at "processing" means a prior attempt crashed
+  // before completing, and it's safe (and necessary) to retry, because
+  // applySubscriptionEvent writes absolute values, never deltas.
+  let alreadyDone = false;
   try {
     await prisma.processedWebhookEvent.create({ data: { provider: "razorpay", eventId: evt.eventId } });
-  } catch {
-    return NextResponse.json({ ok: true, duplicate: true }); // already processed
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      const existing = await prisma.processedWebhookEvent.findUnique({
+        where: { provider_eventId: { provider: "razorpay", eventId: evt.eventId } },
+      });
+      alreadyDone = existing?.status === "done";
+    } else {
+      console.error("[subscription] webhook idempotency check failed", e);
+      return NextResponse.json({ error: "idempotency check failed" }, { status: 500 });
+    }
+  }
+
+  if (alreadyDone) {
+    return NextResponse.json({ ok: true, duplicate: true });
   }
 
   try {
@@ -1110,9 +1133,16 @@ export async function POST(req: NextRequest, { params }: { params: { provider: s
     return NextResponse.json({ error: "processing failed" }, { status: 500 });
   }
 
+  await prisma.processedWebhookEvent.updateMany({
+    where: { provider: "razorpay", eventId: evt.eventId },
+    data: { status: "done" },
+  });
+
   return NextResponse.json({ ok: true });
 }
 ```
+
+> **Review-driven fix:** the original version created the idempotency row BEFORE processing and treated any `create()` failure as "already processed." A 500 from `applySubscriptionEvent` (Razorpay retries) would then be silently swallowed as a duplicate on retry — for a terminal event like `halted`, that permanently left a user with paid access forever, undetected. `ProcessedWebhookEvent` gained a `status: "processing" | "done"` column (`@default("processing")`, applied via `db push` — mirror into `backend/prisma/schema.prisma` too, per the mandatory-sync convention); a row stuck at `"processing"` is safely reprocessed (the function only ever writes absolute values, never deltas); only a genuine `P2002` unique-constraint hit on an already-`"done"` row short-circuits. Task 9/10, which add more `applySubscriptionEvent`/webhook-adjacent code, should assume this version.
 
 - [ ] **Step 3: Middleware** — in `frontend/src/middleware.ts`, add to the "Always public" `if (...)` list:
 ```ts
