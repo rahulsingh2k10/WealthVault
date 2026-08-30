@@ -92,6 +92,7 @@ test.describe("Razorpay subscription flow", () => {
 
   test("a FREE user subscribes end-to-end, then the webhook activates the subscription", async ({ page }) => {
     test.skip(!fakeProviderActive, SKIP_MSG);
+    test.slow(); // multi-step: checkout -> verify -> webhook -> two reloads -> manage page
     const user = await createTestUser(); // FREE
     try {
       await signIn(page, user.id);
@@ -103,8 +104,10 @@ test.describe("Razorpay subscription flow", () => {
 
       await page.getByRole("button", { name: /go sovereign/i }).click();
 
-      // Stub fires -> /api/subscription/verify returns 200 -> modal closes.
-      await expect(dialog).toBeHidden();
+      // Stub fires -> POST /api/subscription/verify -> 200 -> modal closes. Generous
+      // timeout: the first hit compiles the /verify route (lazy dev-server compile),
+      // which can take several seconds when the whole suite runs.
+      await expect(dialog).toBeHidden({ timeout: 20000 });
 
       // Simulate Razorpay's webhook against the real providerSubscriptionId that
       // /api/subscription/create generated (FakeProvider: "sub_fake_…").
