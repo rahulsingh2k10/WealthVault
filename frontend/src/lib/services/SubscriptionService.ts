@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { logSubscriptionPeriodIfChanged } from "@/lib/services/SubscriptionPeriodService";
+import { formatMoney } from "@/lib/utils";
 import type { Subscription } from "@prisma/client";
 import type { NormalizedWebhookEvent } from "@/lib/payments/types";
 
@@ -90,4 +91,35 @@ export async function applySubscriptionEvent(evt: NormalizedWebhookEvent): Promi
 
   // recompute + reconcile the user's effective tier across ALL their rows
   await getEffectivePlan(row.userId);
+}
+
+export async function buildManageView(userId: string) {
+  const eff = await getEffectivePlan(userId);
+  const rows = await prisma.subscription.findMany({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    include: { subscriptionPlan: true },
+  });
+  const active = rows.find((r) => ["active", "authenticated", "pending"].includes(r.status)) ?? null;
+
+  if (!active) return { tier: "FREE" as const };
+
+  const p = active.subscriptionPlan;
+  const intervalLabel = p.intervalMonths === 1 ? "month" : p.intervalMonths === 3 ? "quarter" : "year";
+  const lockedThrough = new Date(active.createdAt);
+  if (p.termMonths) lockedThrough.setMonth(lockedThrough.getMonth() + p.termMonths);
+
+  return {
+    tier: p.tier,
+    planName: { MONTHLY: "Reserve", QUARTERLY: "Treasury", ANNUAL: "Sovereign" }[p.tier as "MONTHLY" | "QUARTERLY" | "ANNUAL"],
+    status: active.status,
+    amountPerCycle: formatMoney(Math.round(active.amount / 100), active.currency),
+    intervalLabel,
+    nextChargeAt: active.chargeAt?.toISOString() ?? null,
+    currentEnd: active.currentEnd?.toISOString() ?? null,
+    priceLockedThrough: lockedThrough.toISOString(),
+    cancelAtCycleEnd: active.cancelAtCycleEnd,
+    paymentRetrying: eff.paymentRetrying,
+    retryUrl: eff.paymentRetrying ? (active.providerData as { shortUrl?: string } | null)?.shortUrl ?? null : null,
+  };
 }
