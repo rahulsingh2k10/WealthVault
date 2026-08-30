@@ -139,13 +139,16 @@ model Subscription {
 
 model ProcessedWebhookEvent {
   id        String   @id @default(uuid())
-  provider  String
-  eventId   String   @unique
+  provider  String   @default("razorpay")
+  eventId   String
   createdAt DateTime @default(now())
 
+  @@unique([provider, eventId])
   @@map("processed_webhook_events")
 }
 ```
+
+> **`backend/prisma/schema.prisma` is a mandated-identical copy** (its header says so; `backend/package.json` has `prisma migrate` scripts on the same DB). Every schema change in this plan must be mirrored there (keep its header) + `cd backend && npx prisma generate`. Task 1's review-fix commit does this. `documents/database/*.md` are stale after this feature — a deferred docs follow-up, not in this plan.
 
 - [ ] **Step 2: Push the schema + regenerate the client**
 
