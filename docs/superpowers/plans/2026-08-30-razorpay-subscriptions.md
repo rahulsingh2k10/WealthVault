@@ -913,12 +913,16 @@ export function totalCountFor(p: { termMonths: number | null; intervalMonths: nu
   return Math.round(p.termMonths / p.intervalMonths);
 }
 
-const GRANTS_ALWAYS = new Set(["active", "authenticated"]);
+// Rows in these statuses grant access regardless of currentEnd (used by both
+// grants() and the tie-break below — kept as one set so they can't drift).
+const GRANTS_UNCONDITIONALLY = new Set(["active", "authenticated", "pending"]);
 const GRANTS_UNTIL_END = new Set(["cancelled", "completed"]);
 
 function grants(row: Subscription, now: Date): boolean {
-  if (GRANTS_ALWAYS.has(row.status)) return true;
-  if (row.status === "pending") return true;
+  // A scheduled (plan-change) row hasn't started yet, regardless of status —
+  // it must not outrank the still-current subscription before its startAt.
+  if (row.startAt && now < row.startAt) return false;
+  if (GRANTS_UNCONDITIONALLY.has(row.status)) return true;
   if (GRANTS_UNTIL_END.has(row.status)) return !!row.currentEnd && now < row.currentEnd;
   return false;
 }
@@ -932,21 +936,22 @@ export interface EffectivePlan {
 
 export async function getEffectivePlan(userId: string): Promise<EffectivePlan> {
   const now = new Date();
-  const [rows, freePlan] = await Promise.all([
+  const [rows, freePlan, user] = await Promise.all([
     prisma.subscription.findMany({
       where: { userId },
       orderBy: { createdAt: "desc" },
       include: { subscriptionPlan: true },
     }),
-    prisma.subscriptionPlan.findFirstOrThrow({ where: { tier: "FREE" } }),
+    prisma.subscriptionPlan.findUniqueOrThrow({ where: { tier: "FREE" } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { subscriptionPlanId: true } }),
   ]);
 
   const granting = rows.filter((r) => grants(r, now));
-  // prefer the one whose access extends furthest (or an always-granting row)
+  // prefer the one whose access extends furthest (or an unconditionally-granting row)
   const chosen =
     granting.sort((a, b) => {
-      const ae = a.currentEnd?.getTime() ?? (GRANTS_ALWAYS.has(a.status) ? Infinity : 0);
-      const be = b.currentEnd?.getTime() ?? (GRANTS_ALWAYS.has(b.status) ? Infinity : 0);
+      const ae = a.currentEnd?.getTime() ?? (GRANTS_UNCONDITIONALLY.has(a.status) ? Infinity : 0);
+      const be = b.currentEnd?.getTime() ?? (GRANTS_UNCONDITIONALLY.has(b.status) ? Infinity : 0);
       return be - ae;
     })[0] ?? null;
 
@@ -955,12 +960,11 @@ export async function getEffectivePlan(userId: string): Promise<EffectivePlan> {
         tier: chosen.subscriptionPlan.tier,
         subscriptionPlanId: chosen.subscriptionPlanId,
         currentEnd: chosen.currentEnd,
-        paymentRetrying: rows.some((r) => r.status === "pending"),
+        paymentRetrying: granting.some((r) => r.status === "pending"),
       }
     : { tier: "FREE", subscriptionPlanId: freePlan.id, currentEnd: null, paymentRetrying: false };
 
   // lazy reconciliation of the denormalised User.subscriptionPlanId cache
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { subscriptionPlanId: true } });
   if (user && user.subscriptionPlanId !== effective.subscriptionPlanId) {
     await prisma.user.update({ where: { id: userId }, data: { subscriptionPlanId: effective.subscriptionPlanId } });
     await logSubscriptionPeriodIfChanged(userId, effective.subscriptionPlanId);
@@ -969,6 +973,8 @@ export async function getEffectivePlan(userId: string): Promise<EffectivePlan> {
   return effective;
 }
 ```
+
+> **Review-driven fixes** (applied after the first implementation, see the "Also fixed" note above Step 1): (1) `grants()` now checks `startAt` first — a scheduled plan-change row must not grant/outrank before it actually starts. (2) The tie-break's "infinite" check now shares `GRANTS_UNCONDITIONALLY` with `grants()` (previously used a narrower `GRANTS_ALWAYS` that excluded `pending`, mis-ranking pending rows). (3) `paymentRetrying` is scoped to `granting` rows, not all historical rows. (4) `user.findUnique` joined into the initial `Promise.all`; the FREE-plan lookup uses `findUniqueOrThrow` (tier is `@unique`). Tasks 8/9/10, which build on this file, should use this corrected version.
 
 - [ ] **Step 5: Run — expect pass** (`cd tests && npx jest --config jest.config.js api/subscription/effective-plan --runInBand`).
 
