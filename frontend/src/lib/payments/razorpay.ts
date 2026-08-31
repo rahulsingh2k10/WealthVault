@@ -119,6 +119,7 @@ export class RazorpayProvider implements PaymentProvider {
       total_count: input.plan.totalCount,
       quantity: 1,
       customer_notify: 1,
+      customer_id: input.providerCustomerId,
       ...(input.startAt ? { start_at: input.startAt } : {}),
       ...(input.offerId ? { offer_id: input.offerId } : {}),
       notes: input.notes,
