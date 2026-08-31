@@ -23,7 +23,12 @@ export async function POST(req: NextRequest) {
     });
     if (!row) return NextResponse.json({ error: "not found" }, { status: 404 });
 
-    await prisma.subscription.update({ where: { id: row.id }, data: { status: "authenticated" } });
+    // Only advance a still-fresh row. Webhooks are server-to-server and usually
+    // land before this client-driven call, so by now the status may already be
+    // "active"/"pending"/etc. — never regress it back to "authenticated".
+    if (row.status === "created") {
+      await prisma.subscription.update({ where: { id: row.id }, data: { status: "authenticated" } });
+    }
 
     // plan change: this row supersedes another → now cancel the old one
     if (row.supersedesId) {
