@@ -128,7 +128,9 @@ export function ManageSubscription({ view, paidPlans }: ManageSubscriptionProps)
         <Card>
           <p className="text-[0.82rem] font-semibold text-[color:var(--ui-text-pri)]">
             {interpolate(t.manageSubscription.scheduledChangeBanner, {
+              current: view.planName,
               plan: view.scheduledChange.planName,
+              amount: view.scheduledChange.amountPerCycle,
               date: fmtDate(view.scheduledChange.startsAt),
             })}
           </p>
@@ -148,13 +150,16 @@ export function ManageSubscription({ view, paidPlans }: ManageSubscriptionProps)
         </div>
 
         <div className="space-y-1.5 text-[0.82rem] text-[color:var(--ui-text-sec)]">
-          {view.nextChargeAt && (
+          {view.nextChargeAt && !view.cancelAtCycleEnd && (
             <p>{interpolate(t.manageSubscription.nextCharge, { amount: view.amountPerCycle, date: fmtDate(view.nextChargeAt) })}</p>
           )}
           <p>{interpolate(t.manageSubscription.priceLocked, { date: fmtDate(view.priceLockedThrough) })}</p>
           {effectiveAccessUntil && (
             <p className="font-semibold text-[color:var(--ui-text-pri)]">
-              {interpolate(t.manageSubscription.accessUntil, { date: fmtDate(effectiveAccessUntil) })}
+              {interpolate(
+                view.scheduledChange ? t.manageSubscription.activeUntilSwitch : t.manageSubscription.accessUntil,
+                { date: fmtDate(effectiveAccessUntil) },
+              )}
             </p>
           )}
         </div>

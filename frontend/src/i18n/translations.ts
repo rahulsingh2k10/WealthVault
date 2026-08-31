@@ -90,6 +90,7 @@ export interface Translations {
     scheduledChangeNote: string;
     retryCta: string;
     accessUntil: string;
+    activeUntilSwitch: string;
   };
   // TODO(i18n): renewalBanner.* strings are AI-translated — need native-speaker review
   renewalBanner: {
@@ -184,10 +185,11 @@ const translations: Record<Locale, Translations> = {
       cancelConfirmBody: "You'll keep {plan} until {date}, then move to Free.",
       changePlanCta: "Change plan",
       changePlanConfirmBody: "Switch to {plan}? You'll set up a new payment method now — Razorpay makes a small refundable verification charge (about ₹5). Your new plan starts on {date}; you keep your current plan until then.",
-      scheduledChangeBanner: "Switching to {plan} on {date}",
+      scheduledChangeBanner: "On {date}, {current} ends and {plan} ({amount}) begins — charged automatically with the payment method you set up.",
       scheduledChangeNote: "A plan change is already scheduled. You can't schedule another until it takes effect.",
       retryCta: "Retry payment",
       accessUntil: "Access continues until {date}",
+      activeUntilSwitch: "This plan stays active until {date}",
     },
     renewalBanner: {
       message: "We couldn't process your renewal.",
@@ -266,10 +268,11 @@ const translations: Record<Locale, Translations> = {
       cancelConfirmBody: "Vous conserverez {plan} jusqu'au {date}, puis vous passerez à l'offre Gratuite.",
       changePlanCta: "Changer de formule",
       changePlanConfirmBody: "Passer à {plan} ? Vous allez configurer un nouveau moyen de paiement maintenant — Razorpay effectue une petite charge de vérification remboursable (environ ₹5). Votre nouvelle formule démarre le {date} ; vous conservez votre formule actuelle jusque-là.",
-      scheduledChangeBanner: "Passage à {plan} le {date}",
+      scheduledChangeBanner: "Le {date}, {current} prend fin et {plan} ({amount}) commence — prélevé automatiquement avec le moyen de paiement que vous avez configuré.",
       scheduledChangeNote: "Un changement de formule est déjà programmé. Vous ne pouvez pas en programmer un autre avant qu'il prenne effet.",
       retryCta: "Réessayer le paiement",
       accessUntil: "L'accès continue jusqu'au {date}",
+      activeUntilSwitch: "Cette formule reste active jusqu'au {date}",
     },
     renewalBanner: {
       message: "Nous n'avons pas pu traiter votre renouvellement.",
@@ -348,10 +351,11 @@ const translations: Record<Locale, Translations> = {
       cancelConfirmBody: "Sie behalten {plan} bis {date}, danach wechseln Sie zu Kostenlos.",
       changePlanCta: "Plan ändern",
       changePlanConfirmBody: "Zu {plan} wechseln? Sie richten jetzt eine neue Zahlungsmethode ein — Razorpay nimmt eine kleine erstattungsfähige Verifizierungsbuchung vor (etwa ₹5). Ihr neuer Plan beginnt am {date}; bis dahin behalten Sie Ihren aktuellen Plan.",
-      scheduledChangeBanner: "Wechsel zu {plan} am {date}",
+      scheduledChangeBanner: "Am {date} endet {current} und {plan} ({amount}) beginnt — automatisch abgebucht über die von Ihnen eingerichtete Zahlungsmethode.",
       scheduledChangeNote: "Ein Planwechsel ist bereits geplant. Sie können keinen weiteren planen, bis er wirksam wird.",
       retryCta: "Zahlung erneut versuchen",
       accessUntil: "Zugriff besteht weiter bis {date}",
+      activeUntilSwitch: "Dieser Plan bleibt bis {date} aktiv",
     },
     renewalBanner: {
       message: "Wir konnten Ihre Verlängerung nicht verarbeiten.",
@@ -430,10 +434,11 @@ const translations: Record<Locale, Translations> = {
       cancelConfirmBody: "आप {date} तक {plan} बनाए रखेंगे, फिर निःशुल्क पर चले जाएंगे।",
       changePlanCta: "प्लान बदलें",
       changePlanConfirmBody: "{plan} पर स्विच करें? आप अभी एक नया भुगतान तरीका सेट करेंगे — Razorpay एक छोटा वापसी-योग्य सत्यापन शुल्क लेता है (लगभग ₹5)। आपका नया प्लान {date} को शुरू होता है; तब तक आप अपना मौजूदा प्लान बनाए रखते हैं।",
-      scheduledChangeBanner: "{date} को {plan} पर स्विच हो रहा है",
+      scheduledChangeBanner: "{date} को {current} समाप्त होगा और {plan} ({amount}) शुरू होगा — आपके द्वारा सेट किए गए भुगतान तरीके से स्वचालित रूप से शुल्क लिया जाएगा।",
       scheduledChangeNote: "एक प्लान बदलाव पहले से शेड्यूल है। जब तक यह प्रभावी नहीं होता, आप दूसरा शेड्यूल नहीं कर सकते।",
       retryCta: "भुगतान पुनः प्रयास करें",
       accessUntil: "पहुंच {date} तक जारी रहेगी",
+      activeUntilSwitch: "यह प्लान {date} तक सक्रिय रहेगा",
     },
     renewalBanner: {
       message: "हम आपका नवीनीकरण संसाधित नहीं कर सके।",
@@ -512,10 +517,11 @@ const translations: Record<Locale, Translations> = {
       cancelConfirmBody: "Anda akan tetap memiliki {plan} hingga {date}, lalu beralih ke Gratis.",
       changePlanCta: "Ubah paket",
       changePlanConfirmBody: "Beralih ke {plan}? Anda akan menyiapkan metode pembayaran baru sekarang — Razorpay melakukan sedikit biaya verifikasi yang dapat dikembalikan (sekitar ₹5). Paket baru Anda dimulai pada {date}; Anda tetap menggunakan paket saat ini hingga saat itu.",
-      scheduledChangeBanner: "Beralih ke {plan} pada {date}",
+      scheduledChangeBanner: "Pada {date}, {current} berakhir dan {plan} ({amount}) dimulai — ditagih otomatis dengan metode pembayaran yang Anda siapkan.",
       scheduledChangeNote: "Perubahan paket sudah dijadwalkan. Anda tidak dapat menjadwalkan yang lain sampai perubahan itu berlaku.",
       retryCta: "Coba lagi pembayaran",
       accessUntil: "Akses berlanjut hingga {date}",
+      activeUntilSwitch: "Paket ini tetap aktif hingga {date}",
     },
     renewalBanner: {
       message: "Kami tidak dapat memproses perpanjangan Anda.",
@@ -594,10 +600,11 @@ const translations: Record<Locale, Translations> = {
       cancelConfirmBody: "Manterrai {plan} fino al {date}, poi passerai al piano Gratuito.",
       changePlanCta: "Cambia piano",
       changePlanConfirmBody: "Passare a {plan}? Ora configurerai un nuovo metodo di pagamento — Razorpay applica un piccolo addebito di verifica rimborsabile (circa ₹5). Il tuo nuovo piano inizia il {date}; fino ad allora mantieni il piano attuale.",
-      scheduledChangeBanner: "Passaggio a {plan} il {date}",
+      scheduledChangeBanner: "Il {date}, {current} termina e {plan} ({amount}) inizia — addebitato automaticamente con il metodo di pagamento che hai impostato.",
       scheduledChangeNote: "Un cambio di piano è già programmato. Non puoi programmarne un altro finché non diventa effettivo.",
       retryCta: "Riprova il pagamento",
       accessUntil: "L'accesso continua fino al {date}",
+      activeUntilSwitch: "Questo piano resta attivo fino al {date}",
     },
     renewalBanner: {
       message: "Non siamo riusciti a elaborare il tuo rinnovo.",
@@ -676,10 +683,11 @@ const translations: Record<Locale, Translations> = {
       cancelConfirmBody: "{date}まで{plan}をご利用いただけます。その後、無料プランに移行します。",
       changePlanCta: "プランを変更",
       changePlanConfirmBody: "{plan}に切り替えますか? 今すぐ新しい支払い方法を設定します — Razorpayは返金可能な少額の確認用請求(約₹5)を行います。新しいプランは{date}に開始します。それまでは現在のプランをご利用いただけます。",
-      scheduledChangeBanner: "{date}に{plan}へ切り替え",
+      scheduledChangeBanner: "{date}に{current}が終了し、{plan}（{amount}）が開始されます — 設定した支払い方法で自動的に請求されます。",
       scheduledChangeNote: "プラン変更はすでに予約されています。変更が有効になるまで、別の変更は予約できません。",
       retryCta: "支払いを再試行",
       accessUntil: "{date}までアクセスが継続します",
+      activeUntilSwitch: "このプランは{date}まで有効です",
     },
     renewalBanner: {
       message: "更新の処理ができませんでした。",
@@ -758,10 +766,11 @@ const translations: Record<Locale, Translations> = {
       cancelConfirmBody: "{date}까지 {plan}을(를) 유지한 후 무료 요금제로 전환됩니다.",
       changePlanCta: "요금제 변경",
       changePlanConfirmBody: "{plan}(으)로 전환하시겠습니까? 지금 새 결제 수단을 설정합니다 — Razorpay가 환불 가능한 소액 확인 청구(약 ₹5)를 진행합니다. 새 요금제는 {date}에 시작되며, 그때까지 현재 요금제를 유지합니다.",
-      scheduledChangeBanner: "{date}에 {plan}(으)로 전환",
+      scheduledChangeBanner: "{date}에 {current}이(가) 종료되고 {plan}({amount})이(가) 시작됩니다 — 설정한 결제 수단으로 자동 청구됩니다.",
       scheduledChangeNote: "요금제 변경이 이미 예약되어 있습니다. 변경이 적용될 때까지 다른 변경을 예약할 수 없습니다.",
       retryCta: "결제 다시 시도",
       accessUntil: "{date}까지 계속 이용 가능합니다",
+      activeUntilSwitch: "이 요금제는 {date}까지 유지됩니다",
     },
     renewalBanner: {
       message: "갱신 결제를 처리하지 못했습니다.",
@@ -840,10 +849,11 @@ const translations: Record<Locale, Translations> = {
       cancelConfirmBody: "Você manterá {plan} até {date}, depois passará para o plano Gratuito.",
       changePlanCta: "Mudar de plano",
       changePlanConfirmBody: "Mudar para {plan}? Você vai configurar uma nova forma de pagamento agora — a Razorpay faz uma pequena cobrança de verificação reembolsável (cerca de ₹5). Seu novo plano começa em {date}; você mantém o plano atual até lá.",
-      scheduledChangeBanner: "Mudança para {plan} em {date}",
+      scheduledChangeBanner: "Em {date}, {current} termina e {plan} ({amount}) começa — cobrado automaticamente com a forma de pagamento que você configurou.",
       scheduledChangeNote: "Uma mudança de plano já está agendada. Você não pode agendar outra até que ela entre em vigor.",
       retryCta: "Tentar pagamento novamente",
       accessUntil: "O acesso continua até {date}",
+      activeUntilSwitch: "Este plano permanece ativo até {date}",
     },
     renewalBanner: {
       message: "Não conseguimos processar sua renovação.",
@@ -922,10 +932,11 @@ const translations: Record<Locale, Translations> = {
       cancelConfirmBody: "Conservarás {plan} hasta el {date} y luego pasarás al plan Gratis.",
       changePlanCta: "Cambiar de plan",
       changePlanConfirmBody: "¿Cambiar a {plan}? Ahora configurarás un nuevo método de pago — Razorpay realiza un pequeño cargo de verificación reembolsable (alrededor de ₹5). Tu nuevo plan comienza el {date}; conservas tu plan actual hasta entonces.",
-      scheduledChangeBanner: "Cambio a {plan} el {date}",
+      scheduledChangeBanner: "El {date}, {current} finaliza y {plan} ({amount}) comienza — se cobra automáticamente con el método de pago que configuraste.",
       scheduledChangeNote: "Ya hay un cambio de plan programado. No puedes programar otro hasta que se aplique.",
       retryCta: "Reintentar el pago",
       accessUntil: "El acceso continúa hasta el {date}",
+      activeUntilSwitch: "Este plan permanece activo hasta el {date}",
     },
     renewalBanner: {
       message: "No pudimos procesar tu renovación.",
@@ -1004,10 +1015,11 @@ const translations: Record<Locale, Translations> = {
       cancelConfirmBody: "Conservarás {plan} hasta el {date} y luego pasarás al plan Gratis.",
       changePlanCta: "Cambiar de plan",
       changePlanConfirmBody: "¿Cambiar a {plan}? Ahora configurarás un nuevo método de pago — Razorpay realiza un pequeño cargo de verificación reembolsable (alrededor de ₹5). Tu nuevo plan comienza el {date}; conservas tu plan actual hasta entonces.",
-      scheduledChangeBanner: "Cambio a {plan} el {date}",
+      scheduledChangeBanner: "El {date}, {current} finaliza y {plan} ({amount}) comienza — se cobra automáticamente con el método de pago que configuraste.",
       scheduledChangeNote: "Ya hay un cambio de plan programado. No puedes programar otro hasta que se aplique.",
       retryCta: "Reintentar el pago",
       accessUntil: "El acceso continúa hasta el {date}",
+      activeUntilSwitch: "Este plan permanece activo hasta el {date}",
     },
     renewalBanner: {
       message: "No pudimos procesar tu renovación.",
