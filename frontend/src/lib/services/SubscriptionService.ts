@@ -118,6 +118,14 @@ export async function buildManageView(userId: string) {
 
   if (!active) return { tier: "FREE" as const };
 
+  const now = new Date();
+  const scheduled = rows.find(
+    (r) =>
+      r.supersedesId === active.id &&
+      !!r.startAt && r.startAt > now &&
+      ["created", "authenticated", "active"].includes(r.status),
+  );
+
   const p = active.subscriptionPlan;
   const intervalLabel = p.intervalMonths === 1 ? "month" : p.intervalMonths === 3 ? "quarter" : "year";
   const lockedThrough = new Date(active.createdAt);
@@ -135,6 +143,15 @@ export async function buildManageView(userId: string) {
     cancelAtCycleEnd: active.cancelAtCycleEnd,
     paymentRetrying: eff.paymentRetrying,
     retryUrl: eff.paymentRetrying ? (active.providerData as { shortUrl?: string } | null)?.shortUrl ?? null : null,
+    scheduledChange: scheduled
+      ? {
+          planName: { MONTHLY: "Reserve", QUARTERLY: "Treasury", ANNUAL: "Sovereign" }[
+            scheduled.subscriptionPlan.tier as "MONTHLY" | "QUARTERLY" | "ANNUAL"
+          ],
+          startsAt: scheduled.startAt!.toISOString(),
+          amountPerCycle: formatMoney(Math.round(scheduled.amount / 100), scheduled.currency),
+        }
+      : null,
   };
 }
 

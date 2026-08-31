@@ -70,6 +70,15 @@ export function ManageSubscription({ view, paidPlans }: ManageSubscriptionProps)
   };
 
   const handleChangePlan = async (tier: string) => {
+    const target = paidPlans.find((p) => p.tier === tier);
+    const ok = window.confirm(
+      interpolate(t.manageSubscription.changePlanConfirmBody, {
+        plan: target?.name ?? tier,
+        date: view.currentEnd ? fmtDate(view.currentEnd) : "your next billing date",
+      }),
+    );
+    if (!ok) return;
+
     setChangeError(null);
     setChangingTier(tier);
     try {
@@ -115,6 +124,16 @@ export function ManageSubscription({ view, paidPlans }: ManageSubscriptionProps)
 
   return (
     <div className="max-w-xl space-y-4">
+      {view.scheduledChange && (
+        <Card>
+          <p className="text-[0.82rem] font-semibold text-[color:var(--ui-text-pri)]">
+            {interpolate(t.manageSubscription.scheduledChangeBanner, {
+              plan: view.scheduledChange.planName,
+              date: fmtDate(view.scheduledChange.startsAt),
+            })}
+          </p>
+        </Card>
+      )}
       <Card>
         <div className="mb-4 flex items-center justify-between">
           <div>
@@ -172,22 +191,26 @@ export function ManageSubscription({ view, paidPlans }: ManageSubscriptionProps)
           <h3 className="mb-3 text-[0.78rem] font-bold uppercase tracking-wide text-[color:var(--ui-text-muted)]">
             {t.manageSubscription.changePlanCta}
           </h3>
-          <div className="space-y-2">
-            {otherPlans.map((p) => (
-              <button
-                key={p.tier}
-                onClick={() => handleChangePlan(p.tier)}
-                disabled={changingTier !== null || cancelling}
-                className="flex w-full items-center justify-between rounded-lg border px-4 py-2.5 text-left text-[0.82rem] disabled:cursor-not-allowed disabled:opacity-60"
-                style={{ borderColor: "var(--ui-card-border)" }}
-              >
-                <span className="font-bold text-[color:var(--ui-text-pri)]">{p.name}</span>
-                <span className="text-[color:var(--ui-text-muted)]">
-                  {changingTier === p.tier ? "Starting…" : `${p.perMonth}/mo · ${p.perCycle}`}
-                </span>
-              </button>
-            ))}
-          </div>
+          {view.scheduledChange ? (
+            <p className="text-[0.82rem] text-[color:var(--ui-text-muted)]">{t.manageSubscription.scheduledChangeNote}</p>
+          ) : (
+            <div className="space-y-2">
+              {otherPlans.map((p) => (
+                <button
+                  key={p.tier}
+                  onClick={() => handleChangePlan(p.tier)}
+                  disabled={changingTier !== null || cancelling}
+                  className="flex w-full items-center justify-between rounded-lg border px-4 py-2.5 text-left text-[0.82rem] disabled:cursor-not-allowed disabled:opacity-60"
+                  style={{ borderColor: "var(--ui-card-border)" }}
+                >
+                  <span className="font-bold text-[color:var(--ui-text-pri)]">{p.name}</span>
+                  <span className="text-[color:var(--ui-text-muted)]">
+                    {changingTier === p.tier ? "Starting…" : `${p.perMonth}/mo · ${p.perCycle}`}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
           {changeError && (
             <p className="mt-3 text-[0.72rem] font-semibold" style={{ color: "var(--ui-accent-warm)" }}>
               {changeError}

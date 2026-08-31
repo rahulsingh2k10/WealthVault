@@ -103,6 +103,37 @@ describeOrSkip("buildManageView", () => {
   // getEffectivePlan's chooseGrantingRow helper, so a scheduled (not-yet-started)
   // plan-change row no longer shadows the still-effective old plan in the manage
   // view — both functions agree on which row is "current".
+  test("surfaces a scheduled plan change from a superseding row", async () => {
+    const user = await createTestUser();
+    try {
+      const cur = await createSubscriptionRow(user.id, {
+        tier: "MONTHLY",
+        status: "active",
+        currentEnd: new Date(Date.now() + 20 * 86400_000),
+      });
+
+      // Without a superseding row, there is no scheduled change.
+      const before = await buildManageView(user.id);
+      expect(before.tier).toBe("MONTHLY");
+      expect(before.scheduledChange).toBeNull();
+
+      await createSubscriptionRow(user.id, {
+        tier: "ANNUAL",
+        status: "authenticated",
+        supersedesId: cur.id,
+        startAt: cur.currentEnd,
+      });
+
+      const view = await buildManageView(user.id);
+      expect(view.tier).toBe("MONTHLY"); // still on the old plan
+      expect(view.scheduledChange).not.toBeNull();
+      expect(view.scheduledChange.planName).toBe("Sovereign");
+      expect(view.scheduledChange.startsAt).toBe(cur.currentEnd?.toISOString());
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
   test("a newer scheduled (future startAt) row does not shadow the still-effective old plan", async () => {
     const user = await createTestUser();
     try {
