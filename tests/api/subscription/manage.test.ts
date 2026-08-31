@@ -283,3 +283,56 @@ describeOrSkip("POST /api/subscription/change-plan", () => {
     }
   });
 });
+
+async function postCancelScheduledChange(cookie: string) {
+  return fetch(`${TEST_SERVER_URL}/api/subscription/cancel-scheduled-change`, {
+    method: "POST",
+    headers: { ...(cookie ? { cookie } : {}) },
+  });
+}
+
+describeOrSkip("POST /api/subscription/cancel-scheduled-change", () => {
+  test("no cookie → 401", async () => {
+    const res = await postCancelScheduledChange("");
+    expect(res.status).toBe(401);
+  });
+
+  test("no scheduled change → 404", async () => {
+    const user = await createTestUser();
+    try {
+      await createSubscriptionRow(user.id, { tier: "MONTHLY", status: "active" });
+      const cookie = await cookieFor(user.id);
+      const res = await postCancelScheduledChange(cookie);
+      expect(res.status).toBe(404);
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
+  test("drops the pending row and leaves the current plan untouched", async () => {
+    const prisma = getTestPrisma();
+    const user = await createTestUser();
+    try {
+      const soon = new Date(Date.now() + 10 * 86400_000);
+      const cur = await createSubscriptionRow(user.id, { tier: "MONTHLY", status: "active", currentEnd: soon });
+      const pending = await createSubscriptionRow(user.id, {
+        tier: "ANNUAL",
+        status: "authenticated",
+        supersedesId: cur.id,
+        startAt: soon,
+      });
+      const cookie = await cookieFor(user.id);
+
+      const res = await postCancelScheduledChange(cookie);
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ ok: true });
+
+      expect(await prisma.subscription.findUnique({ where: { id: pending.id } })).toBeNull();
+      const curAfter = await prisma.subscription.findUniqueOrThrow({ where: { id: cur.id } });
+      expect(curAfter.status).toBe("active");
+      expect(curAfter.cancelAtCycleEnd).toBe(false);
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+});

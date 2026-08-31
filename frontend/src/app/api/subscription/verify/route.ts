@@ -30,15 +30,6 @@ export async function POST(req: NextRequest) {
       await prisma.subscription.update({ where: { id: row.id }, data: { status: "authenticated" } });
     }
 
-    // plan change: this row supersedes another → now cancel the old one
-    if (row.supersedesId) {
-      const old = await prisma.subscription.findUnique({ where: { id: row.supersedesId } });
-      if (old && !old.cancelAtCycleEnd) {
-        await provider.cancelAtCycleEnd(old.providerSubscriptionId);
-        await prisma.subscription.update({ where: { id: old.id }, data: { cancelAtCycleEnd: true } });
-      }
-    }
-
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("[subscription] verify failed", error);

@@ -103,6 +103,24 @@ export async function applySubscriptionEvent(evt: NormalizedWebhookEvent): Promi
     },
   });
 
+  // A superseding plan-change row that just went live: retire the plan it replaced.
+  if (row.supersedesId && evt.status === "active") {
+    const superseded = await prisma.subscription.findUnique({ where: { id: row.supersedesId } });
+    if (superseded && !superseded.endedAt) {
+      try {
+        const { getProvider } = await import("@/lib/payments");
+        await getProvider().cancelNow(superseded.providerSubscriptionId);
+      } catch (e) {
+        console.error("[subscription] failed to cancel superseded subscription", superseded.providerSubscriptionId, e);
+        // fall through — the local state below is what governs access
+      }
+      await prisma.subscription.update({
+        where: { id: superseded.id },
+        data: { status: "cancelled", endedAt: new Date(), cancelAtCycleEnd: false, currentEnd: superseded.currentEnd },
+      });
+    }
+  }
+
   // recompute + reconcile the user's effective tier across ALL their rows
   await getEffectivePlan(row.userId);
 }

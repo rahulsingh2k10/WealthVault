@@ -136,6 +136,10 @@ export class RazorpayProvider implements PaymentProvider {
     await this.client.subscriptions.cancel(providerSubscriptionId, true /* cancel_at_cycle_end */);
   }
 
+  async cancelNow(providerSubscriptionId: string): Promise<void> {
+    await this.client.subscriptions.cancel(providerSubscriptionId, false);
+  }
+
   async fetchSubscription(providerSubscriptionId: string): Promise<{ status: string; currentEnd: Date | null; shortUrl?: string }> {
     const s = await this.client.subscriptions.fetch(providerSubscriptionId);
     return {

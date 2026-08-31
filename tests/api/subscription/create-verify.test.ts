@@ -179,7 +179,7 @@ describeOrSkip("POST /api/subscription/verify", () => {
     }
   });
 
-  test("verify on a row with supersedesId cancels the old subscription", async () => {
+  test("verify on a superseding row leaves the old subscription untouched", async () => {
     const prisma = getTestPrisma();
     const user = await createTestUser();
     try {
@@ -195,11 +195,15 @@ describeOrSkip("POST /api/subscription/verify", () => {
         razorpay_signature: signature,
       });
       expect(res.status).toBe(200);
-      const json = await res.json();
-      expect(json).toEqual({ ok: true });
+      expect(await res.json()).toEqual({ ok: true });
 
+      // The new row advances; the old one is NOT cancelled here — that happens
+      // only when the new plan actually activates (via the webhook).
+      const updatedNew = await prisma.subscription.findUniqueOrThrow({ where: { id: newRow.id } });
+      expect(updatedNew.status).toBe("authenticated");
       const updatedOld = await prisma.subscription.findUniqueOrThrow({ where: { id: oldRow.id } });
-      expect(updatedOld.cancelAtCycleEnd).toBe(true);
+      expect(updatedOld.cancelAtCycleEnd).toBe(false);
+      expect(updatedOld.status).toBe("active");
     } finally {
       await deleteTestUser(user.id);
     }

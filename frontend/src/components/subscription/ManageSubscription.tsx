@@ -31,6 +31,9 @@ export function ManageSubscription({ view, paidPlans }: ManageSubscriptionProps)
   const [changingTier, setChangingTier] = useState<string | null>(null);
   const [changeError, setChangeError] = useState<string | null>(null);
 
+  const [cancellingScheduled, setCancellingScheduled] = useState(false);
+  const [cancelScheduledError, setCancelScheduledError] = useState<string | null>(null);
+
   const fmtDate = (iso: string) =>
     new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", year: "numeric" }).format(new Date(iso));
 
@@ -120,6 +123,29 @@ export function ManageSubscription({ view, paidPlans }: ManageSubscriptionProps)
     }
   };
 
+  const handleCancelScheduledChange = async () => {
+    const ok = window.confirm(
+      interpolate(t.manageSubscription.cancelScheduledChangeConfirm, {
+        plan: view.scheduledChange?.planName ?? "",
+      }),
+    );
+    if (!ok) return;
+    setCancelScheduledError(null);
+    setCancellingScheduled(true);
+    try {
+      const res = await fetch("/api/subscription/cancel-scheduled-change", { method: "POST" });
+      if (!res.ok) {
+        setCancelScheduledError("Something went wrong. Please try again.");
+        return;
+      }
+      router.refresh();
+    } catch {
+      setCancelScheduledError("Something went wrong. Please try again.");
+    } finally {
+      setCancellingScheduled(false);
+    }
+  };
+
   const otherPlans = paidPlans.filter((p) => p.tier !== view.tier);
 
   return (
@@ -197,7 +223,20 @@ export function ManageSubscription({ view, paidPlans }: ManageSubscriptionProps)
             {t.manageSubscription.changePlanCta}
           </h3>
           {view.scheduledChange ? (
-            <p className="text-[0.82rem] text-[color:var(--ui-text-muted)]">{t.manageSubscription.scheduledChangeNote}</p>
+            <div className="space-y-3">
+              <p className="text-[0.82rem] text-[color:var(--ui-text-muted)]">{t.manageSubscription.scheduledChangeNote}</p>
+              <button
+                onClick={handleCancelScheduledChange}
+                disabled={cancellingScheduled}
+                className="rounded-lg border px-4 py-2 text-[0.78rem] font-bold disabled:cursor-not-allowed disabled:opacity-50"
+                style={{ borderColor: "var(--ui-card-border)", color: "var(--ui-text-sec)" }}
+              >
+                {t.manageSubscription.cancelScheduledChangeCta}
+              </button>
+              {cancelScheduledError && (
+                <p className="text-[0.72rem] font-semibold" style={{ color: "var(--ui-accent-warm)" }}>{cancelScheduledError}</p>
+              )}
+            </div>
           ) : (
             <div className="space-y-2">
               {otherPlans.map((p) => (

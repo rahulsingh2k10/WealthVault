@@ -5,6 +5,12 @@ import { createSubscriptionRow } from "../../helpers/subscriptionFactory";
 import { signedWebhook } from "../../helpers/fakeProvider";
 import { ensureDevServer, TEST_SERVER_URL } from "../../helpers/testServer";
 import { normalizeRazorpayWebhookEvent } from "@/lib/payments/razorpay";
+import { __resetProviderCache } from "@/lib/payments";
+
+// applySubscriptionEvent now reaches for getProvider().cancelNow() when a
+// superseding row activates — force the deterministic fake so these in-process
+// tests never hit the real Razorpay API.
+process.env.PAYMENTS_PROVIDER = "fake";
 
 const describeOrSkip = hasTestDb() ? describe : describe.skip;
 
@@ -13,6 +19,7 @@ beforeAll(async () => {
     if (process.env.DATABASE_URL !== process.env.TEST_DATABASE_URL) {
       throw new Error("DATABASE_URL and TEST_DATABASE_URL differ — refusing to run against the real @/lib/prisma singleton.");
     }
+    __resetProviderCache();
     await ensureReferenceData();
     await ensureDevServer();
   }
@@ -147,6 +154,40 @@ describeOrSkip("applySubscriptionEvent", () => {
 
       const updated = await prisma.subscription.findUniqueOrThrow({ where: { id: row.id } });
       expect(updated.status).toBe("halted");
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
+  test("an activated event for a superseding row retires the subscription it replaced", async () => {
+    const prisma = getTestPrisma();
+    const user = await createTestUser();
+    try {
+      const soon = new Date(Date.now() + 5 * 86400_000);
+      const oldRow = await createSubscriptionRow(user.id, { tier: "MONTHLY", status: "active", currentEnd: soon });
+      const newRow = await createSubscriptionRow(user.id, {
+        tier: "ANNUAL",
+        status: "authenticated",
+        supersedesId: oldRow.id,
+        startAt: soon,
+        currentEnd: null,
+      });
+
+      const nowSec = Math.floor(Date.now() / 1000);
+      const { body, eventId } = signedWebhook("subscription.activated", {
+        id: newRow.providerSubscriptionId,
+        status: "active",
+        current_start: nowSec,
+        current_end: nowSec + 365 * 86400,
+        paid_count: 1,
+      });
+      await applySubscriptionEvent(normalizeRazorpayWebhookEvent(body, eventId));
+
+      const updatedNew = await prisma.subscription.findUniqueOrThrow({ where: { id: newRow.id } });
+      expect(updatedNew.status).toBe("active");
+      const updatedOld = await prisma.subscription.findUniqueOrThrow({ where: { id: oldRow.id } });
+      expect(updatedOld.status).toBe("cancelled");
+      expect(updatedOld.endedAt).not.toBeNull();
     } finally {
       await deleteTestUser(user.id);
     }
