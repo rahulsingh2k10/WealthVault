@@ -100,10 +100,14 @@ export class RazorpayProvider implements PaymentProvider {
 
   async ensureCustomer(user: EnsureCustomerUser): Promise<string> {
     if (user.razorpayCustomerId) return user.razorpayCustomerId;
+    // fail_existing must be the string "0" — Razorpay's API ignores a numeric 0
+    // and falls back to its default (throw if a customer with this email already
+    // exists); "0" makes it return the existing customer instead. The SDK's
+    // types wrongly narrow this to `0 | 1 | boolean`, hence the cast.
     const created = await this.client.customers.create({
       name: user.fullName,
       ...(user.email ? { email: user.email } : {}),
-      fail_existing: 0,
+      fail_existing: "0" as unknown as 0,
       notes: { userId: user.id },
     });
     return created.id;
