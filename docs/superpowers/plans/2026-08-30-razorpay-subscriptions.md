@@ -1553,7 +1553,7 @@ git commit -m "$(printf 'Add subscription e2e (stubbed Razorpay checkout + signe
 ## Task 15: Full suite, manual check, wrap-up
 
 - [x] **Step 1:** `./run-tests.sh` → all green (API 5 suites incl. Subscription, Database, Playwright E2E incl. `subscription.spec.ts`). Note skips.
-- [x] **Step 2: Manual browser check** — `cd frontend && PAYMENTS_PROVIDER= npm run dev` with the **real** `rzp_test_` keys from `.env` (not the fake provider):
+- [ ] **Step 2: Manual browser check (NOT done — needs a human)** — `cd frontend && PAYMENTS_PROVIDER= npm run dev` with the **real** `rzp_test_` keys from `.env` (not the fake provider):
   1. Sign in as a FREE user, open `/dashboard`, wait for the modal, click a plan CTA → the **real Razorpay test Checkout** popup opens. Complete it with Razorpay's [test card / test UPI](https://razorpay.com/docs/payments/payments/test-card-details/).
   2. `/verify` succeeds → modal closes. (Webhook won't fire against localhost — either use an ngrok tunnel + a second dashboard webhook, or POST a signed `subscription.activated` yourself to confirm the tier flips.)
   3. `/subscription` shows the plan, "price locked through", Cancel, Change plan. Cancel → "access continues until". 
