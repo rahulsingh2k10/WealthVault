@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
-import { getProvider } from "@/lib/payments";
 
 export async function POST() {
   try {
@@ -14,8 +13,10 @@ export async function POST() {
     });
     if (!row) return NextResponse.json({ error: "not found" }, { status: 404 });
 
-    const provider = getProvider();
-    await provider.cancelAtCycleEnd(row.providerSubscriptionId);
+    // Local flag only — don't commit the cancellation to Razorpay yet, so the
+    // user can resume before the cycle ends with nothing to reverse. The
+    // subscription is actually cancelled on Razorpay by applySubscriptionEvent
+    // if a renewal charge lands while this flag is still set.
     await prisma.subscription.update({ where: { id: row.id }, data: { cancelAtCycleEnd: true } });
 
     return NextResponse.json({ ok: true, accessUntil: row.currentEnd });

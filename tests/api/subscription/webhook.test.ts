@@ -192,6 +192,39 @@ describeOrSkip("applySubscriptionEvent", () => {
       await deleteTestUser(user.id);
     }
   });
+
+  test("a renewal charge on a cancel-at-cycle-end row ends the subscription", async () => {
+    const prisma = getTestPrisma();
+    const user = await createTestUser();
+    try {
+      const cycleEnd = new Date(Date.now() + 2 * 3600_000);
+      const row = await createSubscriptionRow(user.id, {
+        tier: "MONTHLY",
+        status: "active",
+        cancelAtCycleEnd: true,
+        currentEnd: cycleEnd,
+        paidCount: 1,
+      });
+
+      const nowSec = Math.floor(Date.now() / 1000);
+      const { body, eventId } = signedWebhook("subscription.charged", {
+        id: row.providerSubscriptionId,
+        status: "active",
+        current_start: nowSec,
+        current_end: nowSec + 30 * 86400,
+        paid_count: 2,
+      });
+      await applySubscriptionEvent(normalizeRazorpayWebhookEvent(body, eventId));
+
+      const updated = await prisma.subscription.findUniqueOrThrow({ where: { id: row.id } });
+      expect(updated.status).toBe("cancelled");
+      expect(updated.endedAt).not.toBeNull();
+      // access ends at the cycle the user last paid for, not the renewed one
+      expect(updated.currentEnd?.toISOString()).toBe(cycleEnd.toISOString());
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
 });
 
 describeOrSkip("POST /api/subscription/webhook/[provider]", () => {

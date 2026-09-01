@@ -82,6 +82,7 @@ export interface Translations {
     nextCharge: string;
     priceLocked: string;
     cancelCta: string;
+    resumeCta: string;
     cancelConfirmTitle: string;
     cancelConfirmBody: string;
     changePlanCta: string;
@@ -183,6 +184,7 @@ const translations: Record<Locale, Translations> = {
       nextCharge: "Next charge {amount} on {date}",
       priceLocked: "Your price is locked through {date}",
       cancelCta: "Cancel subscription",
+      resumeCta: "Resume subscription",
       cancelConfirmTitle: "Cancel subscription?",
       cancelConfirmBody: "You'll keep {plan} until {date}, then move to Free.",
       changePlanCta: "Change plan",
@@ -268,6 +270,7 @@ const translations: Record<Locale, Translations> = {
       nextCharge: "Prochain prélèvement de {amount} le {date}",
       priceLocked: "Votre tarif est bloqué jusqu'au {date}",
       cancelCta: "Annuler l'abonnement",
+      resumeCta: "Reprendre l'abonnement",
       cancelConfirmTitle: "Annuler l'abonnement ?",
       cancelConfirmBody: "Vous conserverez {plan} jusqu'au {date}, puis vous passerez à l'offre Gratuite.",
       changePlanCta: "Changer de formule",
@@ -353,6 +356,7 @@ const translations: Record<Locale, Translations> = {
       nextCharge: "Nächste Abbuchung {amount} am {date}",
       priceLocked: "Ihr Preis ist bis {date} gesichert",
       cancelCta: "Abonnement kündigen",
+      resumeCta: "Abonnement fortsetzen",
       cancelConfirmTitle: "Abonnement kündigen?",
       cancelConfirmBody: "Sie behalten {plan} bis {date}, danach wechseln Sie zu Kostenlos.",
       changePlanCta: "Plan ändern",
@@ -438,6 +442,7 @@ const translations: Record<Locale, Translations> = {
       nextCharge: "अगला शुल्क {amount}, {date} को",
       priceLocked: "आपका मूल्य {date} तक लॉक है",
       cancelCta: "सदस्यता रद्द करें",
+      resumeCta: "सदस्यता फिर से शुरू करें",
       cancelConfirmTitle: "सदस्यता रद्द करें?",
       cancelConfirmBody: "आप {date} तक {plan} बनाए रखेंगे, फिर निःशुल्क पर चले जाएंगे।",
       changePlanCta: "प्लान बदलें",
@@ -523,6 +528,7 @@ const translations: Record<Locale, Translations> = {
       nextCharge: "Tagihan berikutnya {amount} pada {date}",
       priceLocked: "Harga Anda terkunci hingga {date}",
       cancelCta: "Batalkan langganan",
+      resumeCta: "Lanjutkan langganan",
       cancelConfirmTitle: "Batalkan langganan?",
       cancelConfirmBody: "Anda akan tetap memiliki {plan} hingga {date}, lalu beralih ke Gratis.",
       changePlanCta: "Ubah paket",
@@ -608,6 +614,7 @@ const translations: Record<Locale, Translations> = {
       nextCharge: "Prossimo addebito {amount} il {date}",
       priceLocked: "Il tuo prezzo è bloccato fino al {date}",
       cancelCta: "Annulla abbonamento",
+      resumeCta: "Riattiva abbonamento",
       cancelConfirmTitle: "Annullare l'abbonamento?",
       cancelConfirmBody: "Manterrai {plan} fino al {date}, poi passerai al piano Gratuito.",
       changePlanCta: "Cambia piano",
@@ -693,6 +700,7 @@ const translations: Record<Locale, Translations> = {
       nextCharge: "次回請求 {amount}({date})",
       priceLocked: "料金は{date}まで固定されています",
       cancelCta: "サブスクリプションを解約",
+      resumeCta: "サブスクリプションを再開",
       cancelConfirmTitle: "サブスクリプションを解約しますか?",
       cancelConfirmBody: "{date}まで{plan}をご利用いただけます。その後、無料プランに移行します。",
       changePlanCta: "プランを変更",
@@ -778,6 +786,7 @@ const translations: Record<Locale, Translations> = {
       nextCharge: "다음 결제 {amount}, {date}",
       priceLocked: "요금은 {date}까지 고정됩니다",
       cancelCta: "구독 취소",
+      resumeCta: "구독 다시 시작",
       cancelConfirmTitle: "구독을 취소하시겠습니까?",
       cancelConfirmBody: "{date}까지 {plan}을(를) 유지한 후 무료 요금제로 전환됩니다.",
       changePlanCta: "요금제 변경",
@@ -863,6 +872,7 @@ const translations: Record<Locale, Translations> = {
       nextCharge: "Próxima cobrança {amount} em {date}",
       priceLocked: "Seu preço está travado até {date}",
       cancelCta: "Cancelar assinatura",
+      resumeCta: "Retomar assinatura",
       cancelConfirmTitle: "Cancelar assinatura?",
       cancelConfirmBody: "Você manterá {plan} até {date}, depois passará para o plano Gratuito.",
       changePlanCta: "Mudar de plano",
@@ -948,6 +958,7 @@ const translations: Record<Locale, Translations> = {
       nextCharge: "Próximo cobro de {amount} el {date}",
       priceLocked: "Tu precio está bloqueado hasta el {date}",
       cancelCta: "Cancelar suscripción",
+      resumeCta: "Reanudar suscripción",
       cancelConfirmTitle: "¿Cancelar la suscripción?",
       cancelConfirmBody: "Conservarás {plan} hasta el {date} y luego pasarás al plan Gratis.",
       changePlanCta: "Cambiar de plan",
@@ -1033,6 +1044,7 @@ const translations: Record<Locale, Translations> = {
       nextCharge: "Próximo cobro de {amount} el {date}",
       priceLocked: "Tu precio está bloqueado hasta el {date}",
       cancelCta: "Cancelar suscripción",
+      resumeCta: "Reanudar suscripción",
       cancelConfirmTitle: "¿Cancelar la suscripción?",
       cancelConfirmBody: "Conservarás {plan} hasta el {date} y luego pasarás al plan Gratis.",
       changePlanCta: "Cambiar de plan",

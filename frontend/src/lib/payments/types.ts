@@ -67,7 +67,6 @@ export interface PaymentProvider {
   verifyCheckoutSignature(p: { paymentId: string; subscriptionId: string; signature: string }): boolean;
   verifyWebhookSignature(rawBody: string, signatureHeader: string | null): boolean;
   normalizeWebhookEvent(rawBody: string, eventId: string | null): NormalizedWebhookEvent;
-  cancelAtCycleEnd(providerSubscriptionId: string): Promise<void>;
   cancelNow(providerSubscriptionId: string): Promise<void>;
   fetchSubscription(providerSubscriptionId: string): Promise<{ status: string; currentEnd: Date | null; shortUrl?: string }>;
 }

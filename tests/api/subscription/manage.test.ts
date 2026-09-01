@@ -201,6 +201,51 @@ describeOrSkip("POST /api/subscription/cancel", () => {
   });
 });
 
+async function postResume(cookie: string) {
+  return fetch(`${TEST_SERVER_URL}/api/subscription/resume`, {
+    method: "POST",
+    headers: { ...(cookie ? { cookie } : {}) },
+  });
+}
+
+describeOrSkip("POST /api/subscription/resume", () => {
+  test("no cookie → 401", async () => {
+    const res = await postResume("");
+    expect(res.status).toBe(401);
+  });
+
+  test("no cancel-at-cycle-end subscription → 404", async () => {
+    const user = await createTestUser();
+    try {
+      await createSubscriptionRow(user.id, { tier: "ANNUAL", status: "active", cancelAtCycleEnd: false });
+      const cookie = await cookieFor(user.id);
+      const res = await postResume(cookie);
+      expect(res.status).toBe(404);
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
+  test("flips cancelAtCycleEnd back to false", async () => {
+    const prisma = getTestPrisma();
+    const user = await createTestUser();
+    try {
+      const row = await createSubscriptionRow(user.id, { tier: "ANNUAL", status: "active", cancelAtCycleEnd: true });
+      const cookie = await cookieFor(user.id);
+
+      const res = await postResume(cookie);
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ ok: true });
+
+      const updated = await prisma.subscription.findUniqueOrThrow({ where: { id: row.id } });
+      expect(updated.cancelAtCycleEnd).toBe(false);
+      expect(updated.status).toBe("active");
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+});
+
 describeOrSkip("POST /api/subscription/change-plan", () => {
   test("no cookie → 401", async () => {
     const res = await postChangePlan("", { tier: "ANNUAL" });

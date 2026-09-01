@@ -132,10 +132,6 @@ export class RazorpayProvider implements PaymentProvider {
     };
   }
 
-  async cancelAtCycleEnd(providerSubscriptionId: string): Promise<void> {
-    await this.client.subscriptions.cancel(providerSubscriptionId, true /* cancel_at_cycle_end */);
-  }
-
   async cancelNow(providerSubscriptionId: string): Promise<void> {
     await this.client.subscriptions.cancel(providerSubscriptionId, false);
   }

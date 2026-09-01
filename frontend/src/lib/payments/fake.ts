@@ -46,10 +46,6 @@ export class FakeProvider implements PaymentProvider {
     return normalizeRazorpayWebhookEvent(rawBody, eventId);
   }
 
-  async cancelAtCycleEnd(): Promise<void> {
-    /* no-op */
-  }
-
   async cancelNow(): Promise<void> {
     /* no-op */
   }

@@ -34,6 +34,9 @@ export function ManageSubscription({ view, paidPlans }: ManageSubscriptionProps)
   const [cancellingScheduled, setCancellingScheduled] = useState(false);
   const [cancelScheduledError, setCancelScheduledError] = useState<string | null>(null);
 
+  const [resuming, setResuming] = useState(false);
+  const [resumeError, setResumeError] = useState<string | null>(null);
+
   const fmtDate = (iso: string) =>
     new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", year: "numeric" }).format(new Date(iso));
 
@@ -123,6 +126,25 @@ export function ManageSubscription({ view, paidPlans }: ManageSubscriptionProps)
     }
   };
 
+  const handleResume = async () => {
+    setResumeError(null);
+    setResuming(true);
+    try {
+      const res = await fetch("/api/subscription/resume", { method: "POST" });
+      if (!res.ok) {
+        setResumeError("Something went wrong. Please try again.");
+        return;
+      }
+      setCancelled(false);
+      setAccessUntil(null);
+      router.refresh();
+    } catch {
+      setResumeError("Something went wrong. Please try again.");
+    } finally {
+      setResuming(false);
+    }
+  };
+
   const handleCancelScheduledChange = async () => {
     const ok = window.confirm(
       interpolate(t.manageSubscription.cancelScheduledChangeConfirm, {
@@ -200,19 +222,30 @@ export function ManageSubscription({ view, paidPlans }: ManageSubscriptionProps)
               {t.manageSubscription.retryCta}
             </button>
           )}
-          <button
-            onClick={handleCancel}
-            disabled={cancelling || alreadyCancelled || changingTier !== null}
-            className="rounded-lg border px-4 py-2 text-[0.78rem] font-bold disabled:cursor-not-allowed disabled:opacity-50"
-            style={{ borderColor: "var(--ui-card-border)", color: "var(--ui-text-sec)" }}
-          >
-            {t.manageSubscription.cancelCta}
-          </button>
+          {alreadyCancelled ? (
+            <button
+              onClick={handleResume}
+              disabled={resuming}
+              className="rounded-lg px-4 py-2 text-[0.78rem] font-bold disabled:cursor-not-allowed disabled:opacity-50"
+              style={{ background: "var(--ui-accent-warm)", color: "var(--ui-on-accent)" }}
+            >
+              {t.manageSubscription.resumeCta}
+            </button>
+          ) : (
+            <button
+              onClick={handleCancel}
+              disabled={cancelling || changingTier !== null}
+              className="rounded-lg border px-4 py-2 text-[0.78rem] font-bold disabled:cursor-not-allowed disabled:opacity-50"
+              style={{ borderColor: "var(--ui-card-border)", color: "var(--ui-text-sec)" }}
+            >
+              {t.manageSubscription.cancelCta}
+            </button>
+          )}
         </div>
 
-        {cancelError && (
+        {(cancelError || resumeError) && (
           <p className="mt-3 text-[0.72rem] font-semibold" style={{ color: "var(--ui-accent-warm)" }}>
-            {cancelError}
+            {cancelError ?? resumeError}
           </p>
         )}
       </Card>

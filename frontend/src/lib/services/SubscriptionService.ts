@@ -103,6 +103,24 @@ export async function applySubscriptionEvent(evt: NormalizedWebhookEvent): Promi
     },
   });
 
+  // The user cancelled (local flag) but never resumed, and Razorpay charged the
+  // next cycle anyway — commit the cancellation on Razorpay now and end access
+  // at the cycle the user last paid for (row.currentEnd, pre-charge).
+  if (row.cancelAtCycleEnd && !row.endedAt && evt.kind === "charged") {
+    try {
+      const { getProvider } = await import("@/lib/payments");
+      await getProvider().cancelNow(row.providerSubscriptionId);
+    } catch (e) {
+      console.error("[subscription] failed to cancel a cancel-at-cycle-end subscription", row.providerSubscriptionId, e);
+    }
+    await prisma.subscription.update({
+      where: { id: row.id },
+      data: { status: "cancelled", endedAt: new Date(), currentEnd: row.currentEnd },
+    });
+    await getEffectivePlan(row.userId);
+    return;
+  }
+
   // A superseding plan-change row that just went live: retire the plan it replaced.
   if (row.supersedesId && evt.status === "active") {
     const superseded = await prisma.subscription.findUnique({ where: { id: row.supersedesId } });
