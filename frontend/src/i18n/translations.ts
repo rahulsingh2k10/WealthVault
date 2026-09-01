@@ -71,6 +71,34 @@ export interface Translations {
     trustCancel: string;
     trustMoneyBack: string;
   };
+  // TODO(i18n): manageSubscription.* strings are AI-translated — need native-speaker review
+  manageSubscription: {
+    title: string;
+    freeHeading: string;
+    freeUpgradeCta: string;
+    statusActive: string;
+    statusPending: string;
+    statusCancelled: string;
+    nextCharge: string;
+    priceLocked: string;
+    cancelCta: string;
+    cancelConfirmTitle: string;
+    cancelConfirmBody: string;
+    changePlanCta: string;
+    changePlanConfirmBody: string;
+    scheduledChangeBanner: string;
+    scheduledChangeNote: string;
+    cancelScheduledChangeCta: string;
+    cancelScheduledChangeConfirm: string;
+    retryCta: string;
+    accessUntil: string;
+    activeUntilSwitch: string;
+  };
+  // TODO(i18n): renewalBanner.* strings are AI-translated — need native-speaker review
+  renewalBanner: {
+    message: string;
+    action: string;
+  };
 }
 
 export const LOCALES: { code: Locale; label: string; native: string }[] = [
@@ -145,6 +173,32 @@ const translations: Record<Locale, Translations> = {
       trustCancel: "Cancel anytime",
       trustMoneyBack: "7-day money-back",
     },
+    manageSubscription: {
+      title: "Manage Subscription",
+      freeHeading: "You're on the Free plan",
+      freeUpgradeCta: "Upgrade",
+      statusActive: "Active",
+      statusPending: "Payment pending",
+      statusCancelled: "Cancelled",
+      nextCharge: "Next charge {amount} on {date}",
+      priceLocked: "Your price is locked through {date}",
+      cancelCta: "Cancel subscription",
+      cancelConfirmTitle: "Cancel subscription?",
+      cancelConfirmBody: "You'll keep {plan} until {date}, then move to Free.",
+      changePlanCta: "Change plan",
+      changePlanConfirmBody: "Switch to {plan}? You'll set up a new payment method now — Razorpay makes a small refundable verification charge (about ₹5). Your new plan starts on {date}; you keep your current plan until then.",
+      scheduledChangeBanner: "On {date}, {current} ends and {plan} ({amount}) begins — charged automatically with the payment method you set up.",
+      scheduledChangeNote: "A plan change is already scheduled. You can't schedule another until it takes effect.",
+      cancelScheduledChangeCta: "Cancel scheduled change",
+      cancelScheduledChangeConfirm: "Cancel the switch to {plan}? You'll stay on your current plan and nothing will change.",
+      retryCta: "Retry payment",
+      accessUntil: "Access continues until {date}",
+      activeUntilSwitch: "This plan stays active until {date}",
+    },
+    renewalBanner: {
+      message: "We couldn't process your renewal.",
+      action: "Update payment →",
+    },
   },
 
   "fr-FR": {
@@ -203,6 +257,32 @@ const translations: Record<Locale, Translations> = {
       trustEncrypted: "Chiffré de bout en bout",
       trustCancel: "Résiliable à tout moment",
       trustMoneyBack: "Remboursé sous 7 jours",
+    },
+    manageSubscription: {
+      title: "Gérer l'abonnement",
+      freeHeading: "Vous êtes sur l'offre Gratuite",
+      freeUpgradeCta: "Passer à l'offre supérieure",
+      statusActive: "Actif",
+      statusPending: "Paiement en attente",
+      statusCancelled: "Annulé",
+      nextCharge: "Prochain prélèvement de {amount} le {date}",
+      priceLocked: "Votre tarif est bloqué jusqu'au {date}",
+      cancelCta: "Annuler l'abonnement",
+      cancelConfirmTitle: "Annuler l'abonnement ?",
+      cancelConfirmBody: "Vous conserverez {plan} jusqu'au {date}, puis vous passerez à l'offre Gratuite.",
+      changePlanCta: "Changer de formule",
+      changePlanConfirmBody: "Passer à {plan} ? Vous allez configurer un nouveau moyen de paiement maintenant — Razorpay effectue une petite charge de vérification remboursable (environ ₹5). Votre nouvelle formule démarre le {date} ; vous conservez votre formule actuelle jusque-là.",
+      scheduledChangeBanner: "Le {date}, {current} prend fin et {plan} ({amount}) commence — prélevé automatiquement avec le moyen de paiement que vous avez configuré.",
+      scheduledChangeNote: "Un changement de formule est déjà programmé. Vous ne pouvez pas en programmer un autre avant qu'il prenne effet.",
+      cancelScheduledChangeCta: "Annuler le changement programmé",
+      cancelScheduledChangeConfirm: "Annuler le passage à {plan} ? Vous conserverez votre formule actuelle et rien ne changera.",
+      retryCta: "Réessayer le paiement",
+      accessUntil: "L'accès continue jusqu'au {date}",
+      activeUntilSwitch: "Cette formule reste active jusqu'au {date}",
+    },
+    renewalBanner: {
+      message: "Nous n'avons pas pu traiter votre renouvellement.",
+      action: "Mettre à jour le paiement →",
     },
   },
 
@@ -263,6 +343,32 @@ const translations: Record<Locale, Translations> = {
       trustCancel: "Jederzeit kündbar",
       trustMoneyBack: "7 Tage Geld-zurück",
     },
+    manageSubscription: {
+      title: "Abonnement verwalten",
+      freeHeading: "Sie nutzen den kostenlosen Plan",
+      freeUpgradeCta: "Upgrade",
+      statusActive: "Aktiv",
+      statusPending: "Zahlung ausstehend",
+      statusCancelled: "Gekündigt",
+      nextCharge: "Nächste Abbuchung {amount} am {date}",
+      priceLocked: "Ihr Preis ist bis {date} gesichert",
+      cancelCta: "Abonnement kündigen",
+      cancelConfirmTitle: "Abonnement kündigen?",
+      cancelConfirmBody: "Sie behalten {plan} bis {date}, danach wechseln Sie zu Kostenlos.",
+      changePlanCta: "Plan ändern",
+      changePlanConfirmBody: "Zu {plan} wechseln? Sie richten jetzt eine neue Zahlungsmethode ein — Razorpay nimmt eine kleine erstattungsfähige Verifizierungsbuchung vor (etwa ₹5). Ihr neuer Plan beginnt am {date}; bis dahin behalten Sie Ihren aktuellen Plan.",
+      scheduledChangeBanner: "Am {date} endet {current} und {plan} ({amount}) beginnt — automatisch abgebucht über die von Ihnen eingerichtete Zahlungsmethode.",
+      scheduledChangeNote: "Ein Planwechsel ist bereits geplant. Sie können keinen weiteren planen, bis er wirksam wird.",
+      cancelScheduledChangeCta: "Geplanten Wechsel abbrechen",
+      cancelScheduledChangeConfirm: "Wechsel zu {plan} abbrechen? Sie behalten Ihren aktuellen Plan und es ändert sich nichts.",
+      retryCta: "Zahlung erneut versuchen",
+      accessUntil: "Zugriff besteht weiter bis {date}",
+      activeUntilSwitch: "Dieser Plan bleibt bis {date} aktiv",
+    },
+    renewalBanner: {
+      message: "Wir konnten Ihre Verlängerung nicht verarbeiten.",
+      action: "Zahlung aktualisieren →",
+    },
   },
 
   "hi-IN": {
@@ -321,6 +427,32 @@ const translations: Record<Locale, Translations> = {
       trustEncrypted: "एंड-टू-एंड एन्क्रिप्टेड",
       trustCancel: "कभी भी रद्द करें",
       trustMoneyBack: "7-दिन मनी-बैक",
+    },
+    manageSubscription: {
+      title: "सदस्यता प्रबंधित करें",
+      freeHeading: "आप निःशुल्क प्लान पर हैं",
+      freeUpgradeCta: "अपग्रेड करें",
+      statusActive: "सक्रिय",
+      statusPending: "भुगतान लंबित",
+      statusCancelled: "रद्द",
+      nextCharge: "अगला शुल्क {amount}, {date} को",
+      priceLocked: "आपका मूल्य {date} तक लॉक है",
+      cancelCta: "सदस्यता रद्द करें",
+      cancelConfirmTitle: "सदस्यता रद्द करें?",
+      cancelConfirmBody: "आप {date} तक {plan} बनाए रखेंगे, फिर निःशुल्क पर चले जाएंगे।",
+      changePlanCta: "प्लान बदलें",
+      changePlanConfirmBody: "{plan} पर स्विच करें? आप अभी एक नया भुगतान तरीका सेट करेंगे — Razorpay एक छोटा वापसी-योग्य सत्यापन शुल्क लेता है (लगभग ₹5)। आपका नया प्लान {date} को शुरू होता है; तब तक आप अपना मौजूदा प्लान बनाए रखते हैं।",
+      scheduledChangeBanner: "{date} को {current} समाप्त होगा और {plan} ({amount}) शुरू होगा — आपके द्वारा सेट किए गए भुगतान तरीके से स्वचालित रूप से शुल्क लिया जाएगा।",
+      scheduledChangeNote: "एक प्लान बदलाव पहले से शेड्यूल है। जब तक यह प्रभावी नहीं होता, आप दूसरा शेड्यूल नहीं कर सकते।",
+      cancelScheduledChangeCta: "अनुसूचित बदलाव रद्द करें",
+      cancelScheduledChangeConfirm: "{plan} में बदलाव रद्द करें? आप अपने मौजूदा प्लान पर बने रहेंगे और कुछ नहीं बदलेगा।",
+      retryCta: "भुगतान पुनः प्रयास करें",
+      accessUntil: "पहुंच {date} तक जारी रहेगी",
+      activeUntilSwitch: "यह प्लान {date} तक सक्रिय रहेगा",
+    },
+    renewalBanner: {
+      message: "हम आपका नवीनीकरण संसाधित नहीं कर सके।",
+      action: "भुगतान अपडेट करें →",
     },
   },
 
@@ -381,6 +513,32 @@ const translations: Record<Locale, Translations> = {
       trustCancel: "Batalkan kapan saja",
       trustMoneyBack: "Jaminan uang kembali 7 hari",
     },
+    manageSubscription: {
+      title: "Kelola Langganan",
+      freeHeading: "Anda menggunakan paket Gratis",
+      freeUpgradeCta: "Upgrade",
+      statusActive: "Aktif",
+      statusPending: "Pembayaran tertunda",
+      statusCancelled: "Dibatalkan",
+      nextCharge: "Tagihan berikutnya {amount} pada {date}",
+      priceLocked: "Harga Anda terkunci hingga {date}",
+      cancelCta: "Batalkan langganan",
+      cancelConfirmTitle: "Batalkan langganan?",
+      cancelConfirmBody: "Anda akan tetap memiliki {plan} hingga {date}, lalu beralih ke Gratis.",
+      changePlanCta: "Ubah paket",
+      changePlanConfirmBody: "Beralih ke {plan}? Anda akan menyiapkan metode pembayaran baru sekarang — Razorpay melakukan sedikit biaya verifikasi yang dapat dikembalikan (sekitar ₹5). Paket baru Anda dimulai pada {date}; Anda tetap menggunakan paket saat ini hingga saat itu.",
+      scheduledChangeBanner: "Pada {date}, {current} berakhir dan {plan} ({amount}) dimulai — ditagih otomatis dengan metode pembayaran yang Anda siapkan.",
+      scheduledChangeNote: "Perubahan paket sudah dijadwalkan. Anda tidak dapat menjadwalkan yang lain sampai perubahan itu berlaku.",
+      cancelScheduledChangeCta: "Batalkan perubahan terjadwal",
+      cancelScheduledChangeConfirm: "Batalkan peralihan ke {plan}? Anda akan tetap pada paket Anda saat ini dan tidak ada yang berubah.",
+      retryCta: "Coba lagi pembayaran",
+      accessUntil: "Akses berlanjut hingga {date}",
+      activeUntilSwitch: "Paket ini tetap aktif hingga {date}",
+    },
+    renewalBanner: {
+      message: "Kami tidak dapat memproses perpanjangan Anda.",
+      action: "Perbarui pembayaran →",
+    },
   },
 
   "it-IT": {
@@ -439,6 +597,32 @@ const translations: Record<Locale, Translations> = {
       trustEncrypted: "Crittografato end-to-end",
       trustCancel: "Disdici quando vuoi",
       trustMoneyBack: "Rimborso entro 7 giorni",
+    },
+    manageSubscription: {
+      title: "Gestisci abbonamento",
+      freeHeading: "Sei sul piano Gratuito",
+      freeUpgradeCta: "Esegui l'upgrade",
+      statusActive: "Attivo",
+      statusPending: "Pagamento in sospeso",
+      statusCancelled: "Annullato",
+      nextCharge: "Prossimo addebito {amount} il {date}",
+      priceLocked: "Il tuo prezzo è bloccato fino al {date}",
+      cancelCta: "Annulla abbonamento",
+      cancelConfirmTitle: "Annullare l'abbonamento?",
+      cancelConfirmBody: "Manterrai {plan} fino al {date}, poi passerai al piano Gratuito.",
+      changePlanCta: "Cambia piano",
+      changePlanConfirmBody: "Passare a {plan}? Ora configurerai un nuovo metodo di pagamento — Razorpay applica un piccolo addebito di verifica rimborsabile (circa ₹5). Il tuo nuovo piano inizia il {date}; fino ad allora mantieni il piano attuale.",
+      scheduledChangeBanner: "Il {date}, {current} termina e {plan} ({amount}) inizia — addebitato automaticamente con il metodo di pagamento che hai impostato.",
+      scheduledChangeNote: "Un cambio di piano è già programmato. Non puoi programmarne un altro finché non diventa effettivo.",
+      cancelScheduledChangeCta: "Annulla il cambio programmato",
+      cancelScheduledChangeConfirm: "Annullare il passaggio a {plan}? Rimarrai sul tuo piano attuale e non cambierà nulla.",
+      retryCta: "Riprova il pagamento",
+      accessUntil: "L'accesso continua fino al {date}",
+      activeUntilSwitch: "Questo piano resta attivo fino al {date}",
+    },
+    renewalBanner: {
+      message: "Non siamo riusciti a elaborare il tuo rinnovo.",
+      action: "Aggiorna pagamento →",
     },
   },
 
@@ -499,6 +683,32 @@ const translations: Record<Locale, Translations> = {
       trustCancel: "いつでも解約可能",
       trustMoneyBack: "7日間返金保証",
     },
+    manageSubscription: {
+      title: "サブスクリプション管理",
+      freeHeading: "現在は無料プランです",
+      freeUpgradeCta: "アップグレード",
+      statusActive: "有効",
+      statusPending: "支払い保留中",
+      statusCancelled: "解約済み",
+      nextCharge: "次回請求 {amount}({date})",
+      priceLocked: "料金は{date}まで固定されています",
+      cancelCta: "サブスクリプションを解約",
+      cancelConfirmTitle: "サブスクリプションを解約しますか?",
+      cancelConfirmBody: "{date}まで{plan}をご利用いただけます。その後、無料プランに移行します。",
+      changePlanCta: "プランを変更",
+      changePlanConfirmBody: "{plan}に切り替えますか? 今すぐ新しい支払い方法を設定します — Razorpayは返金可能な少額の確認用請求(約₹5)を行います。新しいプランは{date}に開始します。それまでは現在のプランをご利用いただけます。",
+      scheduledChangeBanner: "{date}に{current}が終了し、{plan}（{amount}）が開始されます — 設定した支払い方法で自動的に請求されます。",
+      scheduledChangeNote: "プラン変更はすでに予約されています。変更が有効になるまで、別の変更は予約できません。",
+      cancelScheduledChangeCta: "予約した変更をキャンセル",
+      cancelScheduledChangeConfirm: "{plan} への切り替えをキャンセルしますか？現在のプランのままで、何も変更されません。",
+      retryCta: "支払いを再試行",
+      accessUntil: "{date}までアクセスが継続します",
+      activeUntilSwitch: "このプランは{date}まで有効です",
+    },
+    renewalBanner: {
+      message: "更新の処理ができませんでした。",
+      action: "支払い方法を更新 →",
+    },
   },
 
   "ko-KR": {
@@ -557,6 +767,32 @@ const translations: Record<Locale, Translations> = {
       trustEncrypted: "종단 간 암호화",
       trustCancel: "언제든 해지 가능",
       trustMoneyBack: "7일 환불 보장",
+    },
+    manageSubscription: {
+      title: "구독 관리",
+      freeHeading: "무료 요금제를 이용 중입니다",
+      freeUpgradeCta: "업그레이드",
+      statusActive: "활성",
+      statusPending: "결제 대기 중",
+      statusCancelled: "취소됨",
+      nextCharge: "다음 결제 {amount}, {date}",
+      priceLocked: "요금은 {date}까지 고정됩니다",
+      cancelCta: "구독 취소",
+      cancelConfirmTitle: "구독을 취소하시겠습니까?",
+      cancelConfirmBody: "{date}까지 {plan}을(를) 유지한 후 무료 요금제로 전환됩니다.",
+      changePlanCta: "요금제 변경",
+      changePlanConfirmBody: "{plan}(으)로 전환하시겠습니까? 지금 새 결제 수단을 설정합니다 — Razorpay가 환불 가능한 소액 확인 청구(약 ₹5)를 진행합니다. 새 요금제는 {date}에 시작되며, 그때까지 현재 요금제를 유지합니다.",
+      scheduledChangeBanner: "{date}에 {current}이(가) 종료되고 {plan}({amount})이(가) 시작됩니다 — 설정한 결제 수단으로 자동 청구됩니다.",
+      scheduledChangeNote: "요금제 변경이 이미 예약되어 있습니다. 변경이 적용될 때까지 다른 변경을 예약할 수 없습니다.",
+      cancelScheduledChangeCta: "예약된 변경 취소",
+      cancelScheduledChangeConfirm: "{plan}(으)로 전환을 취소하시겠습니까? 현재 요금제를 유지하며 아무것도 변경되지 않습니다.",
+      retryCta: "결제 다시 시도",
+      accessUntil: "{date}까지 계속 이용 가능합니다",
+      activeUntilSwitch: "이 요금제는 {date}까지 유지됩니다",
+    },
+    renewalBanner: {
+      message: "갱신 결제를 처리하지 못했습니다.",
+      action: "결제 정보 업데이트 →",
     },
   },
 
@@ -617,6 +853,32 @@ const translations: Record<Locale, Translations> = {
       trustCancel: "Cancele quando quiser",
       trustMoneyBack: "Reembolso em 7 dias",
     },
+    manageSubscription: {
+      title: "Gerenciar assinatura",
+      freeHeading: "Você está no plano Gratuito",
+      freeUpgradeCta: "Fazer upgrade",
+      statusActive: "Ativa",
+      statusPending: "Pagamento pendente",
+      statusCancelled: "Cancelada",
+      nextCharge: "Próxima cobrança {amount} em {date}",
+      priceLocked: "Seu preço está travado até {date}",
+      cancelCta: "Cancelar assinatura",
+      cancelConfirmTitle: "Cancelar assinatura?",
+      cancelConfirmBody: "Você manterá {plan} até {date}, depois passará para o plano Gratuito.",
+      changePlanCta: "Mudar de plano",
+      changePlanConfirmBody: "Mudar para {plan}? Você vai configurar uma nova forma de pagamento agora — a Razorpay faz uma pequena cobrança de verificação reembolsável (cerca de ₹5). Seu novo plano começa em {date}; você mantém o plano atual até lá.",
+      scheduledChangeBanner: "Em {date}, {current} termina e {plan} ({amount}) começa — cobrado automaticamente com a forma de pagamento que você configurou.",
+      scheduledChangeNote: "Uma mudança de plano já está agendada. Você não pode agendar outra até que ela entre em vigor.",
+      cancelScheduledChangeCta: "Cancelar mudança agendada",
+      cancelScheduledChangeConfirm: "Cancelar a mudança para {plan}? Você permanecerá no seu plano atual e nada mudará.",
+      retryCta: "Tentar pagamento novamente",
+      accessUntil: "O acesso continua até {date}",
+      activeUntilSwitch: "Este plano permanece ativo até {date}",
+    },
+    renewalBanner: {
+      message: "Não conseguimos processar sua renovação.",
+      action: "Atualizar pagamento →",
+    },
   },
 
   "es-419": {
@@ -676,6 +938,32 @@ const translations: Record<Locale, Translations> = {
       trustCancel: "Cancela cuando quieras",
       trustMoneyBack: "Reembolso en 7 días",
     },
+    manageSubscription: {
+      title: "Gestionar suscripción",
+      freeHeading: "Estás en el plan Gratis",
+      freeUpgradeCta: "Mejorar plan",
+      statusActive: "Activa",
+      statusPending: "Pago pendiente",
+      statusCancelled: "Cancelada",
+      nextCharge: "Próximo cobro de {amount} el {date}",
+      priceLocked: "Tu precio está bloqueado hasta el {date}",
+      cancelCta: "Cancelar suscripción",
+      cancelConfirmTitle: "¿Cancelar la suscripción?",
+      cancelConfirmBody: "Conservarás {plan} hasta el {date} y luego pasarás al plan Gratis.",
+      changePlanCta: "Cambiar de plan",
+      changePlanConfirmBody: "¿Cambiar a {plan}? Ahora configurarás un nuevo método de pago — Razorpay realiza un pequeño cargo de verificación reembolsable (alrededor de ₹5). Tu nuevo plan comienza el {date}; conservas tu plan actual hasta entonces.",
+      scheduledChangeBanner: "El {date}, {current} finaliza y {plan} ({amount}) comienza — se cobra automáticamente con el método de pago que configuraste.",
+      scheduledChangeNote: "Ya hay un cambio de plan programado. No puedes programar otro hasta que se aplique.",
+      cancelScheduledChangeCta: "Cancelar cambio programado",
+      cancelScheduledChangeConfirm: "¿Cancelar el cambio a {plan}? Seguirás en tu plan actual y nada cambiará.",
+      retryCta: "Reintentar el pago",
+      accessUntil: "El acceso continúa hasta el {date}",
+      activeUntilSwitch: "Este plan permanece activo hasta el {date}",
+    },
+    renewalBanner: {
+      message: "No pudimos procesar tu renovación.",
+      action: "Actualizar el pago →",
+    },
   },
 
   "es-ES": {
@@ -734,6 +1022,32 @@ const translations: Record<Locale, Translations> = {
       trustEncrypted: "Cifrado de extremo a extremo",
       trustCancel: "Cancela cuando quieras",
       trustMoneyBack: "Reembolso en 7 días",
+    },
+    manageSubscription: {
+      title: "Gestionar suscripción",
+      freeHeading: "Estás en el plan Gratis",
+      freeUpgradeCta: "Mejorar plan",
+      statusActive: "Activa",
+      statusPending: "Pago pendiente",
+      statusCancelled: "Cancelada",
+      nextCharge: "Próximo cobro de {amount} el {date}",
+      priceLocked: "Tu precio está bloqueado hasta el {date}",
+      cancelCta: "Cancelar suscripción",
+      cancelConfirmTitle: "¿Cancelar la suscripción?",
+      cancelConfirmBody: "Conservarás {plan} hasta el {date} y luego pasarás al plan Gratis.",
+      changePlanCta: "Cambiar de plan",
+      changePlanConfirmBody: "¿Cambiar a {plan}? Ahora configurarás un nuevo método de pago — Razorpay realiza un pequeño cargo de verificación reembolsable (alrededor de ₹5). Tu nuevo plan comienza el {date}; conservas tu plan actual hasta entonces.",
+      scheduledChangeBanner: "El {date}, {current} finaliza y {plan} ({amount}) comienza — se cobra automáticamente con el método de pago que configuraste.",
+      scheduledChangeNote: "Ya hay un cambio de plan programado. No puedes programar otro hasta que se aplique.",
+      cancelScheduledChangeCta: "Cancelar cambio programado",
+      cancelScheduledChangeConfirm: "¿Cancelar el cambio a {plan}? Seguirás en tu plan actual y nada cambiará.",
+      retryCta: "Reintentar el pago",
+      accessUntil: "El acceso continúa hasta el {date}",
+      activeUntilSwitch: "Este plan permanece activo hasta el {date}",
+    },
+    renewalBanner: {
+      message: "No pudimos procesar tu renovación.",
+      action: "Actualizar el pago →",
     },
   },
 };

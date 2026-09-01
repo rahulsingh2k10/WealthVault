@@ -212,7 +212,10 @@ export function Sidebar() {
               <SheetItem
                 icon={CreditCard}
                 label={t.sidebar.subscription}
-                onClick={() => setSheetOpen(false)}
+                onClick={() => {
+                  setSheetOpen(false);
+                  router.push("/subscription");
+                }}
               />
             </ul>
 

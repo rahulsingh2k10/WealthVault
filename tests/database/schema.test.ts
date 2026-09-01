@@ -21,6 +21,7 @@ describeOrSkip("users table", () => {
        WHERE table_name = 'users' ORDER BY ordinal_position`
     );
     const columns = rows.map((r) => r.column_name);
+    // db push appends new columns in diff-engine (alphabetical) order, not schema order
     expect(columns).toEqual([
       "id",
       "fullName",
@@ -31,6 +32,7 @@ describeOrSkip("users table", () => {
       "verifier",
       "createdAt",
       "updatedAt",
+      "razorpayCustomerId",
     ]);
   });
 
@@ -170,6 +172,7 @@ describeOrSkip("subscription_plans table", () => {
       `SELECT column_name FROM information_schema.columns
        WHERE table_name = 'subscription_plans' ORDER BY ordinal_position`
     );
+    // db push appends new columns in diff-engine (alphabetical) order, not schema order
     expect(rows.map((r) => r.column_name)).toEqual([
       "id",
       "tier",
@@ -181,6 +184,9 @@ describeOrSkip("subscription_plans table", () => {
       "isActive",
       "createdAt",
       "updatedAt",
+      "intervalMonths",
+      "razorpayPlanId",
+      "termMonths",
     ]);
   });
 

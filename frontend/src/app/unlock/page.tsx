@@ -97,6 +97,9 @@ export default function UnlockPage() {
   const [showSaveAlert, setShowSaveAlert] = useState(false);
   const [copied, setCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Holds an avatar uploaded before the initial /api/auth/me resolved, so the
+  // load handler can apply it instead of dropping it.
+  const pendingAvatarRef = useRef<string | null>(null);
 
   // Live passphrase strength checks
   const checks = {
@@ -113,7 +116,7 @@ export default function UnlockPage() {
       .then((r) => r.json())
       .then((d) => {
         if (d.user) {
-          setUser(d.user);
+          setUser(pendingAvatarRef.current ? { ...d.user, avatar: pendingAvatarRef.current } : d.user);
         } else {
           // Middleware let us through (userId in cookie) but the user row is gone —
           // stale session after a DB wipe or account deletion. Sign out and go home.
@@ -138,7 +141,12 @@ export default function UnlockPage() {
         body: JSON.stringify({ avatar: dataUrl }),
       });
       if (!res.ok) { const d = await res.json(); setAvatarError(d.error ?? "Upload failed"); return; }
-      setUser((prev) => prev ? { ...prev, avatar: dataUrl } : prev);
+      setUser((prev) => {
+        if (prev) return { ...prev, avatar: dataUrl };
+        // /api/auth/me hasn't resolved yet — remember it for the load handler.
+        pendingAvatarRef.current = dataUrl;
+        return prev;
+      });
     } catch {
       setAvatarError("Could not process image.");
     } finally {

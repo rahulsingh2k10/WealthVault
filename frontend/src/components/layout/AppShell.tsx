@@ -2,6 +2,7 @@ import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { InactivityLock } from "./InactivityLock";
 import { WarmBackground } from "./WarmBackground";
+import { RenewalBanner } from "@/components/subscription/RenewalBanner";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -19,6 +20,7 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
       <div className="relative z-10 flex flex-1 overflow-hidden">
         <Sidebar />
         <div className="flex flex-1 flex-col overflow-hidden">
+          <RenewalBanner />
           <Header title={title} subtitle={subtitle} />
           <main className="flex-1 overflow-y-auto p-6 scrollbar-thin">
             {children}

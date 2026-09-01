@@ -7,11 +7,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Subscription {
+enum Tier {
   FREE
   MONTHLY
   QUARTERLY
   ANNUAL
+
+  @@map("Subscription")
 }
 
 enum Platform {
@@ -48,7 +50,7 @@ model SubscriptionPeriod {
 
 model SubscriptionPlan {
   id                  String               @id @default(uuid())
-  tier                Subscription         @unique
+  tier                Tier                 @unique
   price               Decimal
   offerPrice          Decimal?
   currency            String               @default("INR")
@@ -59,6 +61,10 @@ model SubscriptionPlan {
   updatedAt           DateTime             @updatedAt
   users               User[]
   subscriptionPeriods SubscriptionPeriod[]
+  razorpayPlanId      String?
+  intervalMonths      Int?
+  termMonths          Int?                 @default(36)
+  subscriptions       Subscription[]
 
   @@map("subscription_plans")
 }
@@ -81,6 +87,8 @@ model User {
   subscriptionPlanId  String
   subscriptionPlan    SubscriptionPlan     @relation(fields: [subscriptionPlanId], references: [id])
   subscriptionPeriods SubscriptionPeriod[]
+  razorpayCustomerId  String?
+  subscriptions       Subscription[]
   // AES-256-GCM encrypted verifier — encrypt("PORTFOLIO_APP_V1", derivedKey)
   // null  → first-time setup; non-null → passphrase already established
   // The passphrase itself is NEVER stored anywhere.
@@ -89,4 +97,56 @@ model User {
   updatedAt           DateTime             @updatedAt
 
   @@map("users")
+}
+
+model Subscription {
+  id                     String           @id @default(uuid())
+  userId                 String
+  user                   User             @relation(fields: [userId], references: [id])
+  subscriptionPlanId     String
+  subscriptionPlan       SubscriptionPlan @relation(fields: [subscriptionPlanId], references: [id])
+
+  // payment provider; provider-neutral column names so a 2nd provider is additive
+  provider               String           @default("razorpay")
+  providerSubscriptionId String           @unique
+  providerPlanId         String           // the plan the sub is bound to — the grandfather anchor, never repointed
+  providerCustomerId     String?
+  providerData           Json?
+
+  // created | authenticated | active | pending | halted | cancelled | completed | expired
+  status                 String           @default("created")
+  totalCount             Int
+  paidCount              Int              @default(0)
+  currentStart           DateTime?
+  currentEnd             DateTime?        // paid-through date — access is valid until here
+  chargeAt               DateTime?
+  startAt                DateTime?        // set for a scheduled (plan-change) subscription
+  endedAt                DateTime?
+  cancelAtCycleEnd       Boolean          @default(false)
+
+  amount                 Int              // paise per cycle, snapshot for display
+  currency               String           @default("INR")
+  offerId                String?
+  supersedesId           String?          // id of the Subscription this row replaces (plan change)
+
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+
+  @@index([userId])
+  @@map("subscriptions")
+}
+
+model ProcessedWebhookEvent {
+  id        String   @id @default(uuid())
+  provider  String   @default("razorpay")
+  eventId   String
+  // "processing" until applySubscriptionEvent succeeds, then "done". A row
+  // stuck at "processing" (a prior attempt crashed mid-way) is safe to
+  // reprocess — applySubscriptionEvent writes absolute values from the
+  // webhook payload, never deltas, so re-running it is idempotent.
+  status    String   @default("processing")
+  createdAt DateTime @default(now())
+
+  @@unique([provider, eventId])
+  @@map("processed_webhook_events")
 }

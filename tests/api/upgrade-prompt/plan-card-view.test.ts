@@ -14,6 +14,7 @@ function plan(overrides: Partial<Record<keyof SubscriptionPlan, unknown>>): Subs
     currency: "INR",
     offerStartDate: null,
     offerEndDate: null,
+    intervalMonths: 3,
     ...overrides,
   } as unknown as SubscriptionPlan;
 }
@@ -22,7 +23,7 @@ const NOW = new Date("2026-09-01T00:00:00Z");
 
 describe("buildPlanCardView", () => {
   test("no offerPrice → offer inactive, effective = base, 0% discount", () => {
-    const v = buildPlanCardView(plan({ tier: "MONTHLY", price: 3000 }), NOW);
+    const v = buildPlanCardView(plan({ tier: "MONTHLY", price: 3000, intervalMonths: 1 }), NOW);
     expect(v).toMatchObject({
       tier: "MONTHLY",
       billingMonths: 1,
@@ -43,6 +44,7 @@ describe("buildPlanCardView", () => {
         offerPrice: 14400,
         offerStartDate: new Date("2026-08-01T00:00:00Z"),
         offerEndDate: new Date("2026-09-30T23:59:59Z"),
+        intervalMonths: 12,
       }),
       NOW,
     );
@@ -98,5 +100,11 @@ describe("buildPlanCardView", () => {
   test("discount percent is rounded", () => {
     const v = buildPlanCardView(plan({ price: 1000, offerPrice: 853 }), NOW);
     expect(v.discountPercent).toBe(15); // 14.7 → 15
+  });
+
+  test("intervalMonths null for a paid tier → throws", () => {
+    expect(() =>
+      buildPlanCardView(plan({ tier: "MONTHLY", intervalMonths: null }), NOW),
+    ).toThrow();
   });
 });

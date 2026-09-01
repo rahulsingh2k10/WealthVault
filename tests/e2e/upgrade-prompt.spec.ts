@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { hasTestDb, disconnectTestPrisma } from "../helpers/testDb";
 import { ensureReferenceData } from "../helpers/seedReferenceData";
 import { createTestUser, deleteTestUser } from "../helpers/testUser";
+import { createSubscriptionRow } from "../helpers/subscriptionFactory";
 import { sealSessionCookie, SESSION_COOKIE_NAME } from "../helpers/session";
 
 test.skip(!hasTestDb(), "TEST_DATABASE_URL is not set in frontend/.env");
@@ -66,6 +67,9 @@ test.describe("Dashboard upgrade prompt", () => {
   test("a paid user never sees the modal", async ({ page }) => {
     const user = await createTestUser({ tier: "ANNUAL" });
     try {
+      // getUpgradePromptData now gates on getEffectivePlan, which derives tier from an
+      // actual granting Subscription row, not the (possibly stale) User.subscriptionPlanId.
+      await createSubscriptionRow(user.id, { tier: "ANNUAL" });
       await signIn(page, user.id);
       await page.goto("/dashboard?wvUpgradePromptDelayMs=150");
       await page.waitForTimeout(1000); // > test delay
