@@ -50,6 +50,14 @@ export class FakeProvider implements PaymentProvider {
     /* no-op */
   }
 
+  async pauseSubscription(): Promise<void> {
+    /* no-op */
+  }
+
+  async resumeSubscription(): Promise<void> {
+    /* no-op */
+  }
+
   async fetchSubscription(id: string): Promise<{ status: string; currentEnd: Date | null; shortUrl?: string }> {
     return { status: "active", currentEnd: null, shortUrl: `https://fake.rzp/${id}` };
   }

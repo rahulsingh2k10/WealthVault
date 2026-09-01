@@ -226,11 +226,14 @@ describeOrSkip("POST /api/subscription/resume", () => {
     }
   });
 
-  test("flips cancelAtCycleEnd back to false", async () => {
+  test("flips cancelAtCycleEnd back to false while the cycle is still running", async () => {
     const prisma = getTestPrisma();
     const user = await createTestUser();
     try {
-      const row = await createSubscriptionRow(user.id, { tier: "ANNUAL", status: "active", cancelAtCycleEnd: true });
+      const row = await createSubscriptionRow(user.id, {
+        tier: "ANNUAL", status: "active", cancelAtCycleEnd: true,
+        currentEnd: new Date(Date.now() + 10 * 86400_000),
+      });
       const cookie = await cookieFor(user.id);
 
       const res = await postResume(cookie);
@@ -240,6 +243,21 @@ describeOrSkip("POST /api/subscription/resume", () => {
       const updated = await prisma.subscription.findUniqueOrThrow({ where: { id: row.id } });
       expect(updated.cancelAtCycleEnd).toBe(false);
       expect(updated.status).toBe("active");
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
+  test("cycle already ended → 409 (must re-subscribe)", async () => {
+    const user = await createTestUser();
+    try {
+      await createSubscriptionRow(user.id, {
+        tier: "ANNUAL", status: "active", cancelAtCycleEnd: true,
+        currentEnd: new Date(Date.now() - 86400_000),
+      });
+      const cookie = await cookieFor(user.id);
+      const res = await postResume(cookie);
+      expect(res.status).toBe(409);
     } finally {
       await deleteTestUser(user.id);
     }

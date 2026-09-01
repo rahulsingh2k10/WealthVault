@@ -14,6 +14,9 @@ const GRANTS_UNTIL_END = new Set(["cancelled", "completed"]);
 
 function grants(row: Subscription, now: Date): boolean {
   if (row.startAt && now < row.startAt) return false; // scheduled (plan-change) row hasn't started yet
+  // Cancelled-at-cycle-end (Razorpay subscription is paused): grant only through
+  // the cycle the user already paid for, then drop to FREE.
+  if (row.cancelAtCycleEnd) return !!row.currentEnd && now < row.currentEnd;
   if (GRANTS_UNCONDITIONALLY.has(row.status)) return true;
   if (GRANTS_UNTIL_END.has(row.status)) return !!row.currentEnd && now < row.currentEnd;
   return false;

@@ -136,6 +136,14 @@ export class RazorpayProvider implements PaymentProvider {
     await this.client.subscriptions.cancel(providerSubscriptionId, false);
   }
 
+  async pauseSubscription(providerSubscriptionId: string): Promise<void> {
+    await this.client.subscriptions.pause(providerSubscriptionId, { pause_at: "now" });
+  }
+
+  async resumeSubscription(providerSubscriptionId: string): Promise<void> {
+    await this.client.subscriptions.resume(providerSubscriptionId, { resume_at: "now" });
+  }
+
   async fetchSubscription(providerSubscriptionId: string): Promise<{ status: string; currentEnd: Date | null; shortUrl?: string }> {
     const s = await this.client.subscriptions.fetch(providerSubscriptionId);
     return {

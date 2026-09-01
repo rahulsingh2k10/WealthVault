@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { getProvider } from "@/lib/payments";
 
 export async function POST() {
   try {
     const session = await getSession();
     if (!session.userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    // The current cycle hasn't ended (row still granting) and it's flagged to
-    // cancel — undo the flag. Nothing to reverse on Razorpay: /cancel only set
-    // the local flag, it never told Razorpay.
     const row = await prisma.subscription.findFirst({
       where: {
         userId: session.userId,
@@ -20,6 +18,13 @@ export async function POST() {
     });
     if (!row) return NextResponse.json({ error: "nothing to resume" }, { status: 404 });
 
+    // Only reversible while the paid cycle is still running. Once it has ended
+    // the user is on FREE and must start a fresh subscription.
+    if (!row.currentEnd || row.currentEnd <= new Date()) {
+      return NextResponse.json({ error: "subscription has ended — subscribe again" }, { status: 409 });
+    }
+
+    await getProvider().resumeSubscription(row.providerSubscriptionId);
     await prisma.subscription.update({ where: { id: row.id }, data: { cancelAtCycleEnd: false } });
 
     return NextResponse.json({ ok: true });

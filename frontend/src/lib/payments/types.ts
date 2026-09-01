@@ -68,5 +68,8 @@ export interface PaymentProvider {
   verifyWebhookSignature(rawBody: string, signatureHeader: string | null): boolean;
   normalizeWebhookEvent(rawBody: string, eventId: string | null): NormalizedWebhookEvent;
   cancelNow(providerSubscriptionId: string): Promise<void>;
+  /** Stop billing without ending the subscription — reversible via resumeSubscription. */
+  pauseSubscription(providerSubscriptionId: string): Promise<void>;
+  resumeSubscription(providerSubscriptionId: string): Promise<void>;
   fetchSubscription(providerSubscriptionId: string): Promise<{ status: string; currentEnd: Date | null; shortUrl?: string }>;
 }

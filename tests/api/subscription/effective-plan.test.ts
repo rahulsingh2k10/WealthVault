@@ -91,6 +91,26 @@ describeOrSkip("getEffectivePlan", () => {
     }
   });
 
+  test("cancelAtCycleEnd + currentEnd in the future → tier kept", async () => {
+    const user = await createTestUser();
+    try {
+      await createSubscriptionRow(user.id, { tier: "MONTHLY", status: "active", cancelAtCycleEnd: true, currentEnd: new Date(Date.now() + 5 * 86400_000) });
+      expect((await getEffectivePlan(user.id)).tier).toBe("MONTHLY");
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
+  test("cancelAtCycleEnd + currentEnd in the past → FREE (even though status is still 'active')", async () => {
+    const user = await createTestUser();
+    try {
+      await createSubscriptionRow(user.id, { tier: "MONTHLY", status: "active", cancelAtCycleEnd: true, currentEnd: new Date(Date.now() - 86400_000) });
+      expect((await getEffectivePlan(user.id)).tier).toBe("FREE");
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
   test("plan change: old completed (past) + new active → new tier", async () => {
     const user = await createTestUser();
     try {
