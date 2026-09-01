@@ -11,7 +11,7 @@ export async function GET() {
 
   const dbUser = await prisma.user.findUnique({
     where: { id: session.userId },
-    include: { authPlatform: true },
+    include: { authPlatform: true, subscriptionPlan: true },
   });
   if (!dbUser) {
     return NextResponse.json({ user: null });
@@ -28,7 +28,19 @@ export async function GET() {
     });
   }
 
-  const eff = await getEffectivePlan(session.userId);
+  // A subscription-computation hiccup must not 500 this route — it's the app's
+  // core identity fetch. Fall back to the denormalised User.subscriptionPlan cache.
+  let subscription: string = dbUser.subscriptionPlan.tier;
+  let paymentRetrying = false;
+  let subscriptionEndsAt: string | null = null;
+  try {
+    const eff = await getEffectivePlan(session.userId);
+    subscription = eff.tier;
+    paymentRetrying = eff.paymentRetrying;
+    subscriptionEndsAt = eff.currentEnd?.toISOString() ?? null;
+  } catch (e) {
+    console.error("[auth/me] getEffectivePlan failed — using the cached tier", e);
+  }
 
   return NextResponse.json({
     user: {
@@ -37,9 +49,9 @@ export async function GET() {
       email: dbUser.username,
       avatar,
       platform: dbUser.authPlatform.platform,
-      subscription: eff.tier,
-      paymentRetrying: eff.paymentRetrying,
-      subscriptionEndsAt: eff.currentEnd?.toISOString() ?? null,
+      subscription,
+      paymentRetrying,
+      subscriptionEndsAt,
     },
   });
 }
