@@ -159,7 +159,7 @@ describeOrSkip("applySubscriptionEvent", () => {
     }
   });
 
-  test("an activated event for a superseding row retires the subscription it replaced", async () => {
+  test("an activated event for a superseding row updates its own status but does not itself retire the old plan — that's reconciliation's job (see reconcileSupersedingSubscriptions)", async () => {
     const prisma = getTestPrisma();
     const user = await createTestUser();
     try {
@@ -185,9 +185,115 @@ describeOrSkip("applySubscriptionEvent", () => {
 
       const updatedNew = await prisma.subscription.findUniqueOrThrow({ where: { id: newRow.id } });
       expect(updatedNew.status).toBe("active");
+      // The old plan is left exactly as-is — reconciliation (login-triggered or
+      // the daily cron) retires it once startAt has genuinely arrived, not the
+      // webhook the instant Razorpay happens to deliver it.
       const updatedOld = await prisma.subscription.findUniqueOrThrow({ where: { id: oldRow.id } });
-      expect(updatedOld.status).toBe("cancelled");
-      expect(updatedOld.endedAt).not.toBeNull();
+      expect(updatedOld.status).toBe("active");
+      expect(updatedOld.endedAt).toBeNull();
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
+  test("a halted event for a superseding row is still reconciled — the webhook's own endedAt does not hide it from the rollback sweep", async () => {
+    const { reconcileSupersedingSubscriptions } = require("@/lib/services/SubscriptionService");
+    const prisma = getTestPrisma();
+    const user = await createTestUser();
+    try {
+      const oldRow = await createSubscriptionRow(user.id, { tier: "MONTHLY", status: "active" });
+      const newRow = await createSubscriptionRow(user.id, {
+        tier: "ANNUAL",
+        status: "authenticated",
+        supersedesId: oldRow.id,
+        startAt: new Date(Date.now() - 3600_000), // already due
+        currentEnd: null,
+      });
+
+      // applySubscriptionEvent itself sets endedAt for any terminal status
+      // (halted/completed/expired) — this must not make reconcileSupersedingSubscriptions'
+      // "due" query silently skip the row before it ever gets a chance to resume the old plan.
+      const { body, eventId } = signedWebhook("subscription.halted", { id: newRow.providerSubscriptionId, status: "halted" });
+      await applySubscriptionEvent(normalizeRazorpayWebhookEvent(body, eventId));
+
+      const halted = await prisma.subscription.findUniqueOrThrow({ where: { id: newRow.id } });
+      expect(halted.status).toBe("halted");
+      expect(halted.endedAt).not.toBeNull(); // set by the webhook handler itself, before reconciliation ever runs
+
+      const result = await reconcileSupersedingSubscriptions({ userId: user.id });
+      expect(result.rolledBack).toBe(1);
+
+      const oldAfter = await prisma.subscription.findUniqueOrThrow({ where: { id: oldRow.id } });
+      expect(oldAfter.status).toBe("active");
+      expect(oldAfter.endedAt).toBeNull();
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
+  test("a halted event for a superseding row still surfaces as failedChange — buildManageView must not hide it behind the webhook's own endedAt either", async () => {
+    const { buildManageView } = require("@/lib/services/SubscriptionService");
+    const user = await createTestUser();
+    try {
+      const oldRow = await createSubscriptionRow(user.id, {
+        tier: "MONTHLY", status: "active", currentEnd: new Date(Date.now() + 20 * 86400_000),
+      });
+      const newRow = await createSubscriptionRow(user.id, {
+        tier: "ANNUAL", status: "authenticated", supersedesId: oldRow.id, startAt: new Date(Date.now() - 3600_000),
+      });
+
+      const { body, eventId } = signedWebhook("subscription.halted", { id: newRow.providerSubscriptionId, status: "halted" });
+      await applySubscriptionEvent(normalizeRazorpayWebhookEvent(body, eventId));
+
+      const view = await buildManageView(user.id);
+      expect(view.tier).toBe("MONTHLY");
+      expect(view.scheduledChange).toBeNull();
+      expect(view.failedChange).not.toBeNull();
+      expect(view.failedChange.tier).toBe("ANNUAL");
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
+  test("authenticated (e-mandate set up, first charge not yet run) grants access immediately", async () => {
+    const prisma = getTestPrisma();
+    const user = await createTestUser();
+    try {
+      const row = await createSubscriptionRow(user.id, { tier: "MONTHLY", status: "created", currentEnd: null });
+      const { body, eventId } = signedWebhook("subscription.authenticated", { id: row.providerSubscriptionId, status: "authenticated" });
+      await applySubscriptionEvent(normalizeRazorpayWebhookEvent(body, eventId));
+
+      const updated = await prisma.subscription.findUniqueOrThrow({ where: { id: row.id } });
+      expect(updated.status).toBe("authenticated");
+
+      const eff = await getEffectivePlan(user.id);
+      expect(eff.tier).toBe("MONTHLY");
+      expect(eff.paymentRetrying).toBe(false);
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
+  test("completed (fixed-term plan finishes its run) → terminal, access ends at the last-paid current_end", async () => {
+    const prisma = getTestPrisma();
+    const user = await createTestUser();
+    try {
+      const row = await createSubscriptionRow(user.id, { tier: "ANNUAL", status: "active", totalCount: 3, paidCount: 3 });
+      const pastSec = Math.floor(Date.now() / 1000) - 3600; // the run already finished by the time the event lands
+      const { body, eventId } = signedWebhook("subscription.completed", {
+        id: row.providerSubscriptionId,
+        status: "completed",
+        current_end: pastSec,
+        paid_count: 3,
+      });
+      await applySubscriptionEvent(normalizeRazorpayWebhookEvent(body, eventId));
+
+      const updated = await prisma.subscription.findUniqueOrThrow({ where: { id: row.id } });
+      expect(updated.status).toBe("completed");
+      expect(updated.endedAt).not.toBeNull();
+
+      const afterUser = await prisma.user.findUniqueOrThrow({ where: { id: user.id }, include: { subscriptionPlan: true } });
+      expect(afterUser.subscriptionPlan.tier).toBe("FREE");
     } finally {
       await deleteTestUser(user.id);
     }

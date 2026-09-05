@@ -1,7 +1,8 @@
 "use client";
 
-import { RefreshCw, Lock } from "lucide-react";
+import { RefreshCw, Lock, Menu } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useMobileNav } from "@/context/MobileNavContext";
 
 interface HeaderProps {
   title: string;
@@ -10,6 +11,7 @@ interface HeaderProps {
 
 export function Header({ title, subtitle }: HeaderProps) {
   const router = useRouter();
+  const { open, setOpen } = useMobileNav();
 
   const handleLock = async () => {
     await fetch("/api/auth/lock", { method: "POST" });
@@ -17,14 +19,23 @@ export function Header({ title, subtitle }: HeaderProps) {
   };
 
   return (
-    <header className="flex h-12 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-6 dark:border-slate-800 dark:bg-slate-950">
-      <div>
-        <h1 className="text-sm font-semibold text-slate-900 dark:text-slate-50 leading-tight">
-          {title}
-        </h1>
-        {subtitle && (
-          <p className="text-xs text-slate-500 dark:text-slate-400 leading-tight">{subtitle}</p>
-        )}
+    <header className="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white px-6 dark:border-slate-800 dark:bg-slate-950">
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => setOpen(!open)}
+          aria-label="Toggle navigation"
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100 lg:hidden"
+        >
+          <Menu className="h-4 w-4" />
+        </button>
+        <div>
+          <h1 className="text-sm font-semibold text-slate-900 dark:text-slate-50 leading-tight">
+            {title}
+          </h1>
+          {subtitle && (
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-tight">{subtitle}</p>
+          )}
+        </div>
       </div>
 
       <div className="flex items-center gap-2">

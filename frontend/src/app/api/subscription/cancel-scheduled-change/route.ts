@@ -19,7 +19,16 @@ export async function POST() {
     });
     if (!pending) return NextResponse.json({ error: "no scheduled change" }, { status: 404 });
 
+    const superseded = pending.supersedesId
+      ? await prisma.subscription.findUnique({ where: { id: pending.supersedesId } })
+      : null;
+
     await getProvider().cancelNow(pending.providerSubscriptionId);
+    // change-plan paused the old subscription on Razorpay to avoid a double
+    // charge at the shared cycle boundary — undo that so it keeps renewing.
+    if (superseded && !superseded.endedAt) {
+      await getProvider().resumeSubscription(superseded.providerSubscriptionId);
+    }
     await prisma.subscription.delete({ where: { id: pending.id } });
 
     return NextResponse.json({ ok: true });

@@ -139,7 +139,6 @@ test.describe("Razorpay subscription flow", () => {
       // The manage screen shows the Sovereign (ANNUAL) plan.
       await page.goto("/subscription");
       await expect(page.getByText(/sovereign/i).first()).toBeVisible();
-      await expect(page.getByText(/your price is locked through/i)).toBeVisible();
     } finally {
       await deleteTestUser(user.id);
     }
@@ -158,10 +157,8 @@ test.describe("Razorpay subscription flow", () => {
       await signIn(page, user.id);
       await page.goto("/subscription");
 
-      // handleCancel uses window.confirm — Playwright auto-dismisses dialogs by
-      // default, so accept it explicitly before the click.
-      page.on("dialog", (d) => d.accept());
       await page.getByRole("button", { name: /cancel subscription/i }).click();
+      await page.getByRole("button", { name: "Continue", exact: true }).click();
 
       await expect(page.getByText(/access continues until/i)).toBeVisible();
     } finally {
@@ -175,5 +172,150 @@ test.describe("Razorpay subscription flow", () => {
       headers: { "x-razorpay-signature": "deadbeef", "x-razorpay-event-id": "evt_x", "content-type": "application/json" },
     });
     expect(res.status()).toBe(400);
+  });
+
+  test("a MONTHLY subscriber upgrades to ANNUAL via the Manage screen", async ({ page }) => {
+    test.skip(!fakeProviderActive, SKIP_MSG);
+    test.slow();
+    const user = await createTestUser({ tier: "MONTHLY" });
+    try {
+      await createSubscriptionRow(user.id, {
+        tier: "MONTHLY",
+        status: "active",
+        currentEnd: new Date(Date.now() + 20 * 24 * 3600 * 1000),
+        providerSubscriptionId: "sub_fake_upgrade1",
+      });
+      await signIn(page, user.id);
+      await stubRazorpay(page);
+      await page.goto("/subscription");
+
+      await expect(page.getByText("Reserve", { exact: true }).first()).toBeVisible();
+
+      await page.getByRole("button", { name: /sovereign/i }).click();
+      await page.getByRole("button", { name: "Continue", exact: true }).click();
+
+      // handleChangePlan runs POST /change-plan -> stubbed checkout -> POST /verify -> router.refresh().
+      // The "Cancel scheduled change" button only renders once view.scheduledChange is
+      // truthy, i.e. once the switch actually took effect server-side — unlike matching
+      // on "Sovereign" text, which is already on the page (the button just clicked) and
+      // so would pass even if the change silently failed. Generous timeout: first hit
+      // against a route this dev server hasn't compiled yet can take a few seconds.
+      await expect(page.getByRole("button", { name: /cancel scheduled change/i })).toBeVisible({ timeout: 20000 });
+
+      const rows = await getTestPrisma().subscription.findMany({
+        where: { userId: user.id },
+        include: { subscriptionPlan: true },
+        orderBy: { createdAt: "asc" },
+      });
+      const oldRow = rows.find((r) => r.providerSubscriptionId === "sub_fake_upgrade1")!;
+      const newRow = rows.find((r) => r.id !== oldRow.id)!;
+      expect(newRow.subscriptionPlan.tier).toBe("ANNUAL");
+      expect(newRow.status).toBe("authenticated");
+      expect(newRow.supersedesId).toBe(oldRow.id);
+      expect(oldRow.status).toBe("active"); // still granting until the scheduled switch
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
+  test("an ANNUAL subscriber downgrades to MONTHLY via the Manage screen", async ({ page }) => {
+    test.skip(!fakeProviderActive, SKIP_MSG);
+    test.slow();
+    const user = await createTestUser({ tier: "ANNUAL" });
+    try {
+      await createSubscriptionRow(user.id, {
+        tier: "ANNUAL",
+        status: "active",
+        currentEnd: new Date(Date.now() + 300 * 24 * 3600 * 1000),
+        providerSubscriptionId: "sub_fake_downgrade1",
+      });
+      await signIn(page, user.id);
+      await stubRazorpay(page);
+      await page.goto("/subscription");
+
+      await expect(page.getByText("Sovereign", { exact: true }).first()).toBeVisible();
+
+      await page.getByRole("button", { name: /reserve/i }).click();
+      await page.getByRole("button", { name: "Continue", exact: true }).click();
+
+      // See the upgrade test above for why this asserts on the scheduled-change UI
+      // rather than on plan-name text that's already on the page pre-click.
+      await expect(page.getByRole("button", { name: /cancel scheduled change/i })).toBeVisible({ timeout: 20000 });
+
+      const rows = await getTestPrisma().subscription.findMany({
+        where: { userId: user.id },
+        include: { subscriptionPlan: true },
+        orderBy: { createdAt: "asc" },
+      });
+      const oldRow = rows.find((r) => r.providerSubscriptionId === "sub_fake_downgrade1")!;
+      const newRow = rows.find((r) => r.id !== oldRow.id)!;
+      expect(newRow.subscriptionPlan.tier).toBe("MONTHLY");
+      expect(newRow.supersedesId).toBe(oldRow.id);
+      expect(oldRow.status).toBe("active"); // still on Sovereign until the switch takes effect
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
+  test("a cancel-at-cycle-end subscriber resumes via the Manage screen", async ({ page }) => {
+    test.skip(!fakeProviderActive, SKIP_MSG);
+    const user = await createTestUser({ tier: "ANNUAL" });
+    try {
+      await createSubscriptionRow(user.id, {
+        tier: "ANNUAL",
+        status: "active",
+        cancelAtCycleEnd: true,
+        currentEnd: new Date(Date.now() + 300 * 24 * 3600 * 1000),
+        providerSubscriptionId: "sub_fake_resume1",
+      });
+      await signIn(page, user.id);
+      await page.goto("/subscription");
+
+      await expect(page.getByRole("button", { name: /resume subscription/i })).toBeVisible();
+      await page.getByRole("button", { name: /resume subscription/i }).click();
+
+      await expect(page.getByRole("button", { name: /cancel subscription/i })).toBeVisible({ timeout: 10000 });
+
+      const row = await getTestPrisma().subscription.findFirstOrThrow({ where: { providerSubscriptionId: "sub_fake_resume1" } });
+      expect(row.cancelAtCycleEnd).toBe(false);
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
+  test("a scheduled plan change can be cancelled via the Manage screen", async ({ page }) => {
+    test.skip(!fakeProviderActive, SKIP_MSG);
+    const user = await createTestUser({ tier: "MONTHLY" });
+    try {
+      const soon = new Date(Date.now() + 10 * 24 * 3600 * 1000);
+      const cur = await createSubscriptionRow(user.id, {
+        tier: "MONTHLY",
+        status: "active",
+        currentEnd: soon,
+        providerSubscriptionId: "sub_fake_scheduled1",
+      });
+      await createSubscriptionRow(user.id, {
+        tier: "ANNUAL",
+        status: "authenticated",
+        supersedesId: cur.id,
+        startAt: soon,
+        currentEnd: null,
+        providerSubscriptionId: "sub_fake_scheduled2",
+      });
+      await signIn(page, user.id);
+      await page.goto("/subscription");
+
+      await expect(page.getByText(/sovereign/i).first()).toBeVisible();
+      await page.getByRole("button", { name: /cancel scheduled change/i }).click();
+      await page.getByRole("button", { name: "Continue", exact: true }).click();
+
+      await expect(page.getByRole("button", { name: /cancel scheduled change/i })).toHaveCount(0, { timeout: 10000 });
+
+      expect(await getTestPrisma().subscription.findUnique({ where: { providerSubscriptionId: "sub_fake_scheduled2" } })).toBeNull();
+      const curAfter = await getTestPrisma().subscription.findUniqueOrThrow({ where: { id: cur.id } });
+      expect(curAfter.status).toBe("active");
+    } finally {
+      await deleteTestUser(user.id);
+    }
   });
 });

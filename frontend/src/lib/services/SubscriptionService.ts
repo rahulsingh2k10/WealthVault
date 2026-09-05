@@ -22,6 +22,145 @@ function grants(row: Subscription, now: Date): boolean {
   return false;
 }
 
+// A cancel-at-cycle-end subscription is only *paused* on the provider at
+// cancel time (see /api/subscription/cancel) — access already stops once
+// currentEnd passes (grants() below), but the provider-side object would
+// otherwise sit paused forever. Once the paid-through window has actually
+// elapsed, finish the job: fully cancel it on the provider too.
+async function finalizeExpiredCancellationRows(rows: Subscription[], now: Date): Promise<void> {
+  const expired = rows.filter((r) => r.cancelAtCycleEnd && !r.endedAt && r.currentEnd && now >= r.currentEnd);
+  for (const row of expired) {
+    try {
+      const { getProvider } = await import("@/lib/payments");
+      await getProvider().cancelNow(row.providerSubscriptionId);
+    } catch (e) {
+      console.error("[subscription] failed to finalize an expired cancellation", row.providerSubscriptionId, e);
+    }
+    await prisma.subscription.update({
+      where: { id: row.id },
+      data: { status: "cancelled", endedAt: now },
+    });
+  }
+}
+
+/**
+ * Global sweep for the daily cron (see /api/cron/finalize-cancellations):
+ * finalizes every cancel-at-cycle-end subscription across all users whose
+ * paid-through window has elapsed, then reconciles each affected user's
+ * cached tier — so neither step waits for that user's next request.
+ */
+export async function finalizeExpiredCancellations(): Promise<{ finalized: number }> {
+  const now = new Date();
+  const rows = await prisma.subscription.findMany({
+    where: { cancelAtCycleEnd: true, endedAt: null, currentEnd: { lte: now } },
+  });
+  await finalizeExpiredCancellationRows(rows, now);
+
+  const userIds = Array.from(new Set(rows.map((r) => r.userId)));
+  for (const userId of userIds) {
+    await getEffectivePlan(userId);
+  }
+
+  return { finalized: rows.length };
+}
+
+// Claims a row atomically before acting on it — the login-triggered check and
+// the midnight cron can both reach the same overdue row within the same
+// second. Whichever caller's updateMany actually flips endedAt (count === 1)
+// is the only one that goes on to call Razorpay; the other sees count === 0
+// and does nothing. This is what makes the two triggers safe to run concurrently.
+async function claimRow(id: string, status: string): Promise<boolean> {
+  const claim = await prisma.subscription.updateMany({
+    where: { id, endedAt: null },
+    data: { status, endedAt: new Date() },
+  });
+  return claim.count === 1;
+}
+
+/**
+ * Resolves every superseding (plan-change) subscription whose startAt has
+ * arrived — called from /api/auth/unlock (userId scoped, on login) and the
+ * daily cron (global sweep, see /api/cron/finalize-cancellations). A row
+ * still `authenticated` or `pending` past its startAt may still resolve on
+ * a later Razorpay retry, so it's left alone rather than guessed at.
+ */
+export async function reconcileSupersedingSubscriptions(
+  opts: { userId?: string } = {},
+): Promise<{ upgraded: number; rolledBack: number }> {
+  const now = new Date();
+  const provider = await getProviderLazy();
+
+  // Not `endedAt: null` — applySubscriptionEvent sets endedAt on ANY row the
+  // instant a terminal webhook (halted/completed/expired) arrives, before
+  // reconciliation ever runs. Filtering on endedAt here would silently hide
+  // exactly the halted rows the rollback branch below exists to catch.
+  // Excluding the fully-resolved statuses instead keeps this query bounded
+  // without depending on a field a webhook can set first.
+  const due = await prisma.subscription.findMany({
+    where: {
+      ...(opts.userId ? { userId: opts.userId } : {}),
+      supersedesId: { not: null },
+      status: { in: ["active", "created", "authenticated", "pending", "halted"] },
+      startAt: { lte: now },
+    },
+  });
+
+  let upgraded = 0;
+  let rolledBack = 0;
+  const affectedUserIds = new Set<string>();
+
+  for (const row of due) {
+    if (row.status === "active") {
+      const superseded = await prisma.subscription.findUnique({ where: { id: row.supersedesId! } });
+      if (!superseded || superseded.endedAt) continue;
+      if (!(await claimRow(superseded.id, "cancelled"))) continue;
+      try {
+        await provider.cancelNow(superseded.providerSubscriptionId);
+      } catch (e) {
+        console.error("[subscription] reconcile: failed to cancel superseded", superseded.providerSubscriptionId, e);
+      }
+      upgraded++;
+      affectedUserIds.add(row.userId);
+    } else if (row.status === "created" || row.status === "halted") {
+      // A halted row may already have endedAt set by applySubscriptionEvent
+      // itself — claim on status instead, which is still exactly-once (this
+      // update's own WHERE excludes it the moment status flips to "cancelled").
+      const claim = await prisma.subscription.updateMany({
+        where: { id: row.id, status: { in: ["created", "halted"] } },
+        data: { status: "cancelled", endedAt: new Date() },
+      });
+      if (claim.count !== 1) continue;
+      try {
+        await provider.cancelNow(row.providerSubscriptionId);
+      } catch (e) {
+        console.error("[subscription] reconcile: failed to cancel dead superseding row", row.providerSubscriptionId, e);
+      }
+      const superseded = await prisma.subscription.findUnique({ where: { id: row.supersedesId! } });
+      if (superseded && !superseded.endedAt) {
+        try {
+          await provider.resumeSubscription(superseded.providerSubscriptionId);
+        } catch (e) {
+          console.error("[subscription] reconcile: failed to resume superseded", superseded.providerSubscriptionId, e);
+        }
+      }
+      rolledBack++;
+      affectedUserIds.add(row.userId);
+    }
+    // "authenticated" / "pending" — still live, Razorpay may yet resolve it. Skip.
+  }
+
+  for (const userId of Array.from(affectedUserIds)) {
+    await getEffectivePlan(userId);
+  }
+
+  return { upgraded, rolledBack };
+}
+
+async function getProviderLazy() {
+  const { getProvider } = await import("@/lib/payments");
+  return getProvider();
+}
+
 function chooseGrantingRow<T extends Subscription>(rows: T[], now: Date): T | null {
   const granting = rows.filter((r) => grants(r, now));
   return (
@@ -31,6 +170,21 @@ function chooseGrantingRow<T extends Subscription>(rows: T[], now: Date): T | nu
       return be - ae;
     })[0] ?? null
   );
+}
+
+/**
+ * The row actually granting access right now, same selection logic as
+ * getEffectivePlan (grants() excludes a superseding row until its startAt
+ * arrives) — so callers can't accidentally treat a pending plan-change row
+ * as "current" just because it's the most recently created one.
+ */
+export async function getGrantingSubscription(userId: string) {
+  const rows = await prisma.subscription.findMany({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    include: { subscriptionPlan: true },
+  });
+  return chooseGrantingRow(rows, new Date());
 }
 
 export interface EffectivePlan {
@@ -51,6 +205,8 @@ export async function getEffectivePlan(userId: string): Promise<EffectivePlan> {
     prisma.subscriptionPlan.findUniqueOrThrow({ where: { tier: "FREE" } }),
     prisma.user.findUnique({ where: { id: userId }, select: { subscriptionPlanId: true } }),
   ]);
+
+  await finalizeExpiredCancellationRows(rows, now);
 
   const granting = rows.filter((r) => grants(r, now));
   // prefer the one whose access extends furthest (or an always-granting row)
@@ -124,23 +280,11 @@ export async function applySubscriptionEvent(evt: NormalizedWebhookEvent): Promi
     return;
   }
 
-  // A superseding plan-change row that just went live: retire the plan it replaced.
-  if (row.supersedesId && evt.status === "active") {
-    const superseded = await prisma.subscription.findUnique({ where: { id: row.supersedesId } });
-    if (superseded && !superseded.endedAt) {
-      try {
-        const { getProvider } = await import("@/lib/payments");
-        await getProvider().cancelNow(superseded.providerSubscriptionId);
-      } catch (e) {
-        console.error("[subscription] failed to cancel superseded subscription", superseded.providerSubscriptionId, e);
-        // fall through — the local state below is what governs access
-      }
-      await prisma.subscription.update({
-        where: { id: superseded.id },
-        data: { status: "cancelled", endedAt: new Date(), cancelAtCycleEnd: false, currentEnd: superseded.currentEnd },
-      });
-    }
-  }
+  // A superseding row going active does NOT retire the plan it replaces here —
+  // that's reconcileSupersedingSubscriptions' job (called from /api/auth/unlock
+  // and the daily cron), not this webhook. Cancelling eagerly the instant the
+  // webhook happens to arrive is exactly the ad-hoc, non-reconciled path that
+  // made the old subscription's own pending renewal a double-charge risk.
 
   // recompute + reconcile the user's effective tier across ALL their rows
   await getEffectivePlan(row.userId);
@@ -158,12 +302,25 @@ export async function buildManageView(userId: string) {
   if (!active) return { tier: "FREE" as const };
 
   const now = new Date();
+  // Only "authenticated"/"active" means the customer actually completed
+  // Razorpay's checkout and a real mandate exists — that's a genuine
+  // scheduled switch. change-plan writes a "created" row *before* checkout
+  // even opens (see /api/subscription/change-plan), so a row still stuck at
+  // "created" here means the payment failed or was abandoned: nothing will
+  // happen at startAt, and it must not be shown as upcoming.
   const scheduled = rows.find(
     (r) =>
       r.supersedesId === active.id &&
       !!r.startAt && r.startAt > now &&
-      ["created", "authenticated", "active"].includes(r.status),
+      ["authenticated", "active"].includes(r.status),
   );
+  // Not `!r.endedAt` — applySubscriptionEvent sets endedAt the instant a
+  // halted webhook arrives, before reconciliation ever runs, which would hide
+  // the retry card exactly when it's most needed. Once reconciliation *has*
+  // resolved it, status moves to "cancelled" and this already excludes it.
+  const failedChange = !scheduled
+    ? rows.find((r) => r.supersedesId === active.id && ["created", "halted"].includes(r.status))
+    : undefined;
 
   const p = active.subscriptionPlan;
   const intervalLabel = p.intervalMonths === 1 ? "month" : p.intervalMonths === 3 ? "quarter" : "year";
@@ -184,11 +341,20 @@ export async function buildManageView(userId: string) {
     retryUrl: eff.paymentRetrying ? (active.providerData as { shortUrl?: string } | null)?.shortUrl ?? null : null,
     scheduledChange: scheduled
       ? {
+          tier: scheduled.subscriptionPlan.tier as "MONTHLY" | "QUARTERLY" | "ANNUAL",
           planName: { MONTHLY: "Reserve", QUARTERLY: "Treasury", ANNUAL: "Sovereign" }[
             scheduled.subscriptionPlan.tier as "MONTHLY" | "QUARTERLY" | "ANNUAL"
           ],
           startsAt: scheduled.startAt!.toISOString(),
           amountPerCycle: formatMoney(Math.round(scheduled.amount / 100), scheduled.currency),
+        }
+      : null,
+    failedChange: failedChange
+      ? {
+          tier: failedChange.subscriptionPlan.tier as "MONTHLY" | "QUARTERLY" | "ANNUAL",
+          planName: { MONTHLY: "Reserve", QUARTERLY: "Treasury", ANNUAL: "Sovereign" }[
+            failedChange.subscriptionPlan.tier as "MONTHLY" | "QUARTERLY" | "ANNUAL"
+          ],
         }
       : null,
   };

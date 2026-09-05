@@ -3,6 +3,7 @@ import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/prisma'
 import { EncryptionService } from '@/lib/services/EncryptionService'
 import { validatePassphrase } from '@/lib/validation/passphraseValidation'
+import { reconcileSupersedingSubscriptions } from '@/lib/services/SubscriptionService'
 
 const encryptionService = new EncryptionService()
 
@@ -42,6 +43,11 @@ export async function POST(req: NextRequest) {
 
     session.encryptionKey = keyHex
     await session.save()
+
+    // Resolve any due plan-change before the dashboard ever reads subscription
+    // state, so it never shows a stale scheduled/failed change the user
+    // could have seen resolve a login or a midnight ago.
+    await reconcileSupersedingSubscriptions({ userId: user.id })
 
     return NextResponse.json({ success: true, firstTime: !user.verifier })
   } catch (error) {

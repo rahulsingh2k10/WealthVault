@@ -89,3 +89,18 @@ export async function getUpgradePromptData(
 
   return { plans, memberCount };
 }
+
+/**
+ * The active paid-plan catalog as card view models, with no gating on the
+ * caller's own tier. Used by the Manage Subscription screen so a PAID user
+ * can see the same plan-comparison cards a FREE user sees (unlike
+ * getUpgradePromptData, which is FREE-only by design).
+ */
+export async function listAllPlanCards(): Promise<PlanCardView[]> {
+  const now = new Date();
+  const rows = await prisma.subscriptionPlan.findMany({
+    where: { isActive: true, tier: { not: "FREE" } },
+    orderBy: { tier: "asc" },
+  });
+  return rows.map((row) => buildPlanCardView(row, now));
+}

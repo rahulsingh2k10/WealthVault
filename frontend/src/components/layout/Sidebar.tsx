@@ -16,16 +16,19 @@ import {
   Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useMobileNav } from "@/context/MobileNavContext";
 import { useLocale } from "@/context/LocaleContext";
 import { LOCALES, type Locale } from "@/i18n/translations";
 import { COUNTRIES, countryFlag } from "@/i18n/countries";
 import { ICON_MAP, type NavItemDto } from "@/i18n/navConfig";
 
-const SUBSCRIPTION_LABELS: Record<string, string> = {
-  FREE:      "freeSubscription",
-  MONTHLY:   "monthlySubscription",
-  QUARTERLY: "quarterlySubscription",
-  ANNUAL:    "annualSubscription",
+// Plan product names — brand names kept as-is across locales (matches the
+// upgrade picker's PLAN_NAME), so no i18n lookup is needed here.
+const PLAN_NAMES: Record<string, string> = {
+  FREE:      "Free",
+  MONTHLY:   "Reserve",
+  QUARTERLY: "Treasury",
+  ANNUAL:    "Sovereign",
 };
 
 type ActivePopover = "lang" | "country" | null;
@@ -41,6 +44,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const router   = useRouter();
   const { t, locale, setLocale, country, setCountry } = useLocale();
+  const { open: mobileOpen, setOpen: setMobileOpen } = useMobileNav();
 
   const [user, setUser]                     = useState<UserInfo | null>(null);
   const [navItems, setNavItems]             = useState<NavItemDto[]>([]);
@@ -65,6 +69,11 @@ export function Sidebar() {
       .catch(() => {})
       .finally(() => setNavLoading(false));
   }, [country]);
+
+  // Close the mobile drawer whenever the route changes
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname, setMobileOpen]);
 
   // Close entire sheet on outside click
   useEffect(() => {
@@ -121,8 +130,7 @@ export function Sidebar() {
     ? user.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()
     : "?";
 
-  const subscriptionKey   = SUBSCRIPTION_LABELS[user?.subscription ?? "FREE"] as keyof typeof t.sidebar;
-  const subscriptionLabel = t.sidebar[subscriptionKey] ?? t.sidebar.freeSubscription;
+  const subscriptionLabel = PLAN_NAMES[user?.subscription ?? "FREE"] ?? PLAN_NAMES.FREE;
 
   const selectedCountry = COUNTRIES.find((c) => c.code === country);
 
@@ -133,7 +141,22 @@ export function Sidebar() {
   }));
 
   return (
-    <aside className="flex h-full w-60 flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+    <>
+      {/* Backdrop — mobile drawer only */}
+      <div
+        onClick={() => setMobileOpen(false)}
+        className={cn(
+          "fixed inset-0 z-30 bg-black/40 lg:hidden",
+          mobileOpen ? "block" : "hidden"
+        )}
+      />
+      <aside
+        className={cn(
+          "fixed left-0 top-14 bottom-0 z-40 flex w-60 flex-col border-r border-slate-200 bg-white transition-transform duration-200 dark:border-slate-800 dark:bg-slate-950",
+          "lg:static lg:top-auto lg:bottom-auto lg:h-full lg:translate-x-0",
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-4 scrollbar-thin">
         <ul className="space-y-0.5 px-3">
@@ -333,7 +356,8 @@ export function Sidebar() {
           )} />
         </button>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }
 

@@ -4,6 +4,7 @@ import { ensureReferenceData } from "../../helpers/seedReferenceData";
 import { createTestUser, deleteTestUser } from "../../helpers/testUser";
 import { sealSessionCookie, SESSION_COOKIE_NAME } from "../../helpers/session";
 import { deriveKey, encrypt, decrypt } from "../../../frontend/src/lib/encryption";
+import { createSubscriptionRow } from "../../helpers/subscriptionFactory";
 
 const describeOrSkip = hasTestDb() ? describe : describe.skip;
 
@@ -116,5 +117,28 @@ describeOrSkip("POST /api/auth/unlock", () => {
     const sealed = await sealSessionCookie({ userId: "00000000-0000-0000-0000-000000000000" });
     const res = await unlock(`${SESSION_COOKIE_NAME}=${sealed}`, VALID_PASSPHRASE);
     expect(res.status).toBe(404);
+  });
+
+  test("a due plan-change reconciles synchronously before the response is returned — no cron needed", async () => {
+    const keyHex = deriveKey(VALID_PASSPHRASE);
+    const verifier = encrypt("PORTFOLIO_APP_V1", keyHex);
+    const user = await createTestUser({ verifier });
+    try {
+      const prisma = getTestPrisma();
+      const oldRow = await createSubscriptionRow(user.id, { tier: "MONTHLY", status: "active" });
+      await createSubscriptionRow(user.id, {
+        tier: "QUARTERLY", status: "active", supersedesId: oldRow.id, startAt: new Date(Date.now() - 3600_000),
+      });
+
+      const sealed = await sealSessionCookie({ userId: user.id });
+      const res = await unlock(`${SESSION_COOKIE_NAME}=${sealed}`, VALID_PASSPHRASE);
+      expect(res.status).toBe(200);
+
+      const oldAfter = await prisma.subscription.findUniqueOrThrow({ where: { id: oldRow.id } });
+      expect(oldAfter.status).toBe("cancelled");
+      expect(oldAfter.endedAt).not.toBeNull();
+    } finally {
+      await deleteTestUser(user.id);
+    }
   });
 });

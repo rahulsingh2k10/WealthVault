@@ -49,6 +49,9 @@ yarn-error.log*
 # ── Vercel ───────────────────────────────────────────────────────────────────
 .vercel
 
+# ── Playwright MCP debug artifacts (screenshots/logs from live browser checks) ─
+.playwright-mcp/
+
 # ── Python (if any scripts added later) ──────────────────────────────────────
 __pycache__/
 *.pyc

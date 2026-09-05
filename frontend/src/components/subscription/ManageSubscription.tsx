@@ -3,23 +3,27 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale } from "@/context/LocaleContext";
-import { Card } from "@/components/ui/Card";
+import { PaidTierPlanPicker } from "./PaidTierPlanPicker";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { CURRENT_COLOR } from "@/components/dashboard/UpgradePlanPicker";
 import { startCheckout } from "@/lib/payments/checkout";
 import type { CheckoutParams } from "@/lib/payments/types";
 import type { buildManageView, PaidPlanOption } from "@/lib/services/SubscriptionService";
+import type { PaidTier, PlanCardView } from "@/lib/services/UpgradePromptService";
 
 type ManageView = Exclude<Awaited<ReturnType<typeof buildManageView>>, { tier: "FREE" }>;
 
 interface ManageSubscriptionProps {
   view: ManageView;
   paidPlans: PaidPlanOption[];
+  planCards: PlanCardView[];
 }
 
 function interpolate(template: string, vars: Record<string, string>): string {
   return template.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? "");
 }
 
-export function ManageSubscription({ view, paidPlans }: ManageSubscriptionProps) {
+export function ManageSubscription({ view, paidPlans, planCards }: ManageSubscriptionProps) {
   const { t, locale } = useLocale();
   const router = useRouter();
 
@@ -28,7 +32,7 @@ export function ManageSubscription({ view, paidPlans }: ManageSubscriptionProps)
   const [accessUntil, setAccessUntil] = useState<string | null>(null);
   const [cancelError, setCancelError] = useState<string | null>(null);
 
-  const [changingTier, setChangingTier] = useState<string | null>(null);
+  const [changingTier, setChangingTier] = useState<PaidTier | null>(null);
   const [changeError, setChangeError] = useState<string | null>(null);
 
   const [cancellingScheduled, setCancellingScheduled] = useState(false);
@@ -36,6 +40,13 @@ export function ManageSubscription({ view, paidPlans }: ManageSubscriptionProps)
 
   const [resuming, setResuming] = useState(false);
   const [resumeError, setResumeError] = useState<string | null>(null);
+
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string;
+    body: string;
+    question: string;
+    onConfirm: () => void;
+  } | null>(null);
 
   const fmtDate = (iso: string) =>
     new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", year: "numeric" }).format(new Date(iso));
@@ -50,12 +61,7 @@ export function ManageSubscription({ view, paidPlans }: ManageSubscriptionProps)
   const alreadyCancelled = cancelled || view.cancelAtCycleEnd;
   const effectiveAccessUntil = accessUntil ?? (view.cancelAtCycleEnd ? view.currentEnd : null);
 
-  const handleCancel = async () => {
-    const body = view.currentEnd
-      ? interpolate(t.manageSubscription.cancelConfirmBody, { plan: view.planName, date: fmtDate(view.currentEnd) })
-      : t.manageSubscription.cancelConfirmTitle;
-    if (!window.confirm(body)) return;
-
+  const doCancel = async () => {
     setCancelError(null);
     setCancelling(true);
     try {
@@ -75,16 +81,19 @@ export function ManageSubscription({ view, paidPlans }: ManageSubscriptionProps)
     }
   };
 
-  const handleChangePlan = async (tier: string) => {
-    const target = paidPlans.find((p) => p.tier === tier);
-    const ok = window.confirm(
-      interpolate(t.manageSubscription.changePlanConfirmBody, {
-        plan: target?.name ?? tier,
-        date: view.currentEnd ? fmtDate(view.currentEnd) : "your next billing date",
-      }),
-    );
-    if (!ok) return;
+  const handleCancel = () => {
+    const body = view.currentEnd
+      ? interpolate(t.manageSubscription.cancelConfirmBody, { plan: view.planName, date: fmtDate(view.currentEnd) })
+      : t.manageSubscription.cancelConfirmTitle;
+    setConfirmDialog({
+      title: t.manageSubscription.cancelConfirmTitle,
+      body,
+      question: t.manageSubscription.confirmQuestion,
+      onConfirm: doCancel,
+    });
+  };
 
+  const doChangePlan = async (tier: PaidTier) => {
     setChangeError(null);
     setChangingTier(tier);
     try {
@@ -126,6 +135,19 @@ export function ManageSubscription({ view, paidPlans }: ManageSubscriptionProps)
     }
   };
 
+  const handleChangePlan = (tier: PaidTier) => {
+    const target = paidPlans.find((p) => p.tier === tier);
+    setConfirmDialog({
+      title: t.manageSubscription.changePlanConfirmTitle,
+      body: interpolate(t.manageSubscription.changePlanConfirmBody, {
+        plan: target?.name ?? tier,
+        date: view.currentEnd ? fmtDate(view.currentEnd) : "your next billing date",
+      }),
+      question: t.manageSubscription.confirmQuestion,
+      onConfirm: () => doChangePlan(tier),
+    });
+  };
+
   const handleResume = async () => {
     setResumeError(null);
     setResuming(true);
@@ -145,13 +167,7 @@ export function ManageSubscription({ view, paidPlans }: ManageSubscriptionProps)
     }
   };
 
-  const handleCancelScheduledChange = async () => {
-    const ok = window.confirm(
-      interpolate(t.manageSubscription.cancelScheduledChangeConfirm, {
-        plan: view.scheduledChange?.planName ?? "",
-      }),
-    );
-    if (!ok) return;
+  const doCancelScheduledChange = async () => {
     setCancelScheduledError(null);
     setCancellingScheduled(true);
     try {
@@ -168,13 +184,101 @@ export function ManageSubscription({ view, paidPlans }: ManageSubscriptionProps)
     }
   };
 
-  const otherPlans = paidPlans.filter((p) => p.tier !== view.tier);
+  const handleCancelScheduledChange = () => {
+    setConfirmDialog({
+      title: t.manageSubscription.cancelScheduledChangeConfirmTitle,
+      body: interpolate(t.manageSubscription.cancelScheduledChangeConfirm, {
+        plan: view.scheduledChange?.planName ?? "",
+      }),
+      question: t.manageSubscription.confirmQuestion,
+      onConfirm: doCancelScheduledChange,
+    });
+  };
 
-  return (
-    <div className="max-w-xl space-y-4">
-      {view.scheduledChange && (
-        <Card>
-          <p className="text-[0.82rem] font-semibold text-[color:var(--ui-text-pri)]">
+  const statusLine = (
+    <div className="space-y-1">
+      {view.status !== "active" && (
+        <span
+          className="inline-block rounded-full px-2 py-0.5 text-[0.62rem] font-bold"
+          style={{ background: "var(--ui-accent-bg)", color: "var(--ui-accent-warm)" }}
+        >
+          {statusLabel}
+        </span>
+      )}
+      {view.nextChargeAt && !view.cancelAtCycleEnd && !view.scheduledChange && (
+        <p
+          className="inline-flex items-center gap-1.5 rounded-lg border-2 px-2.5 py-1 text-[0.78rem] font-bold"
+          style={{ color: "var(--ui-accent-warm)", borderColor: "var(--ui-accent-warm)", background: "var(--ui-accent-bg)" }}
+        >
+          <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full" style={{ background: "var(--ui-accent-warm)" }} aria-hidden />
+          {interpolate(t.manageSubscription.nextCharge, { amount: view.amountPerCycle, date: fmtDate(view.nextChargeAt) })}
+        </p>
+      )}
+      {effectiveAccessUntil && (
+        <p className="font-semibold text-[color:var(--ui-text-pri)]">
+          {interpolate(
+            view.scheduledChange ? t.manageSubscription.activeUntilSwitch : t.manageSubscription.accessUntil,
+            { date: fmtDate(effectiveAccessUntil) },
+          )}
+        </p>
+      )}
+    </div>
+  );
+
+  const actions = (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-2">
+        {view.paymentRetrying && view.retryUrl && (
+          <button
+            onClick={() => window.open(view.retryUrl!, "_blank")}
+            className="rounded-lg px-4 py-2 text-[0.78rem] font-bold"
+            style={{ background: "var(--ui-accent-warm)", color: "var(--ui-on-accent)" }}
+          >
+            {t.manageSubscription.retryCta}
+          </button>
+        )}
+        {view.scheduledChange ? (
+          <button
+            onClick={handleCancelScheduledChange}
+            disabled={cancellingScheduled}
+            className="rounded-lg border px-4 py-2 text-[0.78rem] font-bold disabled:cursor-not-allowed disabled:opacity-50"
+            style={{ borderColor: "var(--ui-card-border)", color: "var(--ui-text-sec)" }}
+          >
+            {t.manageSubscription.cancelScheduledChangeCta}
+          </button>
+        ) : alreadyCancelled ? (
+          <button
+            onClick={handleResume}
+            disabled={resuming}
+            className="rounded-lg px-4 py-2 text-[0.78rem] font-bold disabled:cursor-not-allowed disabled:opacity-50"
+            style={{ background: "var(--ui-accent-warm)", color: "var(--ui-on-accent)" }}
+          >
+            {t.manageSubscription.resumeCta}
+          </button>
+        ) : (
+          <button
+            onClick={handleCancel}
+            disabled={cancelling || changingTier !== null}
+            className="rounded-lg border px-4 py-2 text-[0.78rem] font-bold disabled:cursor-not-allowed disabled:opacity-50"
+            style={{ borderColor: "var(--ui-card-border)", color: "var(--ui-text-sec)" }}
+          >
+            {t.manageSubscription.cancelCta}
+          </button>
+        )}
+      </div>
+      {(cancelError || resumeError || cancelScheduledError) && (
+        <p className="text-[0.72rem] font-semibold" style={{ color: "var(--ui-accent-warm)" }}>
+          {cancelError ?? resumeError ?? cancelScheduledError}
+        </p>
+      )}
+    </div>
+  );
+
+  const pendingCard = view.scheduledChange
+    ? {
+        tier: view.scheduledChange.tier,
+        statusLine: (
+          <p>
             {interpolate(t.manageSubscription.scheduledChangeBanner, {
               current: view.planName,
               plan: view.scheduledChange.planName,
@@ -182,119 +286,72 @@ export function ManageSubscription({ view, paidPlans }: ManageSubscriptionProps)
               date: fmtDate(view.scheduledChange.startsAt),
             })}
           </p>
-        </Card>
-      )}
-      <Card>
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <h2 className="text-base font-bold text-[color:var(--ui-text-pri)]">{view.planName}</h2>
-            <span
-              className="mt-1 inline-block rounded-full px-2 py-0.5 text-[0.68rem] font-bold"
-              style={{ background: "var(--ui-accent-bg)", color: "var(--ui-accent-warm)" }}
-            >
-              {statusLabel}
-            </span>
+        ),
+        footer: (
+          <div
+            className="w-full rounded-[10px] border-2 border-dashed py-[9px] text-center text-[0.78rem] font-extrabold"
+            style={{ color: CURRENT_COLOR, borderColor: CURRENT_COLOR }}
+          >
+            {`Starts ${fmtDate(view.scheduledChange.startsAt)}`}
           </div>
-        </div>
+        ),
+      }
+    : undefined;
 
-        <div className="space-y-1.5 text-[0.82rem] text-[color:var(--ui-text-sec)]">
-          {view.nextChargeAt && !view.cancelAtCycleEnd && (
-            <p>{interpolate(t.manageSubscription.nextCharge, { amount: view.amountPerCycle, date: fmtDate(view.nextChargeAt) })}</p>
-          )}
-          <p>{interpolate(t.manageSubscription.priceLocked, { date: fmtDate(view.priceLockedThrough) })}</p>
-          {effectiveAccessUntil && (
-            <p className="font-semibold text-[color:var(--ui-text-pri)]">
-              {interpolate(
-                view.scheduledChange ? t.manageSubscription.activeUntilSwitch : t.manageSubscription.accessUntil,
-                { date: fmtDate(effectiveAccessUntil) },
-              )}
-            </p>
-          )}
-        </div>
-
-        <div className="mt-5 flex flex-wrap gap-2">
-          {view.paymentRetrying && view.retryUrl && (
-            <button
-              onClick={() => window.open(view.retryUrl!, "_blank")}
-              className="rounded-lg px-4 py-2 text-[0.78rem] font-bold"
-              style={{ background: "var(--ui-accent-warm)", color: "var(--ui-on-accent)" }}
-            >
-              {t.manageSubscription.retryCta}
-            </button>
-          )}
-          {alreadyCancelled ? (
-            <button
-              onClick={handleResume}
-              disabled={resuming}
-              className="rounded-lg px-4 py-2 text-[0.78rem] font-bold disabled:cursor-not-allowed disabled:opacity-50"
-              style={{ background: "var(--ui-accent-warm)", color: "var(--ui-on-accent)" }}
-            >
-              {t.manageSubscription.resumeCta}
-            </button>
-          ) : (
-            <button
-              onClick={handleCancel}
-              disabled={cancelling || changingTier !== null}
-              className="rounded-lg border px-4 py-2 text-[0.78rem] font-bold disabled:cursor-not-allowed disabled:opacity-50"
-              style={{ borderColor: "var(--ui-card-border)", color: "var(--ui-text-sec)" }}
-            >
-              {t.manageSubscription.cancelCta}
-            </button>
-          )}
-        </div>
-
-        {(cancelError || resumeError) && (
-          <p className="mt-3 text-[0.72rem] font-semibold" style={{ color: "var(--ui-accent-warm)" }}>
-            {cancelError ?? resumeError}
+  const failedCard = view.failedChange
+    ? {
+        tier: view.failedChange.tier,
+        statusLine: (
+          <p>
+            {`Your last attempt to switch to ${view.failedChange.planName} didn't go through. You can try again.`}
           </p>
-        )}
-      </Card>
+        ),
+        footer: (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleChangePlan(view.failedChange!.tier);
+            }}
+            disabled={changingTier !== null}
+            className="w-full rounded-[10px] border-2 py-[9px] text-center text-[0.78rem] font-extrabold disabled:cursor-not-allowed disabled:opacity-60"
+            style={{ color: "var(--ui-accent-warm)", borderColor: "var(--ui-accent-warm)" }}
+          >
+            {changingTier === view.failedChange.tier ? "Starting…" : "Retry payment"}
+          </button>
+        ),
+      }
+    : undefined;
 
-      {otherPlans.length > 0 && (
-        <Card>
-          <h3 className="mb-3 text-[0.78rem] font-bold uppercase tracking-wide text-[color:var(--ui-text-muted)]">
-            {t.manageSubscription.changePlanCta}
-          </h3>
-          {view.scheduledChange ? (
-            <div className="space-y-3">
-              <p className="text-[0.82rem] text-[color:var(--ui-text-muted)]">{t.manageSubscription.scheduledChangeNote}</p>
-              <button
-                onClick={handleCancelScheduledChange}
-                disabled={cancellingScheduled}
-                className="rounded-lg border px-4 py-2 text-[0.78rem] font-bold disabled:cursor-not-allowed disabled:opacity-50"
-                style={{ borderColor: "var(--ui-card-border)", color: "var(--ui-text-sec)" }}
-              >
-                {t.manageSubscription.cancelScheduledChangeCta}
-              </button>
-              {cancelScheduledError && (
-                <p className="text-[0.72rem] font-semibold" style={{ color: "var(--ui-accent-warm)" }}>{cancelScheduledError}</p>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {otherPlans.map((p) => (
-                <button
-                  key={p.tier}
-                  onClick={() => handleChangePlan(p.tier)}
-                  disabled={changingTier !== null || cancelling}
-                  className="flex w-full items-center justify-between rounded-lg border px-4 py-2.5 text-left text-[0.82rem] disabled:cursor-not-allowed disabled:opacity-60"
-                  style={{ borderColor: "var(--ui-card-border)" }}
-                >
-                  <span className="font-bold text-[color:var(--ui-text-pri)]">{p.name}</span>
-                  <span className="text-[color:var(--ui-text-muted)]">
-                    {changingTier === p.tier ? "Starting…" : `${p.perMonth}/mo · ${p.perCycle}`}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-          {changeError && (
-            <p className="mt-3 text-[0.72rem] font-semibold" style={{ color: "var(--ui-accent-warm)" }}>
-              {changeError}
-            </p>
-          )}
-        </Card>
+  return (
+    <div className="space-y-4">
+      {planCards.length > 0 && (
+        <PaidTierPlanPicker
+          plans={planCards}
+          currentTier={view.tier as PaidTier}
+          changingTier={changingTier}
+          onSelectPaidTier={handleChangePlan}
+          currentCardDetails={{ statusLine, actions }}
+          disableNonCurrent={!!view.scheduledChange}
+          pendingCard={pendingCard}
+          failedCard={failedCard}
+        />
       )}
+      {changeError && (
+        <p className="text-center text-[0.72rem] font-semibold" style={{ color: "var(--ui-accent-warm)" }}>
+          {changeError}
+        </p>
+      )}
+      <ConfirmDialog
+        open={!!confirmDialog}
+        title={confirmDialog?.title ?? ""}
+        body={confirmDialog?.body ?? ""}
+        question={confirmDialog?.question}
+        onCancel={() => setConfirmDialog(null)}
+        onContinue={() => {
+          confirmDialog?.onConfirm();
+          setConfirmDialog(null);
+        }}
+      />
     </div>
   );
 }
