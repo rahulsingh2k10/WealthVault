@@ -152,6 +152,84 @@ describeOrSkip("applySubscriptionEvent", () => {
     }
   });
 
+  test("paused (e.g. Razorpay-side pause outside our own cancel flow, no cancelAtCycleEnd) → status recorded, access denied", async () => {
+    const prisma = getTestPrisma();
+    const user = await createTestUser();
+    try {
+      const row = await createSubscriptionRow(user.id, {
+        tier: "MONTHLY", status: "active", currentEnd: new Date(Date.now() + 10 * 86400_000), cancelAtCycleEnd: false,
+      });
+      const { body, eventId } = signedWebhook("subscription.paused", { id: row.providerSubscriptionId, status: "paused" });
+      const evt = normalizeRazorpayWebhookEvent(body, eventId);
+
+      await applySubscriptionEvent(evt);
+
+      const updated = await prisma.subscription.findUniqueOrThrow({ where: { id: row.id } });
+      expect(updated.status).toBe("paused");
+
+      const afterUser = await prisma.user.findUniqueOrThrow({ where: { id: user.id }, include: { subscriptionPlan: true } });
+      expect(afterUser.subscriptionPlan.tier).toBe("FREE");
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
+  test("a webhook explicitly reporting charge_at: null clears a stale chargeAt from before, instead of '??' keeping the old value", async () => {
+    const prisma = getTestPrisma();
+    const user = await createTestUser();
+    try {
+      const row = await createSubscriptionRow(user.id, {
+        tier: "MONTHLY", status: "active", currentEnd: new Date(Date.now() + 10 * 86400_000),
+      });
+      // Seed a stale chargeAt as if it were set while still billing normally
+      // (the factory doesn't expose this field directly).
+      await prisma.subscription.update({ where: { id: row.id }, data: { chargeAt: new Date(Date.now() + 5 * 86400_000) } });
+
+      // Real Razorpay payloads for a paused subscription explicitly report
+      // charge_at: null (no next charge scheduled) — not an absent field.
+      const { body, eventId } = signedWebhook("subscription.paused", {
+        id: row.providerSubscriptionId,
+        status: "paused",
+        charge_at: null,
+      });
+      const evt = normalizeRazorpayWebhookEvent(body, eventId);
+
+      await applySubscriptionEvent(evt);
+
+      const updated2 = await prisma.subscription.findUniqueOrThrow({ where: { id: row.id } });
+      expect(updated2.chargeAt).toBeNull();
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
+  test("resumed → status returns to active, access restored, and the local cancelAtCycleEnd flag is cleared", async () => {
+    const prisma = getTestPrisma();
+    const user = await createTestUser();
+    try {
+      const row = await createSubscriptionRow(user.id, {
+        tier: "MONTHLY", status: "paused", cancelAtCycleEnd: true, currentEnd: new Date(Date.now() + 10 * 86400_000),
+      });
+      const { body, eventId } = signedWebhook("subscription.resumed", { id: row.providerSubscriptionId, status: "active" });
+      const evt = normalizeRazorpayWebhookEvent(body, eventId);
+
+      await applySubscriptionEvent(evt);
+
+      const updated = await prisma.subscription.findUniqueOrThrow({ where: { id: row.id } });
+      expect(updated.status).toBe("active");
+      // Resuming — whether via our own /resume route or (as tested here) via
+      // this webhook alone, e.g. resumed directly on Razorpay's side — must
+      // clear the soft-cancel flag, or grants() keeps treating the row as
+      // ending at currentEnd even though it's genuinely active again.
+      expect(updated.cancelAtCycleEnd).toBe(false);
+
+      const afterUser = await prisma.user.findUniqueOrThrow({ where: { id: user.id }, include: { subscriptionPlan: true } });
+      expect(afterUser.subscriptionPlan.tier).toBe("MONTHLY");
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
   test("cancelled with future current_end → tier kept until then", async () => {
     const user = await createTestUser();
     try {
@@ -430,6 +508,25 @@ describeOrSkip("POST /api/subscription/webhook/[provider]", () => {
 
       const afterSecond = await prisma.subscription.findUniqueOrThrow({ where: { id: row.id } });
       expect(afterSecond.paidCount).toBe(4);
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
+  test("the processed event row records which Razorpay event it was", async () => {
+    const prisma = getTestPrisma();
+    const user = await createTestUser();
+    try {
+      const row = await createSubscriptionRow(user.id, { tier: "MONTHLY", status: "active", paidCount: 1 });
+      const { body, signature, eventId } = signedWebhook("subscription.charged", { id: row.providerSubscriptionId, paid_count: 2 });
+
+      const res = await postWebhook(body, signature, eventId);
+      expect(res.status).toBe(200);
+
+      const processed = await prisma.processedWebhookEvent.findUniqueOrThrow({
+        where: { provider_eventId: { provider: "razorpay", eventId } },
+      });
+      expect(processed.event).toBe("subscription.charged");
     } finally {
       await deleteTestUser(user.id);
     }
