@@ -121,6 +121,16 @@ export function ManageSubscription({ view, paidPlans, planCards }: ManageSubscri
       if (done) {
         router.refresh();
       } else {
+        // User dismissed the checkout modal without paying — best-effort tell
+        // the server right away (also resumes the old plan, which was paused
+        // up front) instead of leaving this until startAt reconciliation.
+        if (checkout.razorpay) {
+          fetch("/api/subscription/abandon", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ providerSubscriptionId: checkout.razorpay.subscriptionId }),
+          }).catch(() => {});
+        }
         setChangingTier(null);
       }
     } catch (e) {
