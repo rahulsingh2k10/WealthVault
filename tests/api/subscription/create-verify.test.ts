@@ -84,6 +84,60 @@ describeOrSkip("POST /api/subscription/create", () => {
     }
   });
 
+  test("second click on the same plan reuses the pending created subscription instead of creating a duplicate", async () => {
+    const prisma = getTestPrisma();
+    const user = await createTestUser();
+    try {
+      const cookie = await cookieFor(user.id);
+      const res1 = await postCreate(cookie, { tier: "ANNUAL" });
+      expect(res1.status).toBe(200);
+      const json1 = await res1.json();
+
+      const res2 = await postCreate(cookie, { tier: "ANNUAL" });
+      expect(res2.status).toBe(200);
+      const json2 = await res2.json();
+
+      expect(json2.checkout.razorpay.subscriptionId).toBe(json1.checkout.razorpay.subscriptionId);
+
+      const rows = await prisma.subscription.findMany({ where: { userId: user.id } });
+      expect(rows).toHaveLength(1);
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
+  test("choosing a different plan before paying leaves the earlier pending subscription untouched and creates a separate one for the new plan", async () => {
+    const prisma = getTestPrisma();
+    const user = await createTestUser();
+    try {
+      const cookie = await cookieFor(user.id);
+      const res1 = await postCreate(cookie, { tier: "ANNUAL" });
+      expect(res1.status).toBe(200);
+      const json1 = await res1.json();
+
+      const res2 = await postCreate(cookie, { tier: "MONTHLY" });
+      expect(res2.status).toBe(200);
+      const json2 = await res2.json();
+
+      expect(json2.checkout.razorpay.subscriptionId).not.toBe(json1.checkout.razorpay.subscriptionId);
+
+      const rows = await prisma.subscription.findMany({ where: { userId: user.id }, orderBy: { createdAt: "asc" } });
+      expect(rows).toHaveLength(2);
+      expect(rows.every((r) => r.status === "created")).toBe(true);
+      expect(rows[0].providerSubscriptionId).toBe(json1.checkout.razorpay.subscriptionId);
+      expect(rows[1].providerSubscriptionId).toBe(json2.checkout.razorpay.subscriptionId);
+
+      // retrying the ANNUAL plan still reuses the original row, untouched by
+      // the MONTHLY click in between
+      const res3 = await postCreate(cookie, { tier: "ANNUAL" });
+      expect(res3.status).toBe(200);
+      const json3 = await res3.json();
+      expect(json3.checkout.razorpay.subscriptionId).toBe(json1.checkout.razorpay.subscriptionId);
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
   test("tier: FREE or garbage → 400", async () => {
     const user = await createTestUser();
     try {

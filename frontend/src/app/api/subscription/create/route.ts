@@ -25,6 +25,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "plan not configured for payments" }, { status: 500 });
     }
 
+    // A "created" row with no supersedesId is an unpaid first-time checkout —
+    // the user clicked an upgrade button, Razorpay checkout opened, and they
+    // never finished (dismissed it, or closed the tab before paying). Razorpay
+    // subscriptions in this state are meant to be reopened with the same id,
+    // not recreated — so a retry for the SAME plan reuses it. A different plan
+    // gets its own row instead (a Razorpay subscription's plan can't be
+    // changed after creation) — that row is left alone, not cancelled: if one
+    // of the user's plan choices later activates, applySubscriptionEvent
+    // cleans up whichever of these first-time rows didn't win.
+    const pendingCreated = await prisma.subscription.findFirst({
+      where: { userId: user.id, status: "created", supersedesId: null, subscriptionPlanId: plan.id },
+      orderBy: { createdAt: "desc" },
+    });
+    if (pendingCreated) {
+      return NextResponse.json({
+        checkout: {
+          provider: "razorpay",
+          razorpay: { keyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID, subscriptionId: pendingCreated.providerSubscriptionId, name: "WealthVault" },
+        },
+      });
+    }
+
     const provider = getProvider();
     const email = user.username.includes("@") ? user.username : null;
     const providerCustomerId = await provider.ensureCustomer({ id: user.id, fullName: user.fullName, email, razorpayCustomerId: user.razorpayCustomerId });

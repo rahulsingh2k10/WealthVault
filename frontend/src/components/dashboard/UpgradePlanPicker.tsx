@@ -143,8 +143,9 @@ export function UpgradePlanPicker({
   const fmtDate = (iso: string) =>
     new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" }).format(new Date(iso));
 
+  // billingMonths is a day count now — normalize to a 30-day month-equivalent.
   const perMonth = (p: PlanCardView, amount: number) =>
-    formatMoney(Math.round(amount / p.billingMonths), p.currency, locale);
+    formatMoney(Math.round((amount / p.billingMonths) * 30), p.currency, locale);
   const billedLabel = (p: PlanCardView) => {
     const amount = formatMoney(p.effectivePerPeriod, p.currency, locale);
     const key = p.billingMonths === 1 ? "everyMonth" : p.billingMonths === 3 ? "everyQuarter" : "everyYear";
@@ -193,6 +194,10 @@ export function UpgradePlanPicker({
         onClose?.();
         onSubscribed?.();
       } else {
+        // User dismissed the checkout modal without paying — the "created"
+        // row is left alone so retrying the same plan reuses it (see
+        // /api/subscription/create); it's only ever cleaned up if one of the
+        // user's other pending plan choices activates instead.
         setSubmittingTier(null);
         onSubmittingChange?.(false);
       }
