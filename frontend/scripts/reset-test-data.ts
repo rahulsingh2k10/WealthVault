@@ -23,7 +23,11 @@ function loadEnvFile(file: string) {
 }
 loadEnvFile(path.join(__dirname, "..", ".env"));
 
-const NON_TERMINAL_STATUSES = ["created", "authenticated", "active", "pending", "halted"];
+// Every status except the ones Razorpay itself already treats as closed
+// (cancelled/completed/expired) — those need no cleanup call. Keep this in
+// sync with the full status set documented on Subscription.status in
+// schema.prisma; a status missing here is silently skipped, not cancelled.
+const NON_TERMINAL_STATUSES = ["created", "authenticated", "active", "pending", "halted", "paused"];
 
 async function main() {
   const { PrismaClient } = await import("@prisma/client");
@@ -47,21 +51,21 @@ async function main() {
       }
     }
 
-    const webhookEvents = await prisma.processedWebhookEvent.deleteMany({});
+    const processedWebhookEvents = await prisma.processedWebhookEvent.deleteMany({});
     const planHistory = await prisma.subscriptionPlanHistory.deleteMany({});
     const subscriptions = await prisma.subscription.deleteMany({});
     const users = await prisma.user.deleteMany({});
 
-    console.log("Deleted ->", {
-      webhookEvents: webhookEvents.count,
+    console.log("Deleted ->", JSON.stringify({
+      processedWebhookEvents: processedWebhookEvents.count,
       planHistory: planHistory.count,
       subscriptions: subscriptions.count,
       users: users.count,
-    });
+    }));
 
     const plans = await prisma.subscriptionPlan.count();
     const platforms = await prisma.authPlatform.count();
-    console.log("Preserved ->", { plans, platforms });
+    console.log("Preserved ->", JSON.stringify({ plans, platforms }));
   } finally {
     await prisma.$disconnect();
   }
