@@ -39,9 +39,9 @@ Provider redirects back to /api/auth/<provider>/callback
 2. Exchange the authorization code for an access/id token
 3. Fetch the user's profile from the provider
 4. prisma.user.upsert(...)           ← THE operation that adds/updates the users row
-5. logSubscriptionPeriodIfChanged(user.id, user.subscriptionPlanId)
-   — logs a subscription_periods row if this is the user's first login,
-     or if their plan differs from the last one logged (see Subscription period logging below)
+5. logSubscriptionPlanHistoryIfChanged(user.id, user.subscriptionPlanId)
+   — logs a subscription_plan_history row if this is the user's first login,
+     or if their plan differs from the last one logged (see Subscription plan history logging below)
 6. Write session.userId / userName / userEmail / userAvatar, session.save()
 7. Delete the oauth_state (and x_code_verifier) cookie
   │
@@ -325,15 +325,15 @@ resets a paid subscription back to Free.
 
 ---
 
-## Subscription period logging
+## Subscription plan history logging
 
 Immediately after the `upsert`, every callback route calls
-`logSubscriptionPeriodIfChanged(user.id, user.subscriptionPlanId)`
-(`src/lib/services/SubscriptionPeriodService.ts`). This inserts a `subscription_periods`
+`logSubscriptionPlanHistoryIfChanged(user.id, user.subscriptionPlanId)`
+(`src/lib/services/SubscriptionPlanHistoryService.ts`). This inserts a `subscription_plan_history`
 row only if the user has none yet, or if their current `subscriptionPlanId` differs from
 the one their most recent row recorded — so a brand-new signup always logs their initial
 `FREE` plan, and a returning user on an unchanged plan logs nothing on every subsequent
-login. Full table design in `../database/subscription-periods.md`.
+login. Full table design in `../database/subscription-plan-history.md`.
 
 ---
 

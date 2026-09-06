@@ -7,7 +7,7 @@ module.exports = {
   // "default" keeps the standard summary; listReporter prints each executed
   // test case with its pass/fail result (Jest 30 --verbose no longer does).
   reporters: ["default", "<rootDir>/helpers/listReporter.js"],
-  // Frontend source files imported directly by tests (e.g. SubscriptionPeriodService.ts)
+  // Frontend source files imported directly by tests (e.g. SubscriptionPlanHistoryService.ts)
   // use the "@/*" path alias — resolve it the same way frontend/tsconfig.json does.
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/../frontend/src/$1",

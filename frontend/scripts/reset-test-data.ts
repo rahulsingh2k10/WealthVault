@@ -48,13 +48,13 @@ async function main() {
     }
 
     const webhookEvents = await prisma.processedWebhookEvent.deleteMany({});
-    const periods = await prisma.subscriptionPeriod.deleteMany({});
+    const planHistory = await prisma.subscriptionPlanHistory.deleteMany({});
     const subscriptions = await prisma.subscription.deleteMany({});
     const users = await prisma.user.deleteMany({});
 
     console.log("Deleted ->", {
       webhookEvents: webhookEvents.count,
-      periods: periods.count,
+      planHistory: planHistory.count,
       subscriptions: subscriptions.count,
       users: users.count,
     });

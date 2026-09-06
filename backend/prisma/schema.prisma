@@ -38,19 +38,19 @@ model AuthPlatform {
   @@map("auth_platforms")
 }
 
-model SubscriptionPeriod {
+model SubscriptionPlanHistory {
   id                 String           @id @default(uuid())
   userId             String
   user               User             @relation(fields: [userId], references: [id])
-  // Which plan this period represents. A new row is inserted only when a
+  // Which plan this stretch represents. A new row is inserted only when a
   // user's plan changes from what their most recent row recorded — rows are
-  // never updated. createdAt is the period's start; the next row (if any)
-  // for the same user marks its implicit end.
+  // never updated. createdAt is when this stretch started; the next row (if
+  // any) for the same user marks its implicit end.
   subscriptionPlanId String
   subscriptionPlan   SubscriptionPlan @relation(fields: [subscriptionPlanId], references: [id])
   createdAt          DateTime         @default(now())
 
-  @@map("subscription_periods")
+  @@map("subscription_plan_history")
 }
 
 model SubscriptionPlan {
@@ -65,7 +65,7 @@ model SubscriptionPlan {
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   users               User[]
-  subscriptionPeriods SubscriptionPeriod[]
+  subscriptionPlanHistory SubscriptionPlanHistory[]
   razorpayPlanId      String?
   intervalMonths      Int?
   termMonths          Int?                 @default(36)
@@ -91,7 +91,7 @@ model User {
   // this relation (user.subscriptionPlan.tier), not stored redundantly here.
   subscriptionPlanId  String
   subscriptionPlan    SubscriptionPlan     @relation(fields: [subscriptionPlanId], references: [id])
-  subscriptionPeriods SubscriptionPeriod[]
+  subscriptionPlanHistory SubscriptionPlanHistory[]
   razorpayCustomerId  String?
   subscriptions       Subscription[]
   // AES-256-GCM encrypted verifier — encrypt("PORTFOLIO_APP_V1", derivedKey)

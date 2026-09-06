@@ -32,7 +32,7 @@ afterAll(async () => {
 describeOrSkip("applySubscriptionEvent", () => {
   const { applySubscriptionEvent, getEffectivePlan } = require("@/lib/services/SubscriptionService");
 
-  test("activated on a created row → active, currentEnd set, User tier updated, SubscriptionPeriod row logged", async () => {
+  test("activated on a created row → active, currentEnd set, User tier updated, SubscriptionPlanHistory row logged", async () => {
     const prisma = getTestPrisma();
     const user = await createTestUser();
     try {
@@ -57,8 +57,8 @@ describeOrSkip("applySubscriptionEvent", () => {
       const afterUser = await prisma.user.findUniqueOrThrow({ where: { id: user.id }, include: { subscriptionPlan: true } });
       expect(afterUser.subscriptionPlan.tier).toBe("ANNUAL");
 
-      const period = await prisma.subscriptionPeriod.findFirst({ where: { userId: user.id }, orderBy: { createdAt: "desc" } });
-      expect(period?.subscriptionPlanId).toBe(await getPlanId("ANNUAL"));
+      const planHistory = await prisma.subscriptionPlanHistory.findFirst({ where: { userId: user.id }, orderBy: { createdAt: "desc" } });
+      expect(planHistory?.subscriptionPlanId).toBe(await getPlanId("ANNUAL"));
     } finally {
       await deleteTestUser(user.id);
     }

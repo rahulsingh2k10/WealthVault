@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { logSubscriptionPeriodIfChanged } from "@/lib/services/SubscriptionPeriodService";
+import { logSubscriptionPlanHistoryIfChanged } from "@/lib/services/SubscriptionPlanHistoryService";
 import { formatMoney } from "@/lib/utils";
 import type { Subscription } from "@prisma/client";
 import type { NormalizedWebhookEvent } from "@/lib/payments/types";
@@ -284,7 +284,7 @@ export async function getEffectivePlan(userId: string): Promise<EffectivePlan> {
   // lazy reconciliation of the denormalised User.subscriptionPlanId cache
   if (user && user.subscriptionPlanId !== effective.subscriptionPlanId) {
     await prisma.user.update({ where: { id: userId }, data: { subscriptionPlanId: effective.subscriptionPlanId } });
-    await logSubscriptionPeriodIfChanged(userId, effective.subscriptionPlanId);
+    await logSubscriptionPlanHistoryIfChanged(userId, effective.subscriptionPlanId);
   }
 
   return effective;

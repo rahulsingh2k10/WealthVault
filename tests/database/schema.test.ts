@@ -144,8 +144,8 @@ describeOrSkip("OAuth upsert shape", () => {
 });
 
 // The actual insert-only-on-change logging behavior is tested against the
-// real logSubscriptionPeriodIfChanged() service function, not reimplemented
-// here — see subscription-period-service.test.ts.
+// real logSubscriptionPlanHistoryIfChanged() service function, not
+// reimplemented here — see subscription-plan-history-service.test.ts.
 
 describeOrSkip("auth_platforms table", () => {
   test("physical column order matches the documented sequence", async () => {
@@ -209,12 +209,12 @@ describeOrSkip("subscription_plans table", () => {
   });
 });
 
-describeOrSkip("subscription_periods table", () => {
+describeOrSkip("subscription_plan_history table", () => {
   test("physical column order matches the documented sequence", async () => {
     const prisma = getTestPrisma();
     const rows = await prisma.$queryRawUnsafe<{ column_name: string }[]>(
       `SELECT column_name FROM information_schema.columns
-       WHERE table_name = 'subscription_periods' ORDER BY ordinal_position`
+       WHERE table_name = 'subscription_plan_history' ORDER BY ordinal_position`
     );
     expect(rows.map((r) => r.column_name)).toEqual([
       "id",
@@ -228,7 +228,7 @@ describeOrSkip("subscription_periods table", () => {
     const prisma = getTestPrisma();
     const freePlanId = await getFreePlanId();
     await expect(
-      prisma.subscriptionPeriod.create({
+      prisma.subscriptionPlanHistory.create({
         data: { userId: randomUUID(), subscriptionPlanId: freePlanId },
       })
     ).rejects.toMatchObject({ code: "P2003" });
@@ -239,7 +239,7 @@ describeOrSkip("subscription_periods table", () => {
     const user = await createTestUser();
     try {
       await expect(
-        prisma.subscriptionPeriod.create({
+        prisma.subscriptionPlanHistory.create({
           data: { userId: user.id, subscriptionPlanId: randomUUID() },
         })
       ).rejects.toMatchObject({ code: "P2003" });

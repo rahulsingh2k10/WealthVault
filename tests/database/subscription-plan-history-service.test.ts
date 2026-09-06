@@ -15,7 +15,7 @@ beforeAll(async () => {
     if (process.env.DATABASE_URL !== process.env.TEST_DATABASE_URL) {
       throw new Error(
         "DATABASE_URL and TEST_DATABASE_URL differ — refusing to run " +
-          "logSubscriptionPeriodIfChanged against the real @/lib/prisma singleton, " +
+          "logSubscriptionPlanHistoryIfChanged against the real @/lib/prisma singleton, " +
           "since it would not necessarily hit the test database."
       );
     }
@@ -27,11 +27,11 @@ afterAll(async () => {
   await disconnectTestPrisma();
 });
 
-describeOrSkip("logSubscriptionPeriodIfChanged (real service, not reimplemented)", () => {
+describeOrSkip("logSubscriptionPlanHistoryIfChanged (real service, not reimplemented)", () => {
   // Imported lazily inside the describe block so the DATABASE_URL/TEST_DATABASE_URL
   // safety check above has already run before this module (and its own
   // `@/lib/prisma` singleton) is ever loaded.
-  const { logSubscriptionPeriodIfChanged } = require("@/lib/services/SubscriptionPeriodService");
+  const { logSubscriptionPlanHistoryIfChanged } = require("@/lib/services/SubscriptionPlanHistoryService");
 
   test("first call for a user with no prior rows inserts exactly one row", async () => {
     const prisma = getTestPrisma();
@@ -39,13 +39,13 @@ describeOrSkip("logSubscriptionPeriodIfChanged (real service, not reimplemented)
     try {
       const freePlanId = await getFreePlanId();
 
-      await logSubscriptionPeriodIfChanged(user.id, freePlanId);
+      await logSubscriptionPlanHistoryIfChanged(user.id, freePlanId);
 
-      const rows = await prisma.subscriptionPeriod.findMany({ where: { userId: user.id } });
+      const rows = await prisma.subscriptionPlanHistory.findMany({ where: { userId: user.id } });
       expect(rows).toHaveLength(1);
       expect(rows[0].subscriptionPlanId).toBe(freePlanId);
     } finally {
-      await prisma.subscriptionPeriod.deleteMany({ where: { userId: user.id } });
+      await prisma.subscriptionPlanHistory.deleteMany({ where: { userId: user.id } });
       await deleteTestUser(user.id);
     }
   });
@@ -56,14 +56,14 @@ describeOrSkip("logSubscriptionPeriodIfChanged (real service, not reimplemented)
     try {
       const freePlanId = await getFreePlanId();
 
-      await logSubscriptionPeriodIfChanged(user.id, freePlanId);
-      await logSubscriptionPeriodIfChanged(user.id, freePlanId);
-      await logSubscriptionPeriodIfChanged(user.id, freePlanId);
+      await logSubscriptionPlanHistoryIfChanged(user.id, freePlanId);
+      await logSubscriptionPlanHistoryIfChanged(user.id, freePlanId);
+      await logSubscriptionPlanHistoryIfChanged(user.id, freePlanId);
 
-      const rows = await prisma.subscriptionPeriod.findMany({ where: { userId: user.id } });
+      const rows = await prisma.subscriptionPlanHistory.findMany({ where: { userId: user.id } });
       expect(rows).toHaveLength(1);
     } finally {
-      await prisma.subscriptionPeriod.deleteMany({ where: { userId: user.id } });
+      await prisma.subscriptionPlanHistory.deleteMany({ where: { userId: user.id } });
       await deleteTestUser(user.id);
     }
   });
@@ -77,12 +77,12 @@ describeOrSkip("logSubscriptionPeriodIfChanged (real service, not reimplemented)
         prisma.subscriptionPlan.findUniqueOrThrow({ where: { tier: "MONTHLY" } }).then((p) => p.id),
       ]);
 
-      await logSubscriptionPeriodIfChanged(user.id, freePlanId);
-      const firstRow = await prisma.subscriptionPeriod.findFirstOrThrow({ where: { userId: user.id } });
+      await logSubscriptionPlanHistoryIfChanged(user.id, freePlanId);
+      const firstRow = await prisma.subscriptionPlanHistory.findFirstOrThrow({ where: { userId: user.id } });
 
-      await logSubscriptionPeriodIfChanged(user.id, monthlyPlanId);
+      await logSubscriptionPlanHistoryIfChanged(user.id, monthlyPlanId);
 
-      const rows = await prisma.subscriptionPeriod.findMany({
+      const rows = await prisma.subscriptionPlanHistory.findMany({
         where: { userId: user.id },
         orderBy: { createdAt: "asc" },
       });
@@ -96,7 +96,7 @@ describeOrSkip("logSubscriptionPeriodIfChanged (real service, not reimplemented)
       // The most recent row reflects the new plan.
       expect(rows[1].subscriptionPlanId).toBe(monthlyPlanId);
     } finally {
-      await prisma.subscriptionPeriod.deleteMany({ where: { userId: user.id } });
+      await prisma.subscriptionPlanHistory.deleteMany({ where: { userId: user.id } });
       await deleteTestUser(user.id);
     }
   });
@@ -110,14 +110,14 @@ describeOrSkip("logSubscriptionPeriodIfChanged (real service, not reimplemented)
         prisma.subscriptionPlan.findUniqueOrThrow({ where: { tier: "MONTHLY" } }).then((p) => p.id),
       ]);
 
-      await logSubscriptionPeriodIfChanged(user.id, freePlanId);
-      await logSubscriptionPeriodIfChanged(user.id, monthlyPlanId);
-      await logSubscriptionPeriodIfChanged(user.id, freePlanId);
+      await logSubscriptionPlanHistoryIfChanged(user.id, freePlanId);
+      await logSubscriptionPlanHistoryIfChanged(user.id, monthlyPlanId);
+      await logSubscriptionPlanHistoryIfChanged(user.id, freePlanId);
 
-      const rows = await prisma.subscriptionPeriod.findMany({ where: { userId: user.id } });
+      const rows = await prisma.subscriptionPlanHistory.findMany({ where: { userId: user.id } });
       expect(rows).toHaveLength(3);
     } finally {
-      await prisma.subscriptionPeriod.deleteMany({ where: { userId: user.id } });
+      await prisma.subscriptionPlanHistory.deleteMany({ where: { userId: user.id } });
       await deleteTestUser(user.id);
     }
   });

@@ -31,6 +31,6 @@ export async function createTestUser(options: CreateTestUserOptions = {}) {
 export async function deleteTestUser(userId: string): Promise<void> {
   const prisma = getTestPrisma();
   await prisma.subscription.deleteMany({ where: { userId } });
-  await prisma.subscriptionPeriod.deleteMany({ where: { userId } });
+  await prisma.subscriptionPlanHistory.deleteMany({ where: { userId } });
   await prisma.user.delete({ where: { id: userId } }).catch(() => {});
 }

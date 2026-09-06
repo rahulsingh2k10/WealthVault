@@ -68,7 +68,7 @@ model User {
   authPlatform        AuthPlatform         @relation(fields: [auth_platformId], references: [id])
   subscriptionPlanId  String
   subscriptionPlan    SubscriptionPlan     @relation(fields: [subscriptionPlanId], references: [id])
-  subscriptionPeriods SubscriptionPeriod[]
+  subscriptionPlanHistory SubscriptionPlanHistory[]
   verifier            String?
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
@@ -92,7 +92,7 @@ stored on `User` directly.
 | `QUARTERLY` | Paid tier, billed quarterly. | — |
 | `ANNUAL` | Paid tier, billed annually. | — |
 
-Subscription period tracking lives in `subscription_periods` — see `subscription-periods.md`.
+Subscription plan history tracking lives in `subscription_plan_history` — see `subscription-plan-history.md`.
 
 See **Relationships** below for the full `subscriptionPlanId` foreign key design.
 
@@ -163,8 +163,8 @@ while any user still references its `id`, but updating its `id` cascades automat
 See `subscription-plans.md` for the full relationship writeup, including the reverse
 `SubscriptionPlan.users User[]` accessor.
 
-**`subscription_periods.userId` → `users.id`** (foreign key, reverse direction): each
-`subscription_periods` row belongs to one user. See `subscription-periods.md`.
+**`subscription_plan_history.userId` → `users.id`** (foreign key, reverse direction): each
+`subscription_plan_history` row belongs to one user. See `subscription-plan-history.md`.
 
-`users`, `subscription_plans`, `auth_platforms`, and `subscription_periods` are the four
+`users`, `subscription_plans`, `auth_platforms`, and `subscription_plan_history` are the four
 tables in the database.

@@ -68,7 +68,7 @@ model SubscriptionPlan {
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   users               User[]
-  subscriptionPeriods SubscriptionPeriod[]
+  subscriptionPlanHistory SubscriptionPlanHistory[]
 
   @@map("subscription_plans")
 }
@@ -90,8 +90,8 @@ yet finalized):
 
 No pricing page or checkout flow touches this table yet. The one thing that does read it
 today is the OAuth sign-in flow, which looks up the `FREE` row by `tier` to assign new
-users their starting plan, and `logSubscriptionPeriodIfChanged()` (see
-`subscription-periods.md`), which references a row's `id` when logging a plan change.
+users their starting plan, and `logSubscriptionPlanHistoryIfChanged()` (see
+`subscription-plan-history.md`), which references a row's `id` when logging a plan change.
 
 ---
 
@@ -160,7 +160,7 @@ via `pg_constraint.confupdtype`/`confdeltype`). Practical implications:
   on any `User` row — the relation enforces which plan `id` values are valid, it doesn't
   copy pricing data onto `User` in any way.
 
-`subscription_plans.id` is also referenced by `subscription_periods.subscriptionPlanId` —
-see `subscription-periods.md`. The reverse relation
-`SubscriptionPlan.subscriptionPeriods SubscriptionPeriod[]` lets application code list
-every period ever logged for a given tier.
+`subscription_plans.id` is also referenced by `subscription_plan_history.subscriptionPlanId` —
+see `subscription-plan-history.md`. The reverse relation
+`SubscriptionPlan.subscriptionPlanHistory SubscriptionPlanHistory[]` lets application code list
+every history row ever logged for a given tier.

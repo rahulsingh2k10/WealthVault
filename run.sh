@@ -23,6 +23,9 @@ if [ ! -d node_modules ]; then
   npm install
 fi
 
+echo "Syncing Prisma Client with schema.prisma..."
+npx prisma generate
+
 echo "Freeing port $PORT..."
 lsof -ti ":$PORT" | xargs kill -9 2>/dev/null || true
 

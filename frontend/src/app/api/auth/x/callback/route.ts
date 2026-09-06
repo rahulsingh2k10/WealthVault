@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
-import { logSubscriptionPeriodIfChanged } from "@/lib/services/SubscriptionPeriodService";
+import { logSubscriptionPlanHistoryIfChanged } from "@/lib/services/SubscriptionPlanHistoryService";
 
 interface XTokenResponse {
   access_token: string;
@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
       update: { fullName: name, auth_platformId: xPlatform.id, avatar: xAvatar },
       create: { username: handle, fullName: name, auth_platformId: xPlatform.id, avatar: xAvatar, subscriptionPlanId: freePlan.id },
     });
-    await logSubscriptionPeriodIfChanged(user.id, user.subscriptionPlanId);
+    await logSubscriptionPlanHistoryIfChanged(user.id, user.subscriptionPlanId);
 
     const session = await getSession();
     session.userId    = user.id;
