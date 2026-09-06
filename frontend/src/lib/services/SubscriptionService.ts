@@ -161,6 +161,66 @@ async function getProviderLazy() {
   return getProvider();
 }
 
+/**
+ * Cancels a still-"created" subscription the caller owns, right when they
+ * walk away from checkout (dismiss the Razorpay modal) — instead of waiting
+ * for the next cron sweep or login. If it was superseding an existing plan
+ * (change-plan pauses that plan up front, see change-plan/route.ts), resumes
+ * it so billing isn't left paused until reconciliation would otherwise catch
+ * this. A row not owned by the caller, or already past "created", is a
+ * silent no-op — the caller can't tell the difference from a race it lost.
+ */
+export async function abandonCreatedSubscription(opts: {
+  userId: string;
+  providerSubscriptionId: string;
+}): Promise<{ cancelled: boolean }> {
+  const claim = await prisma.subscription.updateMany({
+    where: { userId: opts.userId, providerSubscriptionId: opts.providerSubscriptionId, status: "created" },
+    data: { status: "cancelled", endedAt: new Date() },
+  });
+  if (claim.count !== 1) return { cancelled: false };
+
+  const provider = await getProviderLazy();
+  try {
+    await provider.cancelNow(opts.providerSubscriptionId);
+  } catch (e) {
+    console.error("[subscription] abandon: failed to cancel on provider", opts.providerSubscriptionId, e);
+  }
+
+  const row = await prisma.subscription.findFirst({
+    where: { userId: opts.userId, providerSubscriptionId: opts.providerSubscriptionId },
+  });
+  if (row?.supersedesId) {
+    const superseded = await prisma.subscription.findUnique({ where: { id: row.supersedesId } });
+    if (superseded && !superseded.endedAt) {
+      try {
+        await provider.resumeSubscription(superseded.providerSubscriptionId);
+      } catch (e) {
+        console.error("[subscription] abandon: failed to resume superseded", superseded.providerSubscriptionId, e);
+      }
+    }
+  }
+
+  return { cancelled: true };
+}
+
+/**
+ * A user can have several unpaid first-time ("created", supersedesId: null)
+ * checkouts sitting around at once — one per plan they've clicked without
+ * paying, kept around so retrying the same plan reuses it (see
+ * /api/subscription/create). Once one of them actually activates, the rest
+ * are moot — cancel them here rather than on a timer, so a slow-to-complete
+ * checkout is never at risk of being cancelled out from under the user.
+ */
+async function cancelSiblingFirstTimeSubscriptions(userId: string, exceptId: string): Promise<void> {
+  const siblings = await prisma.subscription.findMany({
+    where: { userId, status: "created", supersedesId: null, id: { not: exceptId } },
+  });
+  for (const sibling of siblings) {
+    await abandonCreatedSubscription({ userId, providerSubscriptionId: sibling.providerSubscriptionId });
+  }
+}
+
 function chooseGrantingRow<T extends Subscription>(rows: T[], now: Date): T | null {
   const granting = rows.filter((r) => grants(r, now));
   return (
@@ -262,6 +322,17 @@ export async function applySubscriptionEvent(evt: NormalizedWebhookEvent): Promi
     },
   });
 
+  // A first-time ("created", no supersedesId) checkout just started granting
+  // access — "authenticated" (e-mandate set up) grants exactly like "active"
+  // does (see GRANTS_UNCONDITIONALLY/grants() above), so this has to fire on
+  // either, not just "active": a subscription can sit "authenticated" for a
+  // while before its first charge webhook arrives. The user may have clicked
+  // more than one plan before paying (see /api/subscription/create); those
+  // other pending choices are moot now.
+  if (GRANTS_UNCONDITIONALLY.has(evt.status) && !GRANTS_UNCONDITIONALLY.has(row.status) && !row.supersedesId) {
+    await cancelSiblingFirstTimeSubscriptions(row.userId, row.id);
+  }
+
   // The user cancelled (local flag) but never resumed, and Razorpay charged the
   // next cycle anyway — commit the cancellation on Razorpay now and end access
   // at the cycle the user last paid for (row.currentEnd, pre-charge).
@@ -324,8 +395,10 @@ export async function buildManageView(userId: string) {
 
   const p = active.subscriptionPlan;
   const intervalLabel = p.intervalMonths === 1 ? "month" : p.intervalMonths === 3 ? "quarter" : "year";
+  // termMonths is a day count (daily-billing plans, interval 7/9/12) — add
+  // days, not calendar months.
   const lockedThrough = new Date(active.createdAt);
-  if (p.termMonths) lockedThrough.setMonth(lockedThrough.getMonth() + p.termMonths);
+  if (p.termMonths) lockedThrough.setDate(lockedThrough.getDate() + p.termMonths);
 
   return {
     tier: p.tier,
@@ -381,7 +454,8 @@ export async function listPaidPlansForChange(): Promise<PaidPlanOption[]> {
     return {
       tier: p.tier,
       name: PLAN_NAME[p.tier] ?? p.tier,
-      perMonth: formatMoney(Math.round(amount / (p.intervalMonths ?? 1)), p.currency),
+      // intervalMonths is a day count now — normalize to a 30-day month-equivalent.
+      perMonth: formatMoney(Math.round((amount / (p.intervalMonths ?? 1)) * 30), p.currency),
       perCycle: formatMoney(amount, p.currency),
     };
   });

@@ -91,4 +91,24 @@ describeOrSkip("GET /api/cron/finalize-cancellations", () => {
       await deleteTestUser(user.id);
     }
   });
+
+  test("leaves a stale first-time checkout (no supersedesId) alone — only an activation elsewhere cleans those up", async () => {
+    delete process.env.CRON_SECRET;
+    const user = await createTestUser();
+    try {
+      const prisma = getTestPrisma();
+      const row = await createSubscriptionRow(user.id, {
+        status: "created", createdAt: new Date(Date.now() - 2 * 3600_000),
+      });
+
+      const { GET } = require("@/app/api/cron/finalize-cancellations/route");
+      const res = await GET(new Request("http://localhost/api/cron/finalize-cancellations"));
+      expect(res.status).toBe(200);
+
+      const after = await prisma.subscription.findUniqueOrThrow({ where: { id: row.id } });
+      expect(after.status).toBe("created");
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
 });

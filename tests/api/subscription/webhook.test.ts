@@ -64,6 +64,43 @@ describeOrSkip("applySubscriptionEvent", () => {
     }
   });
 
+  test("activating a first-time subscription cancels the user's other pending first-time subscriptions, but leaves a plan-change row untouched", async () => {
+    const prisma = getTestPrisma();
+    const user = await createTestUser();
+    try {
+      const winner = await createSubscriptionRow(user.id, { tier: "ANNUAL", status: "created", currentEnd: null, paidCount: 0 });
+      const sibling = await createSubscriptionRow(user.id, { tier: "MONTHLY", status: "created", currentEnd: null, paidCount: 0 });
+      const oldPaidPlan = await createSubscriptionRow(user.id, { tier: "QUARTERLY", status: "active", currentEnd: new Date(Date.now() + 30 * 86400_000) });
+      const planChangeRow = await createSubscriptionRow(user.id, { tier: "QUARTERLY", status: "created", supersedesId: oldPaidPlan.id, currentEnd: null });
+
+      const nowSec = Math.floor(Date.now() / 1000);
+      const { body, eventId } = signedWebhook("subscription.activated", {
+        id: winner.providerSubscriptionId,
+        status: "active",
+        current_start: nowSec,
+        current_end: nowSec + 30 * 86400,
+        charge_at: nowSec + 30 * 86400,
+        paid_count: 1,
+      });
+      const evt = normalizeRazorpayWebhookEvent(body, eventId);
+
+      await applySubscriptionEvent(evt);
+
+      const updatedWinner = await prisma.subscription.findUniqueOrThrow({ where: { id: winner.id } });
+      expect(updatedWinner.status).toBe("active");
+
+      const updatedSibling = await prisma.subscription.findUniqueOrThrow({ where: { id: sibling.id } });
+      expect(updatedSibling.status).toBe("cancelled");
+      expect(updatedSibling.endedAt).not.toBeNull();
+
+      // governed by reconcileSupersedingSubscriptions, not this cleanup
+      const updatedPlanChangeRow = await prisma.subscription.findUniqueOrThrow({ where: { id: planChangeRow.id } });
+      expect(updatedPlanChangeRow.status).toBe("created");
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
   test("charged with a higher paid_count → absolute update", async () => {
     const prisma = getTestPrisma();
     const user = await createTestUser();
@@ -269,6 +306,26 @@ describeOrSkip("applySubscriptionEvent", () => {
       const eff = await getEffectivePlan(user.id);
       expect(eff.tier).toBe("MONTHLY");
       expect(eff.paymentRetrying).toBe(false);
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
+  test("reaching 'authenticated' (not just 'active') already grants access, so it must cancel sibling first-time checkouts too", async () => {
+    const prisma = getTestPrisma();
+    const user = await createTestUser();
+    try {
+      const winner = await createSubscriptionRow(user.id, { tier: "MONTHLY", status: "created", currentEnd: null });
+      const sibling = await createSubscriptionRow(user.id, { tier: "QUARTERLY", status: "created", currentEnd: null });
+
+      const { body, eventId } = signedWebhook("subscription.authenticated", { id: winner.providerSubscriptionId, status: "authenticated" });
+      await applySubscriptionEvent(normalizeRazorpayWebhookEvent(body, eventId));
+
+      const updatedWinner = await prisma.subscription.findUniqueOrThrow({ where: { id: winner.id } });
+      expect(updatedWinner.status).toBe("authenticated");
+
+      const updatedSibling = await prisma.subscription.findUniqueOrThrow({ where: { id: sibling.id } });
+      expect(updatedSibling.status).toBe("cancelled");
     } finally {
       await deleteTestUser(user.id);
     }

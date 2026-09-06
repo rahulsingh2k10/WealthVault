@@ -79,7 +79,7 @@ describeOrSkip("buildManageView", () => {
       expect(view.retryUrl).toBeNull();
 
       const expectedLock = new Date(createdAt);
-      expectedLock.setMonth(expectedLock.getMonth() + 36); // ANNUAL's termMonths, per seedReferenceData
+      expectedLock.setDate(expectedLock.getDate() + 1095); // ANNUAL's termMonths (now a day count), per seedReferenceData
       expect(view.priceLockedThrough).toBe(expectedLock.toISOString());
     } finally {
       await deleteTestUser(user.id);
@@ -686,7 +686,10 @@ describeOrSkip("listPaidPlansForChange", () => {
       const plan = await prisma.subscriptionPlan.findUniqueOrThrow({ where: { tier } });
       const amount = Number(plan.offerPrice ?? plan.price);
       expect(byTier[tier].perCycle).toBe(formatMoney(amount, plan.currency));
-      expect(byTier[tier].perMonth).toBe(formatMoney(Math.round(amount / (plan.intervalMonths ?? 1)), plan.currency));
+      // intervalMonths now holds a day count (7/9/12) — normalize to a 30-day
+      // month-equivalent so "perMonth" stays a genuine monthly price, not a
+      // per-day one.
+      expect(byTier[tier].perMonth).toBe(formatMoney(Math.round((amount / (plan.intervalMonths ?? 1)) * 30), plan.currency));
     }
   });
 });

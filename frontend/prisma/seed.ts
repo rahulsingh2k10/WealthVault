@@ -51,14 +51,17 @@ async function main() {
   //   price      = list amount charged per billing cycle
   //   offerPrice = current intro amount (60% off) charged per cycle — matches the live Razorpay Plans
   // razorpayPlanId comes from the RAZORPAY_PLAN_ID_* env (test values in frontend/.env).
+  // intervalMonths/termMonths are day counts now — the 3 Razorpay plans bill
+  // daily (interval 7/9/12), so termMonths (still 3-year term intent) is
+  // expressed as 1095 days (365 * 3) instead of 36 months.
   const offerStart = new Date('2026-08-01T00:00:00Z');
   const offerEnd = new Date('2026-09-30T23:59:59Z');
   await prisma.subscriptionPlan.createMany({
     data: [
       { tier: 'FREE',      price: 0,     offerPrice: null,  currency: 'INR', isActive: true, intervalMonths: null, termMonths: null, razorpayPlanId: null },
-      { tier: 'MONTHLY',   price: 9000,  offerPrice: 3600,  currency: 'INR', isActive: true, intervalMonths: 1,  termMonths: 36, razorpayPlanId: process.env.RAZORPAY_PLAN_ID_MONTHLY ?? null,   offerStartDate: offerStart, offerEndDate: offerEnd },
-      { tier: 'QUARTERLY', price: 18000, offerPrice: 7200,  currency: 'INR', isActive: true, intervalMonths: 3,  termMonths: 36, razorpayPlanId: process.env.RAZORPAY_PLAN_ID_QUARTERLY ?? null, offerStartDate: offerStart, offerEndDate: offerEnd },
-      { tier: 'ANNUAL',    price: 36000, offerPrice: 14400, currency: 'INR', isActive: true, intervalMonths: 12, termMonths: 36, razorpayPlanId: process.env.RAZORPAY_PLAN_ID_ANNUAL ?? null,    offerStartDate: offerStart, offerEndDate: offerEnd },
+      { tier: 'MONTHLY',   price: 9000,  offerPrice: 3600,  currency: 'INR', isActive: true, intervalMonths: 7,  termMonths: 1095, razorpayPlanId: process.env.RAZORPAY_PLAN_ID_MONTHLY ?? null,   offerStartDate: offerStart, offerEndDate: offerEnd },
+      { tier: 'QUARTERLY', price: 18000, offerPrice: 7200,  currency: 'INR', isActive: true, intervalMonths: 9,  termMonths: 1095, razorpayPlanId: process.env.RAZORPAY_PLAN_ID_QUARTERLY ?? null, offerStartDate: offerStart, offerEndDate: offerEnd },
+      { tier: 'ANNUAL',    price: 36000, offerPrice: 14400, currency: 'INR', isActive: true, intervalMonths: 12, termMonths: 1095, razorpayPlanId: process.env.RAZORPAY_PLAN_ID_ANNUAL ?? null,    offerStartDate: offerStart, offerEndDate: offerEnd },
     ],
   });
   console.log("✅ Subscription plans seeded (list + 60% intro, Razorpay plan ids)");

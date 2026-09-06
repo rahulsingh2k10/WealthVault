@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { finalizeExpiredCancellations, reconcileSupersedingSubscriptions } from "@/lib/services/SubscriptionService";
+import {
+  finalizeExpiredCancellations,
+  reconcileSupersedingSubscriptions,
+} from "@/lib/services/SubscriptionService";
 
 // Runs daily via Vercel Cron (see vercel.json). Vercel signs the request with
 // `Authorization: Bearer $CRON_SECRET` when CRON_SECRET is set on the project —

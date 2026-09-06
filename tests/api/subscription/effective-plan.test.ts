@@ -476,3 +476,87 @@ describeOrSkip("reconcileSupersedingSubscriptions", () => {
     }
   });
 });
+
+describeOrSkip("abandonCreatedSubscription", () => {
+  const { abandonCreatedSubscription } = require("@/lib/services/SubscriptionService");
+
+  test("cancels a first-time 'created' row owned by the user", async () => {
+    const user = await createTestUser();
+    try {
+      const row = await createSubscriptionRow(user.id, { status: "created" });
+
+      const result = await abandonCreatedSubscription({ userId: user.id, providerSubscriptionId: row.providerSubscriptionId });
+      expect(result).toEqual({ cancelled: true });
+
+      const after = await getTestPrisma().subscription.findUniqueOrThrow({ where: { id: row.id } });
+      expect(after.status).toBe("cancelled");
+      expect(after.endedAt).not.toBeNull();
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
+  test("row already past 'created' (e.g. authenticated) → left untouched", async () => {
+    const user = await createTestUser();
+    try {
+      const row = await createSubscriptionRow(user.id, { status: "authenticated" });
+
+      const result = await abandonCreatedSubscription({ userId: user.id, providerSubscriptionId: row.providerSubscriptionId });
+      expect(result).toEqual({ cancelled: false });
+
+      const after = await getTestPrisma().subscription.findUniqueOrThrow({ where: { id: row.id } });
+      expect(after.status).toBe("authenticated");
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
+  test("wrong user id → left untouched", async () => {
+    const userA = await createTestUser();
+    const userB = await createTestUser();
+    try {
+      const row = await createSubscriptionRow(userA.id, { status: "created" });
+
+      const result = await abandonCreatedSubscription({ userId: userB.id, providerSubscriptionId: row.providerSubscriptionId });
+      expect(result).toEqual({ cancelled: false });
+
+      const after = await getTestPrisma().subscription.findUniqueOrThrow({ where: { id: row.id } });
+      expect(after.status).toBe("created");
+    } finally {
+      await deleteTestUser(userA.id);
+      await deleteTestUser(userB.id);
+    }
+  });
+
+  test("a plan-change row (supersedesId set) is also cancellable, old plan left alone locally", async () => {
+    const user = await createTestUser();
+    try {
+      const oldRow = await createSubscriptionRow(user.id, { tier: "MONTHLY", status: "active" });
+      const newRow = await createSubscriptionRow(user.id, {
+        tier: "QUARTERLY", status: "created", supersedesId: oldRow.id, startAt: new Date(Date.now() + 30 * 86400_000),
+      });
+
+      const result = await abandonCreatedSubscription({ userId: user.id, providerSubscriptionId: newRow.providerSubscriptionId });
+      expect(result).toEqual({ cancelled: true });
+
+      const after = await getTestPrisma().subscription.findUniqueOrThrow({ where: { id: newRow.id } });
+      expect(after.status).toBe("cancelled");
+
+      const oldAfter = await getTestPrisma().subscription.findUniqueOrThrow({ where: { id: oldRow.id } });
+      expect(oldAfter.status).toBe("active");
+      expect(oldAfter.endedAt).toBeNull();
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
+  test("no such row → { cancelled: false }, does not throw", async () => {
+    const user = await createTestUser();
+    try {
+      const result = await abandonCreatedSubscription({ userId: user.id, providerSubscriptionId: "sub_does_not_exist" });
+      expect(result).toEqual({ cancelled: false });
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+});

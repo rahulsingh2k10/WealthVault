@@ -18,10 +18,12 @@ const PLAN_PRICING: Record<
   Tier,
   { price: number; offerPrice: number | null; offerStartDate: Date | null; offerEndDate: Date | null; intervalMonths: number | null; termMonths: number | null; razorpayPlanId: string | null }
 > = {
+  // intervalMonths/termMonths are day counts now (daily-billing Razorpay plans,
+  // interval 7/9/12) — termMonths keeps the 3-year term intent as 1095 days.
   FREE:      { price: 0,     offerPrice: null,  offerStartDate: null,        offerEndDate: null,        intervalMonths: null, termMonths: null, razorpayPlanId: null },
-  MONTHLY:   { price: 9000,  offerPrice: 3600,  offerStartDate: OFFER_START, offerEndDate: OFFER_END,   intervalMonths: 1,   termMonths: 36,   razorpayPlanId: process.env.RAZORPAY_PLAN_ID_MONTHLY   || "plan_test_monthly" },
-  QUARTERLY: { price: 18000, offerPrice: 7200,  offerStartDate: OFFER_START, offerEndDate: OFFER_END,   intervalMonths: 3,   termMonths: 36,   razorpayPlanId: process.env.RAZORPAY_PLAN_ID_QUARTERLY || "plan_test_quarterly" },
-  ANNUAL:    { price: 36000, offerPrice: 14400, offerStartDate: OFFER_START, offerEndDate: OFFER_END,   intervalMonths: 12,  termMonths: 36,   razorpayPlanId: process.env.RAZORPAY_PLAN_ID_ANNUAL    || "plan_test_annual" },
+  MONTHLY:   { price: 9000,  offerPrice: 3600,  offerStartDate: OFFER_START, offerEndDate: OFFER_END,   intervalMonths: 7,   termMonths: 1095, razorpayPlanId: process.env.RAZORPAY_PLAN_ID_MONTHLY   || "plan_test_monthly" },
+  QUARTERLY: { price: 18000, offerPrice: 7200,  offerStartDate: OFFER_START, offerEndDate: OFFER_END,   intervalMonths: 9,   termMonths: 1095, razorpayPlanId: process.env.RAZORPAY_PLAN_ID_QUARTERLY || "plan_test_quarterly" },
+  ANNUAL:    { price: 36000, offerPrice: 14400, offerStartDate: OFFER_START, offerEndDate: OFFER_END,   intervalMonths: 12,  termMonths: 1095, razorpayPlanId: process.env.RAZORPAY_PLAN_ID_ANNUAL    || "plan_test_annual" },
 };
 
 export async function ensureReferenceData(): Promise<void> {

@@ -141,4 +141,25 @@ describeOrSkip("POST /api/auth/unlock", () => {
       await deleteTestUser(user.id);
     }
   });
+
+  test("leaves the user's own stale first-time checkout alone on unlock — only an activation elsewhere cleans those up", async () => {
+    const keyHex = deriveKey(VALID_PASSPHRASE);
+    const verifier = encrypt("PORTFOLIO_APP_V1", keyHex);
+    const user = await createTestUser({ verifier });
+    try {
+      const prisma = getTestPrisma();
+      const row = await createSubscriptionRow(user.id, {
+        status: "created", createdAt: new Date(Date.now() - 2 * 3600_000),
+      });
+
+      const sealed = await sealSessionCookie({ userId: user.id });
+      const res = await unlock(`${SESSION_COOKIE_NAME}=${sealed}`, VALID_PASSPHRASE);
+      expect(res.status).toBe(200);
+
+      const after = await prisma.subscription.findUniqueOrThrow({ where: { id: row.id } });
+      expect(after.status).toBe("created");
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
 });
