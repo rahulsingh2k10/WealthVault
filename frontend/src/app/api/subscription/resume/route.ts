@@ -11,7 +11,11 @@ export async function POST() {
     const row = await prisma.subscription.findFirst({
       where: {
         userId: session.userId,
-        status: { in: ["active", "authenticated", "pending"] },
+        // "paused" included: cancelling now pauses billing on Razorpay
+        // immediately (see /api/subscription/cancel), so a cancelled-but-
+        // still-within-cycle row is commonly "paused" by the time the user
+        // clicks Resume, not "active".
+        status: { in: ["active", "authenticated", "pending", "paused"] },
         cancelAtCycleEnd: true,
       },
       orderBy: { createdAt: "desc" },
@@ -25,7 +29,19 @@ export async function POST() {
     }
 
     await getProvider().resumeSubscription(row.providerSubscriptionId);
-    await prisma.subscription.update({ where: { id: row.id }, data: { cancelAtCycleEnd: false } });
+    await prisma.subscription.update({
+      where: { id: row.id },
+      data: {
+        cancelAtCycleEnd: false,
+        // grants() falls through to checking `status` once cancelAtCycleEnd
+        // is false — a row we just resumed from "paused" would otherwise sit
+        // as (cancelAtCycleEnd: false, status: "paused") until the
+        // subscription.resumed webhook eventually arrives to fix status,
+        // and "paused" doesn't grant. Set it here so access is correct the
+        // instant this request completes, not whenever the webhook lands.
+        ...(row.status === "paused" ? { status: "active" } : {}),
+      },
+    });
 
     return NextResponse.json({ ok: true });
   } catch (error) {

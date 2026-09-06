@@ -346,6 +346,32 @@ describeOrSkip("POST /api/subscription/resume", () => {
     }
   });
 
+  test("also resumes a row that's already 'paused' (cancel now pauses billing on Razorpay immediately, so this is the common case) — status must flip to active immediately, not wait on the webhook", async () => {
+    const prisma = getTestPrisma();
+    const user = await createTestUser();
+    try {
+      const row = await createSubscriptionRow(user.id, {
+        tier: "ANNUAL", status: "paused", cancelAtCycleEnd: true,
+        currentEnd: new Date(Date.now() + 10 * 86400_000),
+      });
+      const cookie = await cookieFor(user.id);
+
+      const res = await postResume(cookie);
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ ok: true });
+
+      const updated = await prisma.subscription.findUniqueOrThrow({ where: { id: row.id } });
+      expect(updated.cancelAtCycleEnd).toBe(false);
+      // If status is left at "paused" here, grants() denies access (paused
+      // isn't in GRANTS_UNCONDITIONALLY) until the subscription.resumed
+      // webhook eventually arrives to fix it — a real gap where a reload
+      // right after resuming shows the user as FREE.
+      expect(updated.status).toBe("active");
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
   test("cycle already ended → 409 (must re-subscribe)", async () => {
     const user = await createTestUser();
     try {

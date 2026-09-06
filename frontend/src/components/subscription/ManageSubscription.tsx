@@ -169,7 +169,15 @@ export function ManageSubscription({ view, paidPlans, planCards }: ManageSubscri
       }
       setCancelled(false);
       setAccessUntil(null);
-      router.refresh();
+      // A resume can flip which top-level view the page shows (this
+      // component vs. the FREE upgrade panel one level up, in
+      // src/app/subscription/page.tsx) — router.refresh() re-fetches this
+      // route's server data, but doesn't reliably re-run that parent
+      // branch decision, so a resume could keep showing the FREE panel
+      // until a real reload. Force one here instead of chasing that with
+      // router.refresh().
+      window.location.reload();
+      return;
     } catch {
       setResumeError("Something went wrong. Please try again.");
     } finally {
