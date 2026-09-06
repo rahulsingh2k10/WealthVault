@@ -121,4 +121,44 @@ describeOrSkip("logSubscriptionPlanHistoryIfChanged (real service, not reimpleme
       await deleteTestUser(user.id);
     }
   });
+
+  test("two concurrent calls for the same new plan insert exactly one row, not two (race safety)", async () => {
+    // Production hit this as two real, separate webhook deliveries landing
+    // close together (confirmed from live data: two rows inserted 2ms
+    // apart). A same-process Promise.all here isn't a proven reproduction of
+    // that specific race — earlier attempts to force it (including gating
+    // the outer client's findFirst) didn't trigger, since the fix runs the
+    // read-then-insert inside prisma.$transaction, and Prisma hands the
+    // callback its own `tx` client distinct from the outer one, so spying on
+    // the outer client's methods never sees the transaction's queries. What
+    // this test does verify: the advisory lock (pg_advisory_xact_lock, keyed
+    // on userId) correctly serializes genuinely concurrent calls end to end,
+    // so real concurrent access can't produce a duplicate row.
+    const prisma = getTestPrisma();
+    const user = await createTestUser();
+    try {
+      const [freePlanId, monthlyPlanId] = await Promise.all([
+        getFreePlanId(),
+        prisma.subscriptionPlan.findUniqueOrThrow({ where: { tier: "MONTHLY" } }).then((p) => p.id),
+      ]);
+
+      await logSubscriptionPlanHistoryIfChanged(user.id, freePlanId);
+
+      await Promise.all([
+        logSubscriptionPlanHistoryIfChanged(user.id, monthlyPlanId),
+        logSubscriptionPlanHistoryIfChanged(user.id, monthlyPlanId),
+      ]);
+
+      const rows = await prisma.subscriptionPlanHistory.findMany({
+        where: { userId: user.id },
+        orderBy: { createdAt: "asc" },
+      });
+      expect(rows).toHaveLength(2);
+      expect(rows[0].subscriptionPlanId).toBe(freePlanId);
+      expect(rows[1].subscriptionPlanId).toBe(monthlyPlanId);
+    } finally {
+      await prisma.subscriptionPlanHistory.deleteMany({ where: { userId: user.id } });
+      await deleteTestUser(user.id);
+    }
+  });
 });
