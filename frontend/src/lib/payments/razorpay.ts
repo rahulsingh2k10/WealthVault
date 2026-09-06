@@ -30,12 +30,17 @@ function unixToDate(v: unknown): Date | null {
   return typeof v === "number" && v > 0 ? new Date(v * 1000) : null;
 }
 
+// Kept in sync with every subscription.* event enabled on the Razorpay
+// webhook (Settings → Webhooks → this endpoint) — checked against the live
+// config, not just Razorpay's docs, since only enabled events ever arrive.
 const EVENT_KIND: Record<string, WebhookEventKind> = {
   "subscription.authenticated": "authenticated",
   "subscription.activated": "activated",
   "subscription.charged": "charged",
   "subscription.pending": "pending",
   "subscription.halted": "halted",
+  "subscription.paused": "paused",
+  "subscription.resumed": "resumed",
   "subscription.cancelled": "cancelled",
   "subscription.completed": "completed",
   "subscription.updated": "updated",
@@ -56,6 +61,7 @@ export function normalizeRazorpayWebhookEvent(rawBody: string, eventId: string |
   const kind = EVENT_KIND[body.event] ?? "ignored";
   return {
     kind,
+    event: body.event,
     eventId: eventId || sha256Hex(rawBody),
     providerSubscriptionId: String(e.id ?? ""),
     status: String(e.status ?? ""),
@@ -63,7 +69,12 @@ export function normalizeRazorpayWebhookEvent(rawBody: string, eventId: string |
     currentStart: unixToDate(e.current_start),
     currentEnd: unixToDate(e.current_end),
     chargeAt: unixToDate(e.charge_at),
-    cancelAtCycleEnd: kind === "cancelled" ? Boolean(e.current_end) : undefined,
+    // "cancelled": true only when access still extends to current_end (soft
+    // cancel). "resumed": always false — resuming is specifically undoing
+    // that soft-cancel state, whether it was set by our own /resume route or
+    // this webhook is the only signal we get (e.g. resumed directly on
+    // Razorpay's side, bypassing our route entirely).
+    cancelAtCycleEnd: kind === "cancelled" ? Boolean(e.current_end) : kind === "resumed" ? false : undefined,
     providerPlanId: e.plan_id ? String(e.plan_id) : undefined,
   };
 }

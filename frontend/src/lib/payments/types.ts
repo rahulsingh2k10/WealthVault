@@ -35,6 +35,8 @@ export type WebhookEventKind =
   | "charged"
   | "pending"
   | "halted"
+  | "paused"
+  | "resumed"
   | "cancelled"
   | "completed"
   | "updated"
@@ -42,6 +44,7 @@ export type WebhookEventKind =
 
 export interface NormalizedWebhookEvent {
   kind: WebhookEventKind;
+  event: string; // the raw Razorpay event name, e.g. "subscription.activated"
   eventId: string;
   providerSubscriptionId: string;
   status: string; // normalised subscription status

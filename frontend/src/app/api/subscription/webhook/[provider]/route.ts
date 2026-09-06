@@ -30,7 +30,7 @@ export async function POST(req: NextRequest, { params }: { params: { provider: s
   // applySubscriptionEvent writes absolute values, never deltas.
   let alreadyDone = false;
   try {
-    await prisma.processedWebhookEvent.create({ data: { provider: "razorpay", eventId: evt.eventId } });
+    await prisma.processedWebhookEvent.create({ data: { provider: "razorpay", eventId: evt.eventId, event: evt.event } });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
       const existing = await prisma.processedWebhookEvent.findUnique({
