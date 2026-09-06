@@ -314,9 +314,17 @@ export async function applySubscriptionEvent(evt: NormalizedWebhookEvent): Promi
     data: {
       status: evt.status || row.status,
       paidCount: evt.paidCount ?? row.paidCount,
-      currentStart: evt.currentStart ?? row.currentStart,
-      currentEnd: evt.currentEnd ?? row.currentEnd,
-      chargeAt: evt.chargeAt ?? row.chargeAt,
+      // Razorpay's webhook payload is always the full current entity, not a
+      // diff — currentStart/currentEnd/chargeAt are authoritative on every
+      // event and legitimately null (e.g. chargeAt once paused/halted/
+      // cancelled). unixToDate() returns null for "absent" too, so a `??
+      // row.X` fallback here can't tell "Razorpay didn't say" apart from
+      // "Razorpay explicitly says none" — it silently keeps stale values
+      // instead of clearing them. paidCount/cancelAtCycleEnd don't have this
+      // problem: their normalizers return undefined (not null) when unset.
+      currentStart: evt.currentStart,
+      currentEnd: evt.currentEnd,
+      chargeAt: evt.chargeAt,
       cancelAtCycleEnd: evt.cancelAtCycleEnd ?? row.cancelAtCycleEnd,
       endedAt: TERMINAL.has(evt.status) ? new Date() : row.endedAt,
     },
