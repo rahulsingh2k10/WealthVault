@@ -114,3 +114,29 @@ describeOrSkip("/api/preferences", () => {
     }
   });
 });
+
+describe("GET /settings (route guard)", () => {
+  function getSettings(cookie?: string) {
+    return fetch(`${TEST_SERVER_URL}/settings`, { redirect: "manual", headers: cookie ? { cookie } : {} });
+  }
+
+  test("redirects to / when there is no session", async () => {
+    const res = await getSettings();
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toBe("/");
+  });
+
+  test("redirects to /unlock when the vault is locked (userId but no encryptionKey)", async () => {
+    const sealed = await sealSessionCookie({ userId: "no-such-user" });
+    const res = await getSettings(`${SESSION_COOKIE_NAME}=${sealed}`);
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toBe("/unlock");
+  });
+
+  test("returns 200 HTML when userId + encryptionKey are present", async () => {
+    const sealed = await sealSessionCookie({ userId: "no-such-user", encryptionKey: "fake-key" });
+    const res = await getSettings(`${SESSION_COOKIE_NAME}=${sealed}`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/html");
+  });
+});
