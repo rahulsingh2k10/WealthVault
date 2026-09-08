@@ -1,6 +1,3 @@
-// @ts-nocheck — prisma.userPreference does not exist until Task 2 adds the model.
-// ts-jest type-checks the file and hard-fails the suite on the unknown property,
-// so type checking is disabled here; remove this line once the model lands.
 import { hasTestDb, disconnectTestPrisma, getTestPrisma } from "../../helpers/testDb";
 import { ensureReferenceData } from "../../helpers/seedReferenceData";
 import { createTestUser, deleteTestUser } from "../../helpers/testUser";
