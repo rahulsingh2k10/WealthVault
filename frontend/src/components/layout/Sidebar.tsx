@@ -10,16 +10,11 @@ import {
   LogOut,
   Lock,
   Settings,
-  Languages,
-  MapPin,
   CreditCard,
-  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMobileNav } from "@/context/MobileNavContext";
 import { useLocale } from "@/context/LocaleContext";
-import { LOCALES, type Locale } from "@/i18n/translations";
-import { COUNTRIES, countryFlag } from "@/i18n/countries";
 import { ICON_MAP, type NavItemDto } from "@/i18n/navConfig";
 
 // Plan product names — brand names kept as-is across locales (matches the
@@ -30,8 +25,6 @@ const PLAN_NAMES: Record<string, string> = {
   QUARTERLY: "Treasury",
   ANNUAL:    "Sovereign",
 };
-
-type ActivePopover = "lang" | "country" | null;
 
 interface UserInfo {
   name: string;
@@ -44,16 +37,14 @@ export function Sidebar() {
   const pathname = usePathname();
   const router   = useRouter();
   const { setTheme } = useTheme();
-  const { t, locale, setLocale, country, setCountry } = useLocale();
+  const { t, country } = useLocale();
   const { open: mobileOpen, setOpen: setMobileOpen } = useMobileNav();
 
   const [user, setUser]                     = useState<UserInfo | null>(null);
   const [navItems, setNavItems]             = useState<NavItemDto[]>([]);
   const [navLoading, setNavLoading]         = useState(true);
   const [sheetOpen, setSheetOpen]           = useState(false);
-  const [activePopover, setActivePopover]   = useState<ActivePopover>(null);
   const sheetRef   = useRef<HTMLDivElement>(null);
-  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -82,33 +73,19 @@ export function Sidebar() {
     const handleClick = (e: MouseEvent) => {
       if (sheetRef.current && !sheetRef.current.contains(e.target as Node)) {
         setSheetOpen(false);
-        setActivePopover(null);
       }
     };
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, [sheetOpen]);
 
-  // Hover helpers — 120 ms delay prevents flicker when crossing the gap
-  const openPopover = (name: ActivePopover) => {
-    if (hoverTimer.current) clearTimeout(hoverTimer.current);
-    setActivePopover(name);
-  };
-  const scheduleClose = (name: ActivePopover) => {
-    hoverTimer.current = setTimeout(() => {
-      setActivePopover((cur) => (cur === name ? null : cur));
-    }, 120);
-  };
-
   const handleLockScreen = () => {
     setSheetOpen(false);
-    setActivePopover(null);
     router.push("/unlock");
   };
 
   const handleSignOut = async () => {
     setSheetOpen(false);
-    setActivePopover(null);
     // Sign-out drops the user's saved theme; fall back to the OS setting.
     // The DB preference is untouched and restored by PreferencesSync on next sign-in.
     setTheme("system");
@@ -117,26 +94,11 @@ export function Sidebar() {
     router.refresh();
   };
 
-  const handleSelectLocale = (code: Locale) => {
-    setLocale(code);
-    setActivePopover(null);
-    setSheetOpen(false);
-  };
-
-  const handleSelectCountry = (code: string) => {
-    setCountry(code);
-    setActivePopover(null);
-    setSheetOpen(false);
-    router.push('/dashboard');
-  };
-
   const initials = user?.name
     ? user.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()
     : "?";
 
   const subscriptionLabel = PLAN_NAMES[user?.subscription ?? "FREE"] ?? PLAN_NAMES.FREE;
-
-  const selectedCountry = COUNTRIES.find((c) => c.code === country);
 
   const resolvedNavItems = navItems.map((item) => ({
     href:  item.href,
@@ -200,7 +162,7 @@ export function Sidebar() {
         </ul>
       </nav>
 
-      {/* Profile row + popovers */}
+      {/* Profile row + popover */}
       <div className="relative border-t border-slate-200 dark:border-slate-800" ref={sheetRef}>
 
         {/* ── Main sheet popover ── */}
@@ -214,25 +176,6 @@ export function Sidebar() {
                   setSheetOpen(false);
                   router.push("/settings");
                 }}
-              />
-
-              {/* Language — hover trigger */}
-              <HoverItem
-                icon={Languages}
-                label={t.sidebar.language}
-                active={activePopover === "lang"}
-                onEnter={() => openPopover("lang")}
-                onLeave={() => scheduleClose("lang")}
-              />
-
-              {/* Country — hover trigger, shows current flag + code */}
-              <HoverItem
-                icon={MapPin}
-                label={t.sidebar.country}
-                badge={selectedCountry ? `${countryFlag(selectedCountry.code)} ${selectedCountry.code}` : undefined}
-                active={activePopover === "country"}
-                onEnter={() => openPopover("country")}
-                onLeave={() => scheduleClose("country")}
               />
 
               <SheetItem
@@ -261,80 +204,9 @@ export function Sidebar() {
           </div>
         )}
 
-        {/* ── Language popover ── independent, to the right of sidebar */}
-        {sheetOpen && activePopover === "lang" && (
-          <div
-            className="absolute bottom-full left-full z-50 mb-1 ml-1 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900"
-            onMouseEnter={() => openPopover("lang")}
-            onMouseLeave={() => scheduleClose("lang")}
-          >
-            <div className="border-b border-slate-100 px-4 py-2.5 dark:border-slate-800">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                {t.sidebar.language}
-              </p>
-            </div>
-            <ul className="overflow-y-auto py-1" style={{ maxHeight: "320px" }}>
-              {LOCALES.map(({ code, native }) => (
-                <li key={code}>
-                  <button
-                    onClick={() => handleSelectLocale(code)}
-                    className={cn(
-                      "flex w-full items-center gap-2 px-4 py-2 text-sm transition-colors",
-                      locale === code
-                        ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-400"
-                        : "text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"
-                    )}
-                  >
-                    <span className="flex-1 text-left">{native}</span>
-                    {locale === code && <Check className="h-3.5 w-3.5 shrink-0 text-indigo-500" />}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {/* ── Country popover ── independent, to the right of sidebar */}
-        {sheetOpen && activePopover === "country" && (
-          <div
-            className="absolute bottom-full left-full z-50 mb-1 ml-1 w-64 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900"
-            onMouseEnter={() => openPopover("country")}
-            onMouseLeave={() => scheduleClose("country")}
-          >
-            <div className="border-b border-slate-100 px-4 py-2.5 dark:border-slate-800">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                {t.sidebar.country}
-              </p>
-            </div>
-            <ul className="overflow-y-auto py-1" style={{ maxHeight: "360px" }}>
-              {COUNTRIES.map(({ code, name }) => (
-                <li key={code}>
-                  <button
-                    onClick={() => handleSelectCountry(code)}
-                    className={cn(
-                      "flex w-full items-center gap-3 px-3 py-1.5 text-sm transition-colors",
-                      country === code
-                        ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-400"
-                        : "text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"
-                    )}
-                  >
-                    <span className="text-base leading-none">{countryFlag(code)}</span>
-                    <span className="w-7 shrink-0 text-xs font-mono text-slate-400 dark:text-slate-500">{code}</span>
-                    <span className="flex-1 truncate text-left">{name}</span>
-                    {country === code && <Check className="h-3.5 w-3.5 shrink-0 text-indigo-500" />}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
         {/* Profile row button */}
         <button
-          onClick={() => {
-            setSheetOpen((v) => !v);
-            if (sheetOpen) setActivePopover(null);
-          }}
+          onClick={() => setSheetOpen((v) => !v)}
           className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60"
         >
           {user?.avatar ? (
@@ -361,45 +233,6 @@ export function Sidebar() {
       </div>
       </aside>
     </>
-  );
-}
-
-// Row that opens a sub-popover on hover
-function HoverItem({
-  icon: Icon,
-  label,
-  badge,
-  active,
-  onEnter,
-  onLeave,
-}: {
-  icon: React.ElementType;
-  label: string;
-  badge?: string;
-  active: boolean;
-  onEnter: () => void;
-  onLeave: () => void;
-}) {
-  return (
-    <li>
-      <button
-        onMouseEnter={onEnter}
-        onMouseLeave={onLeave}
-        className={cn(
-          "flex w-full items-center gap-3 px-4 py-2 text-sm transition-colors",
-          active
-            ? "bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-100"
-            : "text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"
-        )}
-      >
-        <Icon className="h-4 w-4 shrink-0" />
-        <span className="flex-1 text-left">{label}</span>
-        {badge && (
-          <span className="text-xs text-slate-400 dark:text-slate-500">{badge}</span>
-        )}
-        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-      </button>
-    </li>
   );
 }
 
