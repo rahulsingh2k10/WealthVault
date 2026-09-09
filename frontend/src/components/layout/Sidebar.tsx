@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { useTheme } from "next-themes";
-import { ThemeTogglePill } from "./ThemeTogglePill";
 import {
   ChevronRight,
   ChevronUp,
@@ -207,10 +206,6 @@ export function Sidebar() {
         {/* ── Main sheet popover ── */}
         {sheetOpen && (
           <div className="absolute bottom-full left-0 z-50 mb-1 w-60 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900">
-            <div className="border-b border-slate-100 px-4 py-3 dark:border-slate-800">
-              <ThemeTogglePill />
-            </div>
-
             <ul>
               <SheetItem
                 icon={Settings}
