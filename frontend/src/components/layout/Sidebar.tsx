@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
+import { useTheme } from "next-themes";
 import { ThemeTogglePill } from "./ThemeTogglePill";
 import {
   ChevronRight,
@@ -43,6 +44,7 @@ interface UserInfo {
 export function Sidebar() {
   const pathname = usePathname();
   const router   = useRouter();
+  const { setTheme } = useTheme();
   const { t, locale, setLocale, country, setCountry } = useLocale();
   const { open: mobileOpen, setOpen: setMobileOpen } = useMobileNav();
 
@@ -108,6 +110,9 @@ export function Sidebar() {
   const handleSignOut = async () => {
     setSheetOpen(false);
     setActivePopover(null);
+    // Sign-out drops the user's saved theme; fall back to the OS setting.
+    // The DB preference is untouched and restored by PreferencesSync on next sign-in.
+    setTheme("system");
     await fetch("/api/auth/signout", { method: "POST" });
     router.push("/");
     router.refresh();
