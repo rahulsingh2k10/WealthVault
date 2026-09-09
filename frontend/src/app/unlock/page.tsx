@@ -120,6 +120,7 @@ export default function UnlockPage() {
         } else {
           // Middleware let us through (userId in cookie) but the user row is gone —
           // stale session after a DB wipe or account deletion. Sign out and go home.
+          setTheme("system");
           fetch("/api/auth/signout", { method: "POST" })
             .catch(() => {})
             .finally(() => { window.location.href = "/"; });
@@ -238,6 +239,8 @@ export default function UnlockPage() {
   };
 
   const handleSignOut = async () => {
+    // Sign-out drops the user's saved theme; fall back to the OS setting.
+    setTheme("system");
     await fetch("/api/auth/signout", { method: "POST" });
     // Full page reload — clears Next.js client cache and all React state.
     // router.push() + router.refresh() can race; window.location is reliable.
