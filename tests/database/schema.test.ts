@@ -284,3 +284,33 @@ describeOrSkip("ON UPDATE CASCADE", () => {
     }
   });
 });
+
+describeOrSkip("user_preference table", () => {
+  test("physical column order matches the documented sequence", async () => {
+    const prisma = getTestPrisma();
+    const rows = await prisma.$queryRawUnsafe<{ column_name: string }[]>(
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_name = 'user_preference' ORDER BY ordinal_position`
+    );
+    expect(rows.map((r) => r.column_name)).toEqual([
+      "id",
+      "userId",
+      "key",
+      "value",
+      "createdAt",
+      "updatedAt",
+    ]);
+  });
+
+  test("(userId, key) is a unique constraint", async () => {
+    const prisma = getTestPrisma();
+    const rows = await prisma.$queryRawUnsafe<{ indexdef: string }[]>(
+      `SELECT indexdef FROM pg_indexes WHERE tablename = 'user_preference'`
+    );
+    expect(
+      rows.some(
+        (r) => /UNIQUE/i.test(r.indexdef) && /userId/.test(r.indexdef) && /\bkey\b/.test(r.indexdef)
+      )
+    ).toBe(true);
+  });
+});

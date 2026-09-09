@@ -210,7 +210,10 @@ export function Sidebar() {
               <SheetItem
                 icon={Settings}
                 label={t.sidebar.settings}
-                onClick={() => setSheetOpen(false)}
+                onClick={() => {
+                  setSheetOpen(false);
+                  router.push("/settings");
+                }}
               />
 
               {/* Language — hover trigger */}
