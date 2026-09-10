@@ -265,6 +265,3 @@ treatment as the Subscription "Manage" screen. Row cards: `--ui-subtle-bg` +
 - **`COUNTRIES` has only `IN` active.** Every other country is commented out in
   `src/i18n/countries.ts`, so the Country dropdown currently offers a single choice.
   Uncomment entries as each country is instrumented.
-- The `02 Passphrase.md` "Known Issues" section still describes `/api/preferences` as
-  broken (calling `prisma.appConfig`). **That is stale** — the route was rebuilt on the
-  `UserPreference` model and works; that doc needs updating.

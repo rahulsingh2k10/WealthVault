@@ -24,11 +24,11 @@ Its job is to accept a passphrase, POST it to `/api/auth/unlock`, and — if val
 | `src/app/api/auth/avatar/route.ts` | PATCH handler — saves a base64 JPEG to `user.avatar` in the DB |
 | `src/app/api/auth/signout/route.ts` | POST handler — destroys the session, used by the Sign Out button |
 | `src/app/api/auth/reset-vault/route.ts` | POST handler — intended to delete all asset rows and clear the verifier blob. **Currently broken — see Known Issues.** |
-| `src/app/api/preferences/route.ts` | GET/PATCH handler — intended to read/write saved locale, country, and theme. **Currently broken — see Known Issues.** |
+| `src/app/api/preferences/route.ts` | GET/PATCH handler — reads/writes saved locale, country, and theme in the `user_preference` table (`prisma.userPreference`). |
 | `src/components/layout/AppBar.tsx` | Top bar still visible (from root layout); shows the dark/light `ThemeTogglePill` on this route |
 | `src/lib/services/EncryptionService.ts` | `deriveKey`, `createVerifier`, `verifyKey`, `encrypt`, `decrypt` — thin wrapper around `src/lib/encryption.ts` |
 | `src/lib/validation/passphraseValidation.ts` | `validatePassphrase()` — the same 5 rules enforced both client-side (live UI checklist) and server-side (on first-time setup only) |
-| `src/lib/savePreference.ts` | `savePreference(key, value)` — fire-and-forget PATCH to `/api/preferences`; silently swallows network-level errors, but not HTTP error responses (see Known Issues) |
+| `src/lib/savePreference.ts` | `savePreference(key, value)` — fire-and-forget PATCH to `/api/preferences`; silently swallows network-level errors (a non-2xx HTTP response doesn't reject `fetch`, so it isn't surfaced either) |
 | `src/lib/session.ts` | iron-session config — `getSession()`, `SessionData` shape |
 
 `POST /api/auth/unlock` calls `getSession()` and `prisma.user.*` directly.
@@ -167,7 +167,7 @@ Promise.all([
   savePreference('locale',  <browser-detected locale>),
   savePreference('theme',   <current theme, defaulting to 'dark'>),
 ])
-  │  (fire-and-forget — see Known Issues, this currently does not persist)
+  │  (fire-and-forget — each is a PATCH to /api/preferences, upserting one user_preference row)
   ▼
 setShowSaveAlert(true)
   │
@@ -191,7 +191,6 @@ firstTime === false
   │
   ▼
 GET /api/preferences
-  │  (currently returns 500 — see Known Issues — so this branch is always skipped in practice)
   ├── ok → apply saved locale, country, theme to the UI (setLocale/setCountry/setTheme)
   └── not ok → skip silently, defaults stay in effect
   │
@@ -320,19 +319,9 @@ No other table or column is touched by this route. It does not write to `Subscri
 
 ## Known Issues
 
-Two routes this screen depends on are non-functional. Neither is in the unlock endpoint
-itself — both are in routes this screen *calls in addition to* `/api/auth/unlock`:
+One route this screen depends on is non-functional. It is not the unlock endpoint
+itself — it is a route this screen *calls in addition to* `/api/auth/unlock`:
 
-- **`GET`/`PATCH /api/preferences`** (`src/app/api/preferences/route.ts`) calls
-  `prisma.appConfig.findMany` / `prisma.appConfig.upsert` — `appConfig` does not exist on
-  the generated Prisma client, so both handlers throw and Next.js returns a 500.
-  Effect on this screen: the first-time path's three `savePreference()` calls resolve
-  without throwing (a non-2xx HTTP response doesn't reject `fetch`, and `savePreference`
-  only catches network-level failures) so the UI proceeds normally, but nothing is
-  actually saved — country/locale/theme choices from first-time setup are lost. The
-  returning-user path's `GET /api/preferences` fails the same way, so `prefsRes.ok` is
-  `false` and saved preferences are never restored; the user always lands on `/dashboard`
-  with default locale/country/theme.
 - **`POST /api/auth/reset-vault`** (`src/app/api/auth/reset-vault/route.ts`) builds a
   `Promise.all([...])` array that includes `prisma.equityHolding.deleteMany(...)` and
   eight other calls on models that do not exist on the generated Prisma client. Accessing
@@ -345,8 +334,10 @@ itself — both are in routes this screen *calls in addition to* `/api/auth/unlo
   actually cleared. A user who clicks this will see the form reset but their old
   passphrase is still active.
 
-`POST /api/auth/unlock`, `PATCH /api/auth/avatar`, and `POST /api/auth/signout` are
-unaffected and function as documented.
+`POST /api/auth/unlock`, `GET`/`PATCH /api/preferences`, `PATCH /api/auth/avatar`, and
+`POST /api/auth/signout` are unaffected and function as documented. (`/api/preferences`
+was rebuilt on the `UserPreference` model — first-time setup now persists
+country/locale/theme, and a returning user's saved preferences are restored on unlock.)
 
 ---
 
@@ -370,7 +361,7 @@ right panel (`--unlock-right-bg`). Both have distinct light/dark values.
 | GET | `/api/auth/me` | On mount — load user name/avatar/subscription | Working |
 | POST | `/api/auth/unlock` | On form submit | Working |
 | PATCH | `/api/auth/avatar` | On file select | Working |
-| GET | `/api/preferences` | After a successful returning-user unlock | **Broken** — see Known Issues |
-| PATCH | `/api/preferences` | 3× after a successful first-time unlock | **Broken** — see Known Issues |
+| GET | `/api/preferences` | After a successful returning-user unlock | Working |
+| PATCH | `/api/preferences` | 3× after a successful first-time unlock | Working |
 | POST | `/api/auth/reset-vault` | Reset vault confirm | **Broken** — see Known Issues |
 | POST | `/api/auth/signout` | Sign Out button, and auto-signout when `/api/auth/me` returns no user | Working |
