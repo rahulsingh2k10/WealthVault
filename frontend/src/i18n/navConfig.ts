@@ -1,34 +1,34 @@
 import {
   LayoutDashboard,
-  TrendingUp,
+  CandlestickChart,
   BarChart3,
   Gem,
   Home,
   Bitcoin,
   Shield,
-  Building2,
-  CreditCard,
-  PiggyBank,
+  Wallet,
+  HandCoins,
+  Vault,
   Landmark,
 } from 'lucide-react'
 import type { ElementType } from 'react'
 
 export const ICON_MAP: Record<string, ElementType> = {
-  LayoutDashboard,  // Dashboard
-  TrendingUp,       // Stocks
-  BarChart3,        // Mutual Funds
-  Gem,              // Gold & Commodities
-  Home,             // Real Estate
-  Bitcoin,          // Cryptocurrency
-  Shield,           // Insurance
-  Building2,        // Cash & Banking
-  CreditCard,       // Liabilities
-  PiggyBank,        // Fixed Income
-  Landmark,         // Government Schemes
+  LayoutDashboard,   // Dashboard
+  CandlestickChart,  // Stocks
+  BarChart3,         // Mutual Funds
+  Gem,               // Gold & Commodities
+  Home,              // Real Estate
+  Bitcoin,           // Cryptocurrency
+  Shield,            // Insurance
+  Wallet,            // Cash & Banking
+  HandCoins,         // Liabilities
+  Vault,             // Fixed Income
+  Landmark,          // Government Schemes
 }
 
 export interface NavItemDto {
-  id:        number
+  id:        string
   country:   string
   href:      string
   labelKey:  string
