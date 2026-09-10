@@ -6,6 +6,13 @@ import { useLocale } from "@/context/LocaleContext";
 import { LOCALES, type Locale } from "@/i18n/translations";
 import { COUNTRIES, countryFlag } from "@/i18n/countries";
 import { savePreference } from "@/lib/savePreference";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/Select";
 
 /**
  * One setting per row-card: label + hint on the left, control on the right.
@@ -54,12 +61,6 @@ export function SettingsPanel() {
     savePreference("theme", next);
   };
 
-  const fieldStyle = {
-    background: "var(--ui-input-bg)",
-    border: "1px solid var(--ui-input-border)",
-    color: "var(--ui-text-pri)",
-  };
-
   return (
     <div
       className="mx-auto flex w-full max-w-[730px] flex-col overflow-hidden rounded-3xl lg:max-w-[860px] xl:max-w-[1000px]"
@@ -67,33 +68,33 @@ export function SettingsPanel() {
     >
       <div className="flex flex-col gap-3 p-6 sm:p-8">
         <Row label={t.sidebar.country} hint="Sets your currency and number formatting">
-          <select
-            value={country}
-            onChange={(e) => setCountry(e.target.value)}
-            className="w-full rounded-lg px-3 py-2 text-sm sm:w-auto"
-            style={fieldStyle}
-          >
-            {COUNTRIES.map(({ code, name }) => (
-              <option key={code} value={code}>
-                {countryFlag(code)} {name}
-              </option>
-            ))}
-          </select>
+          <Select value={country} onValueChange={setCountry}>
+            <SelectTrigger className="w-full sm:w-56">
+              <SelectValue placeholder="Select country" />
+            </SelectTrigger>
+            <SelectContent>
+              {COUNTRIES.map(({ code, name }) => (
+                <SelectItem key={code} value={code}>
+                  {countryFlag(code)} {name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </Row>
 
         <Row label={t.sidebar.language} hint="Language used across the app">
-          <select
-            value={locale}
-            onChange={(e) => setLocale(e.target.value as Locale)}
-            className="w-full rounded-lg px-3 py-2 text-sm sm:w-auto"
-            style={fieldStyle}
-          >
-            {LOCALES.map(({ code, native }) => (
-              <option key={code} value={code}>
-                {native}
-              </option>
-            ))}
-          </select>
+          <Select value={locale} onValueChange={(v) => setLocale(v as Locale)}>
+            <SelectTrigger className="w-full sm:w-56">
+              <SelectValue placeholder="Select language" />
+            </SelectTrigger>
+            <SelectContent>
+              {LOCALES.map(({ code, native }) => (
+                <SelectItem key={code} value={code}>
+                  {native}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </Row>
 
         <Row label="Theme" hint="When you sign out, the app follows your device">
