@@ -168,3 +168,16 @@ model UserPreference {
   @@unique([userId, key])
   @@map("user_preference")
 }
+
+model NavConfig {
+  id        String @id @default(uuid())
+  country   String
+  href      String
+  labelKey  String
+  iconName  String
+  sortOrder Int    @default(0)
+
+  @@unique([country, href])
+  @@index([country])
+  @@map("nav_config")
+}
