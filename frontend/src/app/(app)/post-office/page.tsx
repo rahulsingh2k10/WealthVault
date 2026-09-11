@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { AppShell } from '@/components/layout/AppShell'
 import { DataTable, Column } from '@/components/ui/DataTable'
 import { EditModal, Field, FieldGrid } from '@/components/ui/EditModal'
 import { Badge } from '@/components/ui/Badge'
@@ -77,7 +76,7 @@ export default function PostOfficePage() {
   }
 
   return (
-    <AppShell title="Post Office" subtitle="KVP, NSC, and other post office schemes">
+    <>
       <div className="mb-6 grid grid-cols-3 gap-4">
         {[
           { label: 'Invested',       value: format(totalInvested) },
@@ -105,6 +104,6 @@ export default function PostOfficePage() {
           <Field label="End Date"       name="endDate"       type="date" required defaultValue={editRow ? editRow.endDate.slice(0, 10) : ''} />
         </FieldGrid>
       </EditModal>
-    </AppShell>
+    </>
   )
 }

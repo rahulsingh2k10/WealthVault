@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { AppShell } from '@/components/layout/AppShell'
 import { CategoryBanner } from '@/components/ui/CategoryBanner'
 import { DataTable, Column } from '@/components/ui/DataTable'
 import { EditModal, Field, FieldGrid } from '@/components/ui/EditModal'
@@ -78,7 +77,7 @@ export default function MutualFundsPage() {
   }
 
   return (
-    <AppShell title="Mutual Funds" subtitle="Index funds and active funds via Coin by Zerodha">
+    <>
       <CategoryBanner slug="mutual-funds" />
       <div className="mb-6 grid grid-cols-3 gap-4">
         {[
@@ -107,6 +106,6 @@ export default function MutualFundsPage() {
           <Field label="Current Amount" name="currentAmount" type="number" step="0.01" value={currentAmount.toFixed(2)} readOnly />
         </FieldGrid>
       </EditModal>
-    </AppShell>
+    </>
   )
 }

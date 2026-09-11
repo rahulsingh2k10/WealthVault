@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { AppShell } from '@/components/layout/AppShell'
 import { DataTable, Column } from '@/components/ui/DataTable'
 import { EditModal, Field, FieldGrid } from '@/components/ui/EditModal'
 import { Badge } from '@/components/ui/Badge'
@@ -80,7 +79,7 @@ export default function HoldingsPage() {
   }
 
   return (
-    <AppShell title="Holdings" subtitle="Indian equity positions">
+    <>
       <div className="mb-6 grid grid-cols-3 gap-4">
         {[
           { label: 'Invested',       value: format(totals.invested) },
@@ -113,6 +112,6 @@ export default function HoldingsPage() {
           <Field label="NCLT"             name="nclt"           defaultValue={editRow?.nclt ?? 'No'} placeholder="Yes / No" />
         </FieldGrid>
       </EditModal>
-    </AppShell>
+    </>
   )
 }

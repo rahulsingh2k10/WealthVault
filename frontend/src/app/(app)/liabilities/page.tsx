@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { AppShell } from '@/components/layout/AppShell'
 import { CategoryBanner } from '@/components/ui/CategoryBanner'
 import { DataTable, Column } from '@/components/ui/DataTable'
 import { EditModal, Field, FieldGrid } from '@/components/ui/EditModal'
@@ -63,7 +62,7 @@ export default function LiabilitiesPage() {
   }
 
   return (
-    <AppShell title="Liabilities">
+    <>
       <CategoryBanner slug="liabilities" />
       <div className="mb-6 grid grid-cols-3 gap-4">
         {[
@@ -89,6 +88,6 @@ export default function LiabilitiesPage() {
           <Field label="Outstanding"      name="currentAmount"  type="number" step="0.01" required value={outstandingVal}  onChange={setOutstandingVal} />
         </FieldGrid>
       </EditModal>
-    </AppShell>
+    </>
   )
 }

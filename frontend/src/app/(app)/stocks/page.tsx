@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { AppShell } from '@/components/layout/AppShell'
 import { CategoryBanner } from '@/components/ui/CategoryBanner'
 import { EditModal, Field, FieldGrid } from '@/components/ui/EditModal'
 import { Card } from '@/components/ui/Card'
@@ -74,7 +73,7 @@ export default function StocksPage() {
   }
 
   return (
-    <AppShell title="Stocks">
+    <>
       <CategoryBanner slug="stocks" />
       <div className="mb-6 grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
@@ -124,6 +123,6 @@ export default function StocksPage() {
           <Field label="Platform"          name="platform"       required defaultValue={editRow?.platform}   placeholder="Zerodha" />
         </FieldGrid>
       </EditModal>
-    </AppShell>
+    </>
   )
 }

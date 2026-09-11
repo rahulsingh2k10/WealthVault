@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { AppShell } from '@/components/layout/AppShell'
 import { CategoryBanner } from '@/components/ui/CategoryBanner'
 import { DataTable, Column } from '@/components/ui/DataTable'
 import { EditModal, Field, FieldGrid } from '@/components/ui/EditModal'
@@ -66,7 +65,7 @@ export default function RealEstatePage() {
   }
 
   return (
-    <AppShell title="Real Estate">
+    <>
       <CategoryBanner slug="real-estate" />
       <div className="mb-6 grid grid-cols-3 gap-4">
         {[
@@ -92,6 +91,6 @@ export default function RealEstatePage() {
           <div className="col-span-2"><Field label="Notes" name="notes" defaultValue={editRow?.notes ?? ''} placeholder="Optional notes" /></div>
         </FieldGrid>
       </EditModal>
-    </AppShell>
+    </>
   )
 }

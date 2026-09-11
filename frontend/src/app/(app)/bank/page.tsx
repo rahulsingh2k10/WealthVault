@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { AppShell } from '@/components/layout/AppShell'
 import { DataTable, Column } from '@/components/ui/DataTable'
 import { EditModal, Field, FieldGrid } from '@/components/ui/EditModal'
 import { Card } from '@/components/ui/Card'
@@ -48,7 +47,7 @@ export default function BankPage() {
   }
 
   return (
-    <AppShell title="Bank Accounts" subtitle="Savings and current account balances">
+    <>
       <div className="mb-6 grid grid-cols-1 gap-4 max-w-xs">
         <Card>
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Total Balance</p>
@@ -66,6 +65,6 @@ export default function BankPage() {
           <Field label="Balance"        name="balance"       type="number" step="0.01" required defaultValue={editRow?.balance} />
         </FieldGrid>
       </EditModal>
-    </AppShell>
+    </>
   )
 }

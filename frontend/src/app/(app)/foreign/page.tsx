@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { AppShell } from '@/components/layout/AppShell'
 import { DataTable, Column } from '@/components/ui/DataTable'
 import { EditModal, Field, FieldGrid } from '@/components/ui/EditModal'
 import { Badge } from '@/components/ui/Badge'
@@ -84,7 +83,7 @@ export default function ForeignPage() {
   }
 
   return (
-    <AppShell title="Foreign Holdings" subtitle="US stocks via IndMoney and Vested">
+    <>
       <div className="mb-6 grid grid-cols-3 gap-4">
         {[
           { label: 'Invested',      value: fmtUsd(totalInvestedUsd) },
@@ -112,6 +111,6 @@ export default function ForeignPage() {
           <Field label="P&L ($)"              name="pnlUsd"           type="number" step="0.01" value={pnlUsd.toFixed(2)} readOnly />
         </FieldGrid>
       </EditModal>
-    </AppShell>
+    </>
   )
 }

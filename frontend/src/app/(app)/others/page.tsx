@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { AppShell } from '@/components/layout/AppShell'
 import { DataTable, Column } from '@/components/ui/DataTable'
 import { EditModal, Field, FieldGrid } from '@/components/ui/EditModal'
 import { Badge } from '@/components/ui/Badge'
@@ -73,7 +72,7 @@ export default function OthersPage() {
   }
 
   return (
-    <AppShell title="Others (LIC & Insurance)" subtitle="Life insurance and other long-term investments">
+    <>
       <div className="mb-6 grid grid-cols-3 gap-4">
         {[
           { label: 'Invested',      value: format(totalInvested) },
@@ -104,6 +103,6 @@ export default function OthersPage() {
           <div className="col-span-2"><Field label="Notes" name="notes" defaultValue={editRow?.notes ?? ''} /></div>
         </FieldGrid>
       </EditModal>
-    </AppShell>
+    </>
   )
 }
