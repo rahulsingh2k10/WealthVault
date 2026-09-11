@@ -199,7 +199,7 @@ export const COUNTRIES: Country[] = [
   // { code: "UA", name: "Ukraine" },
   // { code: "AE", name: "United Arab Emirates" },
   // { code: "GB", name: "United Kingdom" },
-  // { code: "US", name: "United States" },
+  { code: "US", name: "United States" }, // DUMMY test data for country-switch nav — see prisma/seed-nav.ts
   // { code: "UY", name: "Uruguay" },
   // { code: "UZ", name: "Uzbekistan" },
   // { code: "VU", name: "Vanuatu" },
