@@ -1,17 +1,37 @@
 "use client";
 
 import { RefreshCw, Lock, Menu } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useMobileNav } from "@/context/MobileNavContext";
 
-interface HeaderProps {
-  title: string;
-  subtitle?: string;
-}
+const PAGE_META: Record<string, { title: string; subtitle?: string }> = {
+  "/dashboard":           { title: "Dashboard" },
+  "/stocks":              { title: "Stocks" },
+  "/mutual-funds":        { title: "Mutual Funds", subtitle: "Index funds and active funds via Coin by Zerodha" },
+  "/gold-commodities":    { title: "Gold & Commodities" },
+  "/real-estate":         { title: "Real Estate" },
+  "/crypto":              { title: "Cryptocurrency", subtitle: "CoinSwitch and WazirX holdings" },
+  "/insurance":           { title: "Insurance" },
+  "/cash-banking":        { title: "Cash & Banking" },
+  "/liabilities":         { title: "Liabilities" },
+  "/fixed-income":        { title: "Fixed Income" },
+  "/government-schemes":  { title: "Government Schemes" },
+  "/settings":            { title: "Settings" },
+  "/subscription":        { title: "Manage Subscription" },
+  "/bank":                { title: "Bank Accounts", subtitle: "Savings and current account balances" },
+  "/fd-rd-ppf":           { title: "FD / RD / PPF", subtitle: "Fixed deposits, recurring deposits, and PPF accounts" },
+  "/foreign":             { title: "Foreign Holdings", subtitle: "US stocks via IndMoney and Vested" },
+  "/holdings":            { title: "Holdings", subtitle: "Indian equity positions" },
+  "/nps":                 { title: "NPS", subtitle: "National Pension System — SBI Pension Fund (CDSL)" },
+  "/others":              { title: "Others (LIC & Insurance)", subtitle: "Life insurance and other long-term investments" },
+  "/post-office":         { title: "Post Office", subtitle: "KVP, NSC, and other post office schemes" },
+};
 
-export function Header({ title, subtitle }: HeaderProps) {
+export function Header() {
   const router = useRouter();
+  const pathname = usePathname();
   const { open, setOpen } = useMobileNav();
+  const { title, subtitle } = PAGE_META[pathname] ?? { title: "" };
 
   const handleLock = async () => {
     await fetch("/api/auth/lock", { method: "POST" });
