@@ -74,6 +74,8 @@ tags:
     description: Updating an existing user's own details
   - name: Preferences
     description: The current user's country, locale and theme settings
+  - name: Navigation
+    description: The country-specific sidebar navigation items
   - name: Session
     description: Ending an existing session
   - name: Dashboard
@@ -88,6 +90,8 @@ x-tagGroups:
     tags: [Profile]
   - name: Preferences
     tags: [Preferences]
+  - name: Navigation
+    tags: [Navigation]
   - name: Session
     tags: [Session]
   - name: Dashboard
@@ -559,6 +563,47 @@ paths:
                 $ref: "#/components/schemas/Error"
               example: { error: "Unauthorized" }
 
+  /api/nav:
+    get:
+      summary: Sidebar navigation items for a country
+      operationId: getNav
+      tags: [Navigation]
+      security:
+        - SessionCookie: []
+      description: |
+        Returns the ordered sidebar items for the given country from the `nav_config`
+        table. Only India (`IN`) is configured today; any other `country` (including an
+        IP-detected one the user never chose) falls back to India's rows, so the sidebar
+        is never empty. Labels are keys (`labelKey` → the client `t.nav[...]`, translated
+        by language); `iconName` maps to the client `ICON_MAP`.
+
+        Like `/api/preferences`, does not require an unlocked vault — `middleware.ts`
+        lets `/api/nav` through on `userId` alone.
+      parameters:
+        - name: country
+          in: query
+          required: false
+          schema:
+            type: string
+            default: "IN"
+          description: ISO 3166-1 alpha-2 code. Defaults to `IN`.
+      responses:
+        "200":
+          description: Ordered nav items (ascending `sortOrder`).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NavItem"
+        "401":
+          description: No valid session.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example: { error: "Unauthorized" }
+
   /dashboard:
     get:
       summary: Load the dashboard page
@@ -642,6 +687,32 @@ components:
         userId. Missing or expired → 401 Unauthorized.
 
   schemas:
+    NavItem:
+      type: object
+      required: [id, country, href, labelKey, iconName, sortOrder]
+      description: One sidebar navigation item — a row of `nav_config`.
+      properties:
+        id:
+          type: string
+          description: uuid
+        country:
+          type: string
+          example: "IN"
+        href:
+          type: string
+          example: "/stocks"
+        labelKey:
+          type: string
+          description: Key into the client `t.nav.*` translations.
+          example: "stocks"
+        iconName:
+          type: string
+          description: Key into the client `ICON_MAP`.
+          example: "CandlestickChart"
+        sortOrder:
+          type: integer
+          example: 2
+
     Preferences:
       type: object
       required: [country, locale, theme]
