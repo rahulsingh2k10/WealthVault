@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/session'
 import { getUpgradePromptData, listAllPlanCards } from '@/lib/services/UpgradePromptService'
 import { buildManageView, listPaidPlansForChange } from '@/lib/services/SubscriptionService'
@@ -6,6 +7,9 @@ import { FreeTierUpgradePanel } from '@/components/subscription/FreeTierUpgradeP
 
 export default async function SubscriptionPage() {
   const session = await getSession()
+  // The (app) layout already guarantees this at runtime; this narrows the type
+  // for buildManageView(userId: string) — TS can't see across the layout boundary.
+  if (!session.userId) redirect('/unlock')
 
   const [view, prompt, planCards] = await Promise.all([
     buildManageView(session.userId),
