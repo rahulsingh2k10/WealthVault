@@ -140,8 +140,8 @@ session cookie.
 | `src/components/layout/PreferencesSync.tsx` | Calls `GET` once on mount (rendered in `layout.tsx`), applies the result to the locale context and `next-themes` |
 | `src/lib/savePreference.ts` | `savePreference(key, value)` — the shared fire-and-forget `PATCH` helper |
 | `src/context/LocaleContext.tsx` | `setLocale` / `setCountry` call `savePreference` after updating cookie + state |
-| `src/components/layout/ThemeTogglePill.tsx` | Sidebar theme pill — calls `savePreference('theme', …)` |
-| `src/components/settings/SettingsPanel.tsx` | The `/settings` page controls for all three preferences |
+| `src/components/layout/ThemeTogglePill.tsx` | Theme pill in `AppBar`, shown only on `/` and `/unlock` — calls `savePreference('theme', …)`. Only writes successfully from `/unlock`, where a session already exists; on `/` (fully signed out) the `PATCH` 401s and is silently swallowed. |
+| `src/components/settings/SettingsPanel.tsx` | The `/settings` page controls for all three preferences — the only place Country/Language/Theme can be changed once signed in |
 
 ---
 

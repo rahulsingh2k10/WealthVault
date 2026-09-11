@@ -91,15 +91,21 @@ await prisma.userPreference.upsert({
 })
 ```
 
-The `PATCH` is fired from four places in the frontend, all of them user actions:
+The `PATCH` is fired from these places in the frontend, all of them user actions:
 
 | Trigger | File |
 |---|---|
-| Country `<select>` on the Settings page | `src/components/settings/SettingsPanel.tsx` (via `setCountry`) |
-| Language `<select>` on the Settings page | `src/components/settings/SettingsPanel.tsx` (via `setLocale`) |
+| Country picker on the Settings page | `src/components/settings/SettingsPanel.tsx` (via `setCountry`) |
+| Language picker on the Settings page | `src/components/settings/SettingsPanel.tsx` (via `setLocale`) |
 | Dark/Light toggle on the Settings page | `src/components/settings/SettingsPanel.tsx` |
-| Country / Language pickers in the sidebar profile sheet | `src/components/layout/Sidebar.tsx` → `LocaleContext` `setCountry`/`setLocale` |
-| Dark/Light pill in the sidebar profile sheet | `src/components/layout/ThemeTogglePill.tsx` |
+| Theme pill in `AppBar`, shown only on `/` and `/unlock` | `src/components/layout/ThemeTogglePill.tsx` — only writes successfully from `/unlock` (a session already exists there); on `/` the write 401s and is swallowed |
+
+`/settings` is the only place Country and Language can be changed at all — the sidebar's
+own Country/Language pickers and its theme pill were removed; theme can also still be
+changed pre-unlock via the `AppBar` pill described above. On sign-out, the *applied*
+theme reverts to the OS setting (`next-themes` `setTheme("system")`), but this table's
+stored `theme` row is left untouched and is restored on the next sign-in — see
+`docs/superpowers/specs/2026-09-09-signout-theme-reset-design.md`.
 
 `setCountry` / `setLocale` (`src/context/LocaleContext.tsx`) and the theme toggles call
 the shared helper `savePreference(key, value)` (`src/lib/savePreference.ts`), a
