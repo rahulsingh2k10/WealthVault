@@ -44,7 +44,17 @@ export function Sidebar() {
   const [navItems, setNavItems]             = useState<NavItemDto[]>([]);
   const [navLoading, setNavLoading]         = useState(true);
   const [sheetOpen, setSheetOpen]           = useState(false);
+  // Set synchronously on click, before Next's navigation resolves, so the
+  // highlight moves immediately instead of waiting for the new route to
+  // finish loading. Cleared the moment any navigation actually commits
+  // (usePathname updates), whether that's this click, a different one, or
+  // back/forward — so it never goes stale.
+  const [pendingHref, setPendingHref]       = useState<string | null>(null);
   const sheetRef   = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setPendingHref(null);
+  }, [pathname]);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -134,11 +144,13 @@ export function Sidebar() {
                 </li>
               ))
             : resolvedNavItems.map(({ href, label, icon: Icon }) => {
-                const active = pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
+                const effectivePath = pendingHref ?? pathname;
+                const active = effectivePath === href || (href !== "/dashboard" && effectivePath.startsWith(href));
                 return (
                   <li key={href}>
                     <Link
                       href={href as any}
+                      onClick={() => setPendingHref(href)}
                       className={cn(
                         "group flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                         active
