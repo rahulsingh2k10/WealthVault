@@ -1,8 +1,8 @@
 import { spawnSync } from "child_process";
 import { stopDevServerIfOwned } from "./helpers/testServer";
 
-type Suite = "auth" | "unlock" | "dashboard" | "upgrade" | "preferences" | "subscription" | "database" | "playwright";
-const ALL_SUITES: Suite[] = ["auth", "unlock", "dashboard", "upgrade", "preferences", "subscription", "database", "playwright"];
+type Suite = "auth" | "unlock" | "dashboard" | "upgrade" | "preferences" | "nav" | "subscription" | "database" | "playwright";
+const ALL_SUITES: Suite[] = ["auth", "unlock", "dashboard", "upgrade", "preferences", "nav", "subscription", "database", "playwright"];
 
 function runJest(testPathPattern: string): number {
   const result = spawnSync(
@@ -34,6 +34,8 @@ function runSuite(suite: Suite): number {
       return runJest("api/upgrade-prompt");
     case "preferences":
       return runJest("api/preferences");
+    case "nav":
+      return runJest("api/nav");
     case "subscription":
       return runJest("api/subscription");
     case "database":

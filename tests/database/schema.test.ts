@@ -314,3 +314,33 @@ describeOrSkip("user_preference table", () => {
     ).toBe(true);
   });
 });
+
+describeOrSkip("nav_config table", () => {
+  test("physical column order matches the documented sequence", async () => {
+    const prisma = getTestPrisma();
+    const rows = await prisma.$queryRawUnsafe<{ column_name: string }[]>(
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_name = 'nav_config' ORDER BY ordinal_position`
+    );
+    expect(rows.map((r) => r.column_name)).toEqual([
+      "id",
+      "country",
+      "href",
+      "labelKey",
+      "iconName",
+      "sortOrder",
+    ]);
+  });
+
+  test("(country, href) is a unique constraint", async () => {
+    const prisma = getTestPrisma();
+    const rows = await prisma.$queryRawUnsafe<{ indexdef: string }[]>(
+      `SELECT indexdef FROM pg_indexes WHERE tablename = 'nav_config'`
+    );
+    expect(
+      rows.some(
+        (r) => /UNIQUE/i.test(r.indexdef) && /country/.test(r.indexdef) && /href/.test(r.indexdef)
+      )
+    ).toBe(true);
+  });
+});
