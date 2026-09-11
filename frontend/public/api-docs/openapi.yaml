@@ -597,12 +597,16 @@ paths:
                 items:
                   $ref: "#/components/schemas/NavItem"
         "401":
-          description: No valid session.
+          description: >-
+            No valid session. Unlike every other route on this spec, the body is an
+            empty array, not an `Error` object — the frontend renders it exactly like a
+            country with no rows, i.e. an empty sidebar.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Error"
-              example: { error: "Unauthorized" }
+                type: array
+                items: {}
+              example: []
 
   /dashboard:
     get:
