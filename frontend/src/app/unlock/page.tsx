@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useLocale } from "@/context/LocaleContext";
 import { savePreference } from "@/lib/savePreference";
+import { RipplePulseLoader } from "@/components/ui/ripple-pulse-loader";
 import type { Locale } from "@/i18n/translations";
 import {
   Lock, Eye, EyeOff, LogOut, Camera,
@@ -585,6 +586,26 @@ export default function UnlockPage() {
             </p>
           </div>
         </div>
+
+        {/* ── Vault-opening transition — scoped to this card, not the page ── */}
+        {loading && (
+          <div
+            className="absolute inset-0 z-20 flex items-center justify-center backdrop-blur-md"
+            style={{ background: "var(--ui-scrim-bg)" }}
+          >
+            <div className="rounded-2xl border border-[var(--ui-card-border)] bg-[var(--ui-modal-bg)] px-8 py-7 shadow-2xl">
+              <RipplePulseLoader
+                caption={
+                  loadingStep === "unlocking"
+                    ? "Verifying passphrase…"
+                    : loadingStep === "syncing"
+                    ? "Loading your settings…"
+                    : "Opening your vault…"
+                }
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── First-time passphrase save confirmation ──────────────────── */}

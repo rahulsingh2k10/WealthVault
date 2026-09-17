@@ -3,18 +3,28 @@
 Not a route of its own — this is the persistent left-hand navigation rendered around
 every authenticated page (`/dashboard`, `/stocks`, `/settings`, … — the full list is in
 `documents/database/nav-config.md`). Documented separately from those pages because it
-carries its own state machine (collapse, active-item highlight, the profile popover) and
-its own API call (`GET /api/nav`), independent of whatever page happens to be showing.
+carries its own state (nav list, hover/tap reveal, the signed-in user's identity) and its
+own API calls (`GET /api/nav`, `GET /api/auth/me`), independent of whatever page happens
+to be showing.
 
 ---
 
 ## 1. Overview
 
-The sidebar has three regions, top to bottom: a **collapse toggle** floating on its right
-border, the **nav list** (country-driven — see `documents/api/nav-api.md`), and a
-**profile row** that opens a small popover menu (Settings, Subscription, Lock screen,
-Log out). On screens narrower than the `lg` breakpoint it becomes an off-canvas drawer
-instead of a static column.
+The sidebar is a **floating overlay**, not a column that reserves layout space: it sits on
+top of the page content (`AppShell` renders it before `<main>`, both absolutely
+positioned) rather than pushing it aside. It has two stacked groups of **pills** — small
+pill-shaped buttons/links that sit mostly off-canvas at rest (only the icon peeks out past
+the left edge) and slide fully into view on hover or tap:
+
+- **Category pills** (top) — one per `nav_config` row for the user's country, in
+  `sortOrder` — see `documents/api/nav-api.md`.
+- **Account pills** (bottom, closest to the screen edge first) — **Log out**, then the
+  **identity pill** (avatar + name, no action), then **Settings**, then **Subscription**.
+
+There is no collapse toggle, no profile popover/menu, and no separate mobile drawer —
+every pill behaves the same way at every viewport width: icon-only at rest, expanded on
+hover (desktop) or first tap (touch).
 
 It mounts **once** per session, not once per page. See §3 for why that matters.
 
@@ -24,28 +34,32 @@ It mounts **once** per session, not once per page. See §3 for why that matters.
 
 | File | Role |
 |------|------|
-| `src/components/layout/Sidebar.tsx` | The whole component — nav list, collapse, profile popover, mobile drawer. `'use client'`. |
+| `src/components/layout/Sidebar.tsx` | The whole component — `Pill`/`PillSkeleton`, nav-item fetch, hover/tap-reveal state, sign-out. `'use client'`. |
 | `src/app/(app)/layout.tsx` | Renders `<AppShell>`, which renders `<Sidebar />`, once for the whole `(app)` route group — not per page. |
-| `src/components/layout/AppShell.tsx` | Page chrome: `Sidebar` + `Header` + scrollable `<main>` on the warm background. |
-| `src/components/layout/Header.tsx` | Top bar; its mobile hamburger button opens/closes the sidebar drawer via `MobileNavContext`. |
-| `src/context/MobileNavContext.tsx` | `{ open, setOpen }` — whether the off-canvas drawer is open. Read by `Sidebar`, written by `Header`'s hamburger and by `Sidebar` itself (backdrop click, route change). |
+| `src/components/layout/AppShell.tsx` | Page chrome: floating `Sidebar` overlay + `Header` + scrollable `<main>` on the warm background. |
+| `src/components/layout/Header.tsx` | Top bar (page title + Refresh/Lock buttons). No longer has any sidebar/mobile-nav toggle — the sidebar has no drawer to open. |
 | `src/context/LocaleContext.tsx` | Source of `country`, which the nav-fetch effect depends on. |
 | `src/app/api/nav/route.ts` | `GET /api/nav?country=` — documented in `documents/api/nav-api.md`. |
+| `src/app/api/auth/me/route.ts` | `GET /api/auth/me` — feeds the identity pill's name/avatar/plan. |
 | `src/i18n/navConfig.ts` | `ICON_MAP` (icon name → component) and the `NavItemDto` type. |
-| `src/i18n/translations.ts` | `t.nav.*` (item labels, by language) and `t.sidebar.*` (profile-menu labels). |
-| `src/app/api/auth/me/route.ts` | `GET /api/auth/me` — feeds the profile row's name/avatar/plan. |
+| `src/i18n/translations.ts` | `t.nav.*` (item labels, by language) and `t.sidebar.subscription`/`t.sidebar.settings`/`t.sidebar.logout` (the three labelled account pills). |
+
+`src/context/MobileNavContext.tsx` was deleted along with the off-canvas drawer it drove —
+there is no mobile-specific nav state left anywhere in the app. `t.sidebar.lockScreen` and
+`t.sidebar.language`/`t.sidebar.country` remain in `translations.ts` but are no longer read
+by `Sidebar.tsx` — the sidebar has no "Lock screen" item and never had
+Country/Language pickers of its own; see §9.
 
 ---
 
 ## 3. Why it's documented separately from the pages
 
-Before the `(app)` route-group layout existed, every page rendered its own `<AppShell>`,
-so the sidebar **unmounted and remounted on every navigation** — every click re-fetched
-`/api/nav` and `/api/auth/me` from empty state, showing a skeleton and "Loading…" each
-time. That's fixed: `AppShell` now lives in `src/app/(app)/layout.tsx`, which the App
-Router keeps mounted across navigation between its child routes — only the page content
-inside `<main>` swaps. `Sidebar`'s `useState`/`useEffect` calls run once per session, not
-once per click. (Full history: `docs/superpowers/specs/2026-09-11-persistent-app-shell-layout-design.md`.)
+`AppShell` lives in `src/app/(app)/layout.tsx`, which the App Router keeps mounted across
+navigation between its child routes — only the page content inside `<main>` swaps. This
+means `Sidebar`'s `useState`/`useEffect` calls run once per session, not once per click:
+the nav list and the signed-in user's identity are fetched once and simply persist as the
+user moves between pages. (Design history:
+`docs/superpowers/specs/2026-09-11-persistent-app-shell-layout-design.md`.)
 
 ---
 
@@ -54,22 +68,18 @@ once per click. (Full history: `docs/superpowers/specs/2026-09-11-persistent-app
 ```
 (app)/layout.tsx                                   [server: session guard]
 └── AppShell
-    ├── Sidebar                                     ['use client', mounts once]
-    │   ├── mobile backdrop  (div, lg:hidden)
-    │   └── <aside>  (w-60 expanded / w-20 collapsed)
-    │       ├── collapse toggle button (ChevronLeft, floats on the border)
-    │       ├── <nav>
-    │       │   └── nav item list  — OR 5 skeleton rows while navLoading
-    │       └── profile row + popover
-    │           ├── popover (sheetOpen)
-    │           │    ├── SheetItem  Settings      → router.push('/settings')
-    │           │    ├── SheetItem  Subscription  → router.push('/subscription')
-    │           │    ├── SheetItem  Lock screen   → handleLockScreen
-    │           │    └── SheetItem  Log out       → handleSignOut
-    │           └── profile button (avatar, name/plan or just plan, chevron)
-    ├── Header                                      [mobile hamburger toggles MobileNavContext]
+    ├── Sidebar                                     ['use client', mounts once, floats over content]
+    │   └── fixed overlay column (w-[220px], pointer-events-none container)
+    │       ├── category pills   (top, pointer-events-auto)  — OR 5 skeleton pills while navLoading
+    │       ├── flexible gap     (grows to fill space, floors at 32px)
+    │       └── account pills    (bottom → top: Log out, identity, Settings, Subscription)
+    ├── Header                                      [page title + Refresh/Lock — no nav toggle]
     └── <main>{page content}</main>
 ```
+
+Each pill (`Pill` in `Sidebar.tsx`) is one self-contained element — a `<Link>` when it
+navigates, a `<button>` for sign-out/identity — not a shared list-item template with a
+separate popover; there is no menu that opens on top of a pill.
 
 ---
 
@@ -79,11 +89,12 @@ once per click. (Full history: `docs/superpowers/specs/2026-09-11-persistent-app
 |---|---|---|
 | `user` | `UserInfo \| null` | From `GET /api/auth/me`, fetched once on mount |
 | `navItems` | `NavItemDto[]` | From `GET /api/nav?country=`, refetched whenever `country` changes |
-| `navLoading` | `boolean` | Drives the 5-row skeleton while the nav fetch is in flight |
-| `sheetOpen` | `boolean` | Profile popover open/closed |
-| `pendingHref` | `string \| null` | The just-clicked nav item's `href`, used to highlight it **immediately** — see §7 |
-| `collapsed` | `boolean` | Icons-only mode. Local, **not persisted** — always starts expanded on load |
-| `mobileOpen` / `setMobileOpen` | from `useMobileNav()` | Off-canvas drawer open/closed (shared with `Header`) |
+| `navLoading` | `boolean` | Drives the 5-pill skeleton while the nav fetch is in flight |
+| `pendingHref` | `string \| null` | The just-clicked pill's `href`, used to highlight it **immediately** — see §6.2 |
+| `revealedId` | `string \| null` | Which pill is currently tap-revealed (touch only) — see §6.3 |
+
+There is no `collapsed`, `sheetOpen`, or `mobileOpen` state — those belonged to the
+previous (collapsible column + drawer) design and no longer exist.
 
 ---
 
@@ -100,85 +111,69 @@ Sidebar mounts (once, in the (app) layout)
         (re-runs whenever `country` changes, e.g. after a /settings change)
 ```
 
-### 6.2 Click a nav item
+### 6.2 Click a category or Settings/Subscription pill
 
 ```
-User clicks a nav item's <Link>
+User clicks a pill's <Link>
   │
   ▼
-onClick: setPendingHref(href)         ← synchronous, before Next's navigation resolves
+onClick: setPendingHref(href), setRevealedId(null)   ← synchronous, before Next's navigation resolves
   │
   ▼
-Item highlights immediately (active = pendingHref ?? pathname)
+Pill's collapsed-sliver tint brightens immediately (active = pendingHref ?? pathname)
   │
   ▼ (independently) Next.js navigates; usePathname() updates once it commits
   │
   ▼
-useEffect([pathname]): setPendingHref(null)   ← clears once any navigation commits,
-                                                 whether this click, a different one
-                                                 clicked in the meantime, or back/forward
+useEffect([pathname]): setPendingHref(null), setRevealedId(null)   ← clears once any
+                                                 navigation commits
 ```
 
-Without this, the highlight would only move once the new page finished loading — the
-same instant the content itself changed — rather than responding to the click. Second
-click before the first resolves: `pendingHref` just gets overwritten; Next's router
-already aborts a superseded in-flight navigation on its own, no code needed for that
-part.
+`active` only tints the collapsed sliver a touch brighter — it does **not** keep a pill
+expanded. Every pill, current page included, returns to icon-only the instant it's no
+longer hovered or tap-revealed.
 
-### 6.3 Collapse / expand
+### 6.3 Hover / tap reveal
 
 ```
-User clicks the ChevronLeft toggle (floats on the sidebar's right border)
+Desktop (hover: capable pointer):
+  CSS :hover / :focus-visible slides the pill fully into view; a normal click navigates
+  immediately — no extra tap needed.
+
+Touch (hover: none):
+  First tap on a collapsed pill → e.preventDefault(), setRevealedId(id)   (reveals only)
+  Second tap on the now-revealed pill → navigates / signs out / (identity: no-op)
+  Tapping anywhere else while a pill is revealed → setRevealedId(null)    (pointerdown
+    listener outside the revealed pill's data-pill-id)
+```
+
+The **identity pill** (avatar + name) has no `href` and no navigation target — tapping it
+only ever toggles its own reveal; it exists to show who's signed in, not as a menu trigger.
+
+### 6.4 Sign out
+
+```
+User activates the "Log out" pill (click, or second tap on touch)
   │
   ▼
-setCollapsed(v => !v)
-  │
-  ├── aside width: w-60 ↔ w-20 (animated)
-  ├── nav items: label + active-chevron hidden; icon centered; hover shows a tooltip
-  ├── loading skeleton: text bar hidden, icon-block only
-  └── profile row: switches to a vertical stack — avatar + plan name only,
-      full name and the popover chevron hidden
-```
-
-Applies at every breakpoint (desktop and inside the open mobile drawer alike) —
-independent of `mobileOpen`, which only controls whether the drawer is on/off screen.
-Not persisted: a reload always starts expanded.
-
-### 6.4 Profile popover
-
-```
-User clicks the profile row → setSheetOpen(v => !v)
+setTheme('system')          ← drops the applied theme; the stored DB preference is
+                               untouched and restored by PreferencesSync next sign-in
   │
   ▼
-Popover opens (always full-width, 240px, even when the sidebar itself is collapsed —
-  anchored to the narrow column, extending over the content area)
+POST /api/auth/signout
   │
-  ├── Settings      → close popover, router.push('/settings')      — see 03 Settings.md
-  ├── Subscription  → close popover, router.push('/subscription')
-  ├── Lock screen   → close popover, router.push('/unlock')  (no /api/auth/lock call here —
-  │                    that's Header's separate Lock button; this one just navigates)
-  └── Log out       → close popover, setTheme('system'), POST /api/auth/signout,
-                       router.push('/'), router.refresh()
+  ▼
+router.push('/'), router.refresh()
 ```
 
-Closes on outside click (`mousedown` listener while `sheetOpen`) and on any route change.
-The Settings and Subscription entry points, and the sign-out theme reset, are the same
-mechanisms documented in `documents/screens/03 Settings.md` and
-`docs/superpowers/specs/2026-09-09-signout-theme-reset-design.md` — not repeated here.
+Same mechanism as `docs/superpowers/specs/2026-09-09-signout-theme-reset-design.md` and
+`documents/api/signout-api.md` — not repeated here.
 
-### 6.5 Mobile drawer
+### 6.5 No mobile drawer
 
-```
-< lg breakpoint:
-  aside is position:fixed, off-screen (-translate-x-full) by default
-  Header's hamburger → setMobileOpen(true) → aside slides in (translate-x-0),
-    backdrop appears (bg-black/40, lg:hidden)
-  Backdrop click, or any route change (useEffect([pathname])) → setMobileOpen(false)
-```
-
-`collapsed` (icons-only) and `mobileOpen` (drawer on/off screen) are independent booleans
-— collapsing the drawer while it's open doesn't close it, and closing it doesn't reset
-collapse.
+The sidebar renders identically at every viewport width — the same fixed-position,
+icon-peeking-then-reveal pills, no breakpoint-specific layout, no backdrop, no open/close
+state. There is nothing analogous to the old off-canvas drawer to document.
 
 ---
 
@@ -191,9 +186,9 @@ flowchart TD
     LC["LocaleContext.country changes\n(e.g. via /settings)"] -->|"GET /api/nav?country=X"| N
 
     N --> R["resolvedNavItems:\nhref, t.nav[labelKey], ICON_MAP[iconName]"]
-    R --> UI[Rendered nav list]
+    R --> UI[Rendered category pills]
 
-    click["User clicks a nav Link"] --> PH["setPendingHref(href)\n(highlight moves now)"]
+    click["User clicks/taps a pill"] --> PH["setPendingHref(href)\n(active tint moves now)"]
     click --> NAV["Next.js navigation"]
     NAV --> PATH["usePathname() updates on commit"]
     PATH --> CLR["pendingHref cleared"]
@@ -203,31 +198,27 @@ flowchart TD
 
 ## 8. Theme pattern
 
-Same as the rest of the app — the shared `--ui-*` / dark-class tokens, but note the
-sidebar itself is styled with plain Tailwind `slate`/`indigo` utilities and `dark:`
-variants (`bg-white dark:bg-slate-950`, `text-indigo-700 dark:text-indigo-400`, …) rather
-than the `--ui-*` CSS custom properties used on `/settings`, `/subscription`, `/`, and
-`/unlock`. This predates the `--ui-*` token system and hasn't been migrated.
+Mixed: the **brand**-toned category pills use the shared `--ui-*` design tokens
+(`bg-gradient-to-br from-[var(--ui-accent)] to-[var(--ui-accent-warm)]`,
+`text-[var(--ui-on-accent)]`), matching `/settings`, `/subscription`, `/`, and `/unlock`.
+The **neutral**-toned Settings/Subscription pills and the **danger**-toned Log out pill
+instead use plain Tailwind `slate`/`red` utilities with `dark:` variants, not the `--ui-*`
+tokens. Both conventions coexist in the same component today.
 
 ---
 
 ## 9. Known issues / notes
 
-- **The sidebar's "Lock screen" menu item doesn't actually lock the vault.** It only
-  navigates to `/unlock` (`router.push`) — unlike `Header`'s separate **Lock** button,
-  which first `POST`s `/api/auth/lock` to clear `session.encryptionKey`, then navigates.
-  Since this popover item skips that call, `session.encryptionKey` stays valid: the user
-  sees the passphrase screen, but any authenticated URL they visit directly (or navigate
-  back to) still works without re-entering it — middleware only checks whether
-  `encryptionKey` is present, not whether `/unlock` was shown. Pre-existing behavior, not
-  introduced by this doc's changes.
+- **No "Lock screen" entry point in the sidebar.** The previous design's profile popover
+  had a "Lock screen" menu item; the current pill layout has no equivalent — locking the
+  vault mid-session is only reachable via `Header`'s **Lock** button
+  (`POST /api/auth/lock`, then `router.push('/unlock')`).
+- **`t.sidebar.lockScreen`, `t.sidebar.language`, and `t.sidebar.country`** remain defined
+  in `src/i18n/translations.ts` for every locale but are not read by `Sidebar.tsx` — dead
+  translation keys left over from an earlier design, not a bug in the sidebar itself.
 - **Only India is configured.** `nav_config` has rows for `country = 'IN'` only; every
   other country falls back to India's list (see `documents/api/nav-api.md`). The
   `/settings` Country picker only offers India today, so this is currently unreachable
   in practice, not a bug.
-- **Popover anchor at narrow width** is an accepted quirk, not a bug — see
-  `docs/superpowers/specs/2026-09-11-sidebar-collapse-design.md` §6.
-- **Collapse state is not persisted** — a deliberate choice (see the same spec), not an
-  oversight.
-- **Styling predates `--ui-*` tokens** (§8) — flagged for awareness, not scheduled for
-  change here.
+- **Hover/tap reveal state is not persisted** — a pill always starts icon-only on load or
+  after any navigation; this is the intended interaction, not an oversight.

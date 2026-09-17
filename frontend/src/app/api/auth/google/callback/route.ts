@@ -117,6 +117,6 @@ export async function GET(request: NextRequest) {
   } catch (outerErr) {
     // Safety net — should never reach here, but prevents Next.js crash
     console.error("[oauth] unhandled top-level error:", outerErr);
-    return NextResponse.redirect(new URL("http://localhost:3000/?error=server_error"));
+    return NextResponse.redirect(new URL("/?error=server_error", appUrl));
   }
 }

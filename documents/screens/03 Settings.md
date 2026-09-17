@@ -1,9 +1,9 @@
 # Screen: Settings (`/settings`)
 
-The screen reached from the sidebar **profile button → Settings**. A single elevated
-panel with three controls — **Country**, **Language**, **Theme** — that persist per
-user through `/api/preferences` and follow the user across devices. It holds no account
-data and no monetary values; its only side effects are preference writes.
+The screen reached from the sidebar's **Settings** pill. A single elevated panel with
+three controls — **Country**, **Language**, **Theme** — that persist per user through
+`/api/preferences` and follow the user across devices. It holds no account data and no
+monetary values; its only side effects are preference writes.
 
 ---
 
@@ -20,25 +20,24 @@ is written two ways: immediately to a cookie (per-device, read on next load by
 
 ---
 
-## 2. Entry Point — the profile menu
+## 2. Entry Point — the sidebar's Settings pill
 
-There is no nav-rail link to `/settings`. It is reached only through the sidebar's
-profile menu:
+There is no separate profile menu. The sidebar has a dedicated **Settings** pill in its
+bottom (account) group — a direct link, not a menu item:
 
 ```
-Sidebar (bottom)
-└── Profile button  — avatar (or initials) + user name + plan label + chevron
-      click → toggles the popover menu (state: sheetOpen)
-        └── Popover menu (SheetItem list)
-              ├── Settings       → router.push('/settings')   ← this screen
-              ├── Subscription   → router.push('/subscription')
-              ├── Lock Screen    → router.push('/unlock')  (POST /api/auth/lock first)
-              └── Log out        → POST /api/auth/signout, setTheme('system'), → '/'
+Sidebar (bottom group, screen edge upward)
+└── Log out pill
+└── Identity pill      — avatar + name, tap/hover reveals only, no menu, no navigation
+└── Settings pill      → <Link href="/settings">                       ← this screen
+└── Subscription pill  → <Link href="/subscription">
 ```
 
-The menu closes on outside click, on route change, or when any item is chosen. It used
-to also carry a dark/light toggle and Language/Country pickers; those were removed —
-theme/locale/country are now changed **only** here on `/settings`.
+Each pill is independent — there is no popover, no "Lock screen" entry point in the
+sidebar at all (locking mid-session is only reachable via `Header`'s **Lock** button; see
+`documents/screens/04 Sidebar Navigation.md` §9). Theme/locale/country are changed
+**only** here on `/settings` — see `documents/database/user-preference.md` for the
+history of what else used to change them.
 
 ---
 
@@ -46,17 +45,19 @@ theme/locale/country are now changed **only** here on `/settings`.
 
 | File | Role |
 |------|------|
-| `src/app/settings/page.tsx` | The route. Server component: session guard, then `<AppShell title="Settings"><SettingsPanel /></AppShell>`. |
+| `src/app/(app)/settings/page.tsx` | The route. Just `return <SettingsPanel />` — no session guard or `AppShell` wrap of its own; both live in the shared `(app)` layout (see **Access & Guarding**). |
+| `src/app/(app)/settings/loading.tsx` | Suspense fallback — a skeleton mirroring the three `Row` cards, shown while the page's server data resolves. |
+| `src/app/(app)/layout.tsx` | Shared layout for every `(app)` route: the `encryptionKey`/`userId` guard and the `AppShell` wrap, not written per-page. |
 | `src/components/settings/SettingsPanel.tsx` | The whole screen body — the elevated panel, the three `Row` cards, all control wiring. `'use client'`. |
 | `src/components/ui/Select.tsx` | The Radix-based dropdown used for Country and Language. Styled with the app's `--ui-*` tokens. |
 | `src/components/layout/AppShell.tsx` | Page chrome: `Sidebar` + `Header` + scrollable `<main>` on the warm background. |
 | `src/components/layout/Header.tsx` | Top bar showing the title `"Settings"` plus the shared **Refresh** and **Lock** buttons. |
-| `src/components/layout/Sidebar.tsx` | The nav rail; its profile button + popover menu is the only way in. |
+| `src/components/layout/Sidebar.tsx` | The nav rail; its **Settings** pill is the only way in — no popover, no menu. See `documents/screens/04 Sidebar Navigation.md`. |
 | `src/context/LocaleContext.tsx` | Holds `locale` + `country`, the `t` translation bundle, and `setLocale` / `setCountry`. Cookie-backed; IP-detects country on first visit. |
 | `src/components/layout/PreferencesSync.tsx` | Rendered in `layout.tsx`. On mount, `GET /api/preferences` and pushes the result into `LocaleContext` + `next-themes`. |
 | `src/lib/savePreference.ts` | `savePreference(key, value)` — fire-and-forget `PATCH /api/preferences`. |
 | `src/app/api/preferences/route.ts` | `GET` (read merged prefs) + `PATCH` (upsert one pref). Documented in `documents/api/preferences-api.md` and `openapi.yaml`. |
-| `src/i18n/translations.ts` | `LOCALES` (11 languages) + the `t` strings, including `t.sidebar.country` / `t.sidebar.language`. |
+| `src/i18n/translations.ts` | `LOCALES` (11 languages) + the `t` strings. `t.sidebar.country`/`t.sidebar.language`/`t.sidebar.lockScreen` remain defined per locale but are dead — not read by `Sidebar.tsx` or this screen. |
 | `src/i18n/countries.ts` | `COUNTRIES` + `countryFlag()`. Only **India (`IN`)** is uncommented today; every other entry is present but commented out until instrumented. |
 | `src/app/layout.tsx` | Wraps the app in `next-themes`' `ThemeProvider` (`attribute="class"`, `defaultTheme="system"`, `enableSystem`). |
 | `prisma/schema.prisma` | `UserPreference` model → `user_preference` table. See `documents/database/user-preference.md`. |
@@ -72,10 +73,10 @@ Two checks, both must pass:
 | Layer | Check | On failure |
 |---|---|---|
 | `src/middleware.ts` | Protected route → needs `session.userId` **and** `session.encryptionKey` | no `userId` → `307 → /` · `userId` but locked → `307 → /unlock` |
-| `src/app/settings/page.tsx` | `if (!session.encryptionKey \|\| !session.userId) redirect('/unlock')` | `307 → /unlock` |
+| `src/app/(app)/layout.tsx` | `if (!session.encryptionKey \|\| !session.userId) redirect('/unlock')` — shared by every `(app)` route, not written per-page | `307 → /unlock` |
 
-The page-level check is a defensive repeat — in normal operation the middleware has
-already redirected before the page component runs.
+The layout-level check is a defensive repeat — in normal operation the middleware has
+already redirected before the layout (and therefore this page) ever runs.
 
 Note the asymmetry: **`/settings` needs an unlocked vault**, but the API it drives
 (`/api/preferences`) only needs `userId` — the middleware whitelists `/api/preferences`
@@ -86,26 +87,27 @@ so `PreferencesSync` can run on `/unlock` too.
 ## 5. Component Hierarchy
 
 ```
-SettingsPage (src/app/settings/page.tsx)          [server]
-└── AppShell  title="Settings"
+(app)/layout.tsx                                  [server: session guard]
+└── AppShell
     ├── Sidebar
     ├── Header  ("Settings"  ·  Refresh  ·  Lock)
     └── <main>
-        └── SettingsPanel                          ['use client']
-            └── elevated panel  (--ui-modal-bg, --ui-modal-shadow, rounded-3xl,
-                                  mx-auto, max-w 730 / lg 860 / xl 1000)
-                └── column, gap-3, p-6 sm:p-8
-                    ├── Row  "Country"   hint="Sets your currency and number formatting"
-                    │    └── <Select value={country} onValueChange={setCountry}>
-                    │         SelectTrigger (w-full sm:w-56) · SelectValue placeholder
-                    │         SelectContent → SelectItem per COUNTRIES entry (flag + name)
-                    ├── Row  "Language"  hint="Language used across the app"
-                    │    └── <Select value={locale} onValueChange={v => setLocale(v as Locale)}>
-                    │         SelectContent → SelectItem per LOCALES entry (native name)
-                    └── Row  "Theme"     hint="When you sign out, the app follows your device"
-                         └── segmented  [ Dark | Light ]  — two <button>s
-                              active = mode === "dark" ? isDark : !isDark
-                              onClick → chooseTheme(mode)
+        └── SettingsPage (src/app/(app)/settings/page.tsx)   [server, no logic of its own]
+            └── SettingsPanel                      ['use client']
+                └── elevated panel  (--ui-modal-bg, --ui-modal-shadow, rounded-3xl,
+                                      mx-auto, max-w 730 / lg 860 / xl 1000)
+                    └── column, gap-3, p-6 sm:p-8
+                        ├── Row  "Country"   hint="Sets your currency and number formatting"
+                        │    └── <Select value={country} onValueChange={setCountry}>
+                        │         SelectTrigger (w-full sm:w-56) · SelectValue placeholder
+                        │         SelectContent → SelectItem per COUNTRIES entry (flag + name)
+                        ├── Row  "Language"  hint="Language used across the app"
+                        │    └── <Select value={locale} onValueChange={v => setLocale(v as Locale)}>
+                        │         SelectContent → SelectItem per LOCALES entry (native name)
+                        └── Row  "Theme"     hint="When you sign out, the app follows your device"
+                             └── segmented  [ Dark | Light ]  — two <button>s
+                                  active = mode === "dark" ? isDark : !isDark
+                                  onClick → chooseTheme(mode)
 ```
 
 `Row` is a local helper in `SettingsPanel.tsx`: a `--ui-subtle-bg` card that is
@@ -137,7 +139,7 @@ SettingsPage (src/app/settings/page.tsx)          [server]
 Navigate to /settings
   │  middleware: userId + encryptionKey present? ── no ──► 307 /unlock
   ▼
-SettingsPage (server) re-checks → renders AppShell + SettingsPanel
+(app)/layout.tsx re-checks → renders AppShell around SettingsPage → SettingsPanel
   │
   ▼
 SettingsPanel mounts — reads country/locale from LocaleContext, theme from next-themes
@@ -164,9 +166,10 @@ onValueChange(code) → LocaleContext.setCountry(code)
                                                    → user_preference upsert on (userId,"country")
 ```
 
-Currency / number formatting elsewhere in the app keys off `country`. The nav rail also
-re-fetches `/api/nav?country=<code>` on change (that route is currently broken — see
-**Known issues** — so the effect is not visible today). Unlike the old sidebar country
+Currency / number formatting elsewhere in the app keys off `country`. The sidebar also
+re-fetches `/api/nav?country=<code>` on change — see `documents/api/nav-api.md`. Since
+only India has `nav_config` rows today, the visible nav list doesn't change (any other
+country falls back to India's rows), even though the fetch itself succeeds. Unlike the old sidebar country
 picker, changing it here does **not** navigate anywhere.
 
 ### 7.3 Change Language
@@ -249,19 +252,15 @@ treatment as the Subscription "Manage" screen. Row cards: `--ui-subtle-bg` +
 |--------|-------|------|--------|
 | GET | `/api/preferences` | On mount, via `PreferencesSync` (rendered app-wide) | Working |
 | PATCH | `/api/preferences` | On each Country / Language / Theme change | Working |
-| GET | `/api/auth/me` | Sidebar — to render the profile button's name/avatar/plan | Working |
-| GET | `/api/nav?country=<code>` | Sidebar — re-fetched when `country` changes | **Broken** — see Known issues |
-| POST | `/api/auth/lock` | Profile menu → Lock Screen | Working |
-| POST | `/api/auth/signout` | Profile menu → Log out | Working |
+| GET | `/api/auth/me` | Sidebar — to render the identity pill's name/avatar/plan | Working |
+| GET | `/api/nav?country=<code>` | Sidebar — re-fetched when `country` changes | Working — see `documents/api/nav-api.md` |
+| POST | `/api/auth/lock` | Header's **Lock** button (not part of this screen's own controls) | Working |
+| POST | `/api/auth/signout` | Sidebar's **Log out** pill (not part of this screen's own controls) | Working |
 
 ---
 
 ## 11. Known issues
 
-- **`GET /api/nav` is 500-ing** (`prisma.navConfig` — model deleted in `f589006`; no
-  `nav_config` table). The sidebar nav is empty for all users. Changing Country here
-  triggers a re-fetch that also fails. Tracked separately; not a `/settings` bug.
-  See `documents/api/` / project memory `api-nav-broken-deferred`.
 - **`COUNTRIES` has only `IN` active.** Every other country is commented out in
   `src/i18n/countries.ts`, so the Country dropdown currently offers a single choice.
   Uncomment entries as each country is instrumented.

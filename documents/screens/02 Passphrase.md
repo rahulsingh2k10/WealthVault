@@ -41,7 +41,7 @@ Its job is to accept a passphrase, POST it to `/api/auth/unlock`, and — if val
 Root Layout
 └── AppBar
     └── UnlockPage (src/app/unlock/page.tsx)   ['use client']
-        ├── Ambient orb divs (aria-hidden) — <WarmBackground>-style, inline in this page
+        ├── Ambient orb divs — <WarmBackground>-style, inline in this page (no aria-hidden attribute)
         ├── Main two-panel card
         │   ├── Gradient accent strip (top)
         │   ├── LEFT PANEL
@@ -52,17 +52,19 @@ Root Layout
         │   │   ├── Divider
         │   │   ├── INFO_POINTS list (4× icon + label + text)
         │   │   └── Sign Out button
-        │   └── RIGHT PANEL
-        │       ├── Lock icon + heading
-        │       ├── <form onSubmit={handleSubmit}>
-        │       │   ├── Password input (show/hide toggle)
-        │       │   ├── Validation checklist (5 rules, live)
-        │       │   ├── Char counter
-        │       │   ├── Error message (conditional)
-        │       │   ├── "Forgot passphrase?" link (conditional on "Invalid passphrase" error)
-        │       │   ├── Reset confirmation panel (conditional on showReset)
-        │       │   └── "Unlock Vault" submit button — label changes with loadingStep
-        │       └── Footer hint ("First time here?")
+        │   ├── RIGHT PANEL
+        │   │   ├── Lock icon + heading
+        │   │   ├── <form onSubmit={handleSubmit}>
+        │   │   │   ├── Password input (show/hide toggle)
+        │   │   │   ├── Validation checklist (5 rules, live)
+        │   │   │   ├── Char counter
+        │   │   │   ├── Error message (conditional)
+        │   │   │   ├── "Forgot passphrase?" link (conditional on "Invalid passphrase" error)
+        │   │   │   ├── Reset confirmation panel (conditional on showReset)
+        │   │   │   └── "Unlock Vault" submit button — label changes with loadingStep
+        │   │   └── Footer hint ("First time here?")
+        │   └── Vault-opening overlay (absolute, conditional on `loading`) — see **Vault-opening
+        │       overlay** below
         └── First-time passphrase modal (fixed overlay, conditional on showSaveAlert)
             ├── Gradient accent strip
             ├── ShieldCheck icon
@@ -70,6 +72,17 @@ Root Layout
             ├── Passphrase display box + Copy button
             └── "I've saved it — Open Vault" button
 ```
+
+### Vault-opening overlay
+
+While `loading` is true (i.e. for the whole span from clicking "Unlock Vault" through
+either an error or the redirect to `/dashboard`), an overlay covers the two-panel card —
+**scoped to the card itself, not the full page** — a blurred scrim
+(`background: var(--ui-scrim-bg)`, `backdrop-blur-md`) with a small rounded box on top
+(`bg-[var(--ui-modal-bg)]`, bordered) containing a `RipplePulseLoader`
+(`src/components/ui/ripple-pulse-loader.tsx`) and a caption that tracks `loadingStep`
+(`"Verifying passphrase…"` → `"Loading your settings…"` → `"Opening your vault…"`) — the
+same three strings shown on the submit button itself while it's disabled.
 
 ---
 
@@ -102,7 +115,7 @@ mount
   ▼
 GET /api/auth/me
   ├── { user } → setUser(user)
-  └── { user: null } (no user) → POST /api/auth/signout → window.location.href = "/"
+  └── { user: null } (no user) → setTheme('system') → POST /api/auth/signout → window.location.href = "/"
 ```
 
 If `/api/auth/me` returns no user (stale session after a DB wipe or account deletion), the page self-signs-out and redirects to `/`. This prevents a logged-in-but-ghost-user state.
@@ -227,13 +240,18 @@ POST /api/auth/reset-vault
 User clicks "Sign out"
   │
   ▼
+setTheme('system')   ← drops the applied theme; the stored DB preference is untouched
+  │                     and restored by PreferencesSync on next sign-in
+  ▼
 POST /api/auth/signout   ← session.destroy(), clearing userId + encryptionKey + everything else
   │
   ▼
 window.location.href = "/"   ← full page reload to clear Next.js client cache
 ```
 
-`router.push()` is intentionally not used here because it can race with session clearing. `window.location.href` guarantees a full browser navigation and state reset.
+`router.push()` is intentionally not used here because it can race with session clearing. `window.location.href` guarantees a full browser navigation and state reset. Same
+`setTheme('system')` pattern as the sidebar's Log out pill — see
+`docs/superpowers/specs/2026-09-09-signout-theme-reset-design.md`.
 
 ---
 

@@ -598,15 +598,17 @@ paths:
                   $ref: "#/components/schemas/NavItem"
         "401":
           description: >-
-            No valid session. Unlike every other route on this spec, the body is an
-            empty array, not an `Error` object — the frontend renders it exactly like a
-            country with no rows, i.e. an empty sidebar.
+            No session at all — returned by `middleware.ts` before this route runs,
+            same `Error` shape every other non-whitelisted route returns. The route's
+            own handler also contains a `session.userId` check returning an empty array
+            with this status, but that branch is unreachable for a real request since
+            `/api/nav` isn't on middleware's public allowlist — it only fires if the
+            handler is invoked directly, bypassing middleware.
           content:
             application/json:
               schema:
-                type: array
-                items: {}
-              example: []
+                $ref: "#/components/schemas/Error"
+              example: { error: "Unauthorized" }
 
   /dashboard:
     get:
@@ -620,21 +622,23 @@ paths:
         the same session cookie as the rest of the app, enforced by
         `frontend/src/middleware.ts` before this route's own handler ever runs.
 
-        The page component itself repeats the `encryptionKey` check
-        (`if (!session.encryptionKey) redirect('/unlock')`), but in normal operation
-        the middleware has already redirected away before that line can execute — it's
-        a defensive second check, not the primary gate.
+        The shared layout every route under the `(app)` route group renders through
+        (`src/app/(app)/layout.tsx`) repeats the `encryptionKey` check
+        (`if (!session.encryptionKey || !session.userId) redirect('/unlock')`), but in
+        normal operation the middleware has already redirected away before that line
+        can execute — it's a defensive second check, not the primary gate.
 
-        Currently renders the app shell (sidebar + header) with an intentionally blank
-        content area — the portfolio-summary data wiring this page used to call
-        (`PortfolioService`/`AssetRepository`) depended on Prisma models that don't
-        exist in the current schema and has been removed; no request to this route can
-        throw as a result of that missing wiring anymore.
+        Renders the app shell (sidebar + header) around one conditional element: an
+        upgrade-plan prompt modal, shown only to a signed-in user whose effective plan
+        tier is `FREE` (`getUpgradePromptData()` /
+        `src/lib/services/UpgradePromptService.ts`). A user on any paid tier sees no
+        modal and no other page content — there is no portfolio-summary or widget
+        content on this route today.
       responses:
         "200":
           description: >-
-            Session has both `userId` and `encryptionKey` — renders the dashboard shell
-            with blank content.
+            Session has both `userId` and `encryptionKey` — renders the dashboard shell,
+            plus an upgrade-plan prompt modal if the user's effective plan is `FREE`.
           content:
             text/html:
               schema: { type: string }

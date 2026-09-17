@@ -39,7 +39,11 @@ export function AppBar() {
 
       {/* ── Right: Theme toggle + Profile badge ── */}
       <div className="flex items-center gap-4">
-        {showThemeToggle && <ThemeTogglePill />}
+        {showThemeToggle && (
+          <div className="hidden md:flex">
+            <ThemeTogglePill />
+          </div>
+        )}
         <ProfileBadge />
       </div>
     </header>

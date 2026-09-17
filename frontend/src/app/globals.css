@@ -40,6 +40,7 @@
     --ui-accent-ring: rgba(107,33,168,0.10);
     --ui-accent-border: rgba(107,33,168,0.20);
     --ui-accent-avatar: linear-gradient(135deg, rgba(107,33,168,0.27), rgba(190,75,3,0.27));
+    --ui-accent-shadow: rgba(107,33,168,0.22);
     --ui-on-accent: #ffffff;
 
     /* Misc surface tokens */
@@ -52,6 +53,8 @@
     --ui-icon-bg: rgba(0,0,0,0.06);
     --ui-signin-shadow: 0 8px 40px rgba(0,0,0,0.10);
     --ui-section-bg: rgba(255,255,255,0.28);
+    --ui-scrim-bg: rgba(250,250,248,0.42);
+    --ui-shimmer-band: rgba(255,255,255,0.80);
   }
 
   .dark {
@@ -91,6 +94,7 @@
     --ui-accent-ring: rgba(245,200,66,0.10);
     --ui-accent-border: rgba(245,200,66,0.25);
     --ui-accent-avatar: linear-gradient(135deg, rgba(245,200,66,0.27), rgba(255,160,64,0.27));
+    --ui-accent-shadow: rgba(245,200,66,0.28);
     --ui-on-accent: #1a1400;
 
     /* Misc surface tokens */
@@ -103,6 +107,8 @@
     --ui-icon-bg: rgba(255,255,255,0.10);
     --ui-signin-shadow: 0 8px 40px rgba(0,0,0,0.35);
     --ui-section-bg: rgba(0,0,0,0.18);
+    --ui-scrim-bg: rgba(40,40,55,0.40);
+    --ui-shimmer-band: rgba(255,255,255,0.16);
   }
 
   * {
@@ -143,6 +149,23 @@
   50%       { transform: translateY(-4px); }
 }
 
+/* ── Ripple pulse loader ──────────────────────────────────────── */
+@keyframes rp-ripple {
+  0%   { transform: translate(var(--tx, 0), var(--ty, 0)) scale(1);    box-shadow: 0 8px 16px -4px var(--ui-accent-shadow); }
+  50%  { transform: translate(var(--tx, 0), var(--ty, 0)) scale(1.22); box-shadow: 0 22px 26px -6px var(--ui-accent-shadow); }
+  100% { transform: translate(var(--tx, 0), var(--ty, 0)) scale(1);    box-shadow: 0 8px 16px -4px var(--ui-accent-shadow); }
+}
+@keyframes rp-glyph-pulse {
+  0%, 100% { color: var(--ui-text-pri); }
+  50%      { color: var(--ui-accent); }
+}
+
+/* ── Skeleton shimmer sweep ──────────────────────────────────── */
+@keyframes skeleton-shimmer-sweep {
+  0%   { transform: translateX(-140%); }
+  100% { transform: translateX(140%); }
+}
+
 @layer utilities {
   .text-gain {
     @apply text-emerald-500;
@@ -161,6 +184,16 @@
   .animate-float-fast   { animation: float-fast    7s ease-in-out infinite; }
   .animate-badge-shimmer { animation: badge-shimmer 2.4s ease-in-out infinite; }
   .animate-icon-bob { animation: icon-bob 2.4s ease-in-out infinite; }
+  .animate-rp-ripple { animation: rp-ripple 1.8s ease-in-out infinite; }
+  .animate-rp-glyph-pulse { animation: rp-glyph-pulse 1.8s ease-in-out infinite; }
+  .skeleton-shimmer { position: relative; overflow: hidden; }
+  .skeleton-shimmer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(100deg, transparent 35%, var(--ui-shimmer-band) 50%, transparent 65%);
+    animation: skeleton-shimmer-sweep 1.7s ease-in-out infinite;
+  }
   .scrollbar-thin {
     scrollbar-width: thin;
     scrollbar-color: rgb(51 65 85) transparent;
@@ -175,5 +208,12 @@
   .scrollbar-thin::-webkit-scrollbar-thumb {
     background: rgb(51 65 85);
     border-radius: 2px;
+  }
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
   }
 }

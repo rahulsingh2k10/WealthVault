@@ -48,13 +48,15 @@ The route reads and writes nothing sensitive.
 | Status | Body | When |
 |---|---|---|
 | `200` | `NavItem[]` (see **Schemas**), ascending `sortOrder` | Always, for a valid session |
-| `401` | `[]` — **an empty array, not an `Error` object** | No valid session (`session.userId` missing) |
+| `401` | `{ "error": "Unauthorized" }` | No session at all (`session.userId` missing) — returned by `src/middleware.ts` before this route runs, same shape every other non-whitelisted route returns |
 
-The `401` shape is a deliberate difference from every other route in this spec
-(`/api/preferences` included): the handler returns `NextResponse.json([], { status: 401
-})`. The frontend (`Sidebar.tsx`) doesn't distinguish "unauthenticated" from "no rows for
-this country" — both render as an empty nav list — so the body is shaped to match the
-success case rather than the usual `{ error: "..." }`.
+`route.ts` itself also contains `if (!session.userId) return NextResponse.json([], {
+status: 401 })`, but this branch is unreachable for a real HTTP request: `/api/nav` isn't
+on middleware's public allowlist, so middleware's own `!session?.userId` check (shared by
+every protected route) already returns `{ error: "Unauthorized" }` before the request ever
+reaches this handler. The `[]` branch only fires if the route function is invoked directly,
+bypassing middleware (e.g. an in-process unit test that imports `GET` rather than hitting a
+running server) — `Sidebar.tsx` never observes this shape in practice.
 
 **Fallback behavior:** if `country` has no rows (any code other than `IN` today,
 including an IP-detected one the user never explicitly chose), the route falls back to

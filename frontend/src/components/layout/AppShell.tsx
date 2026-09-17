@@ -1,9 +1,8 @@
 import { Sidebar } from "./Sidebar";
-import { Header } from "./Header";
+import { CategoryMenuBar } from "./CategoryMenuBar";
 import { InactivityLock } from "./InactivityLock";
 import { WarmBackground } from "./WarmBackground";
 import { RenewalBanner } from "@/components/subscription/RenewalBanner";
-import { MobileNavProvider } from "@/context/MobileNavContext";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -15,18 +14,17 @@ export function AppShell({ children }: AppShellProps) {
       <InactivityLock />
       <WarmBackground />
 
-      <MobileNavProvider>
-        <div className="relative z-10 flex flex-1 overflow-hidden">
-          <Sidebar />
-          <div className="flex flex-1 flex-col overflow-hidden">
-            <RenewalBanner />
-            <Header />
-            <main className="flex-1 overflow-y-auto p-6 scrollbar-thin">
-              {children}
-            </main>
-          </div>
-        </div>
-      </MobileNavProvider>
+      {/* Floating nav — both overlay the content, neither reserves a column.
+          Categories float top-center; account controls float bottom-left. */}
+      <CategoryMenuBar />
+      <Sidebar />
+
+      <div className="relative z-10 flex flex-1 flex-col overflow-hidden">
+        <RenewalBanner />
+        <main className="flex-1 overflow-y-auto p-6 scrollbar-thin">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

@@ -118,8 +118,15 @@ export default function FeatureCarousel({
   const [autoplayPaused, setAutoplayPaused] = useState(false);
 
   const scrollToIndex = (i: number) => {
-    const child = trackRef.current?.children[i] as HTMLElement | undefined;
-    child?.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
+    const track = trackRef.current;
+    const child = track?.children[i] as HTMLElement | undefined;
+    if (!track || !child) return;
+    // Scroll only the track itself (horizontal), not scrollIntoView — which
+    // walks up every scrollable ancestor including the page, and on mobile
+    // (carousel out of view when scrolled to the top) yanks the whole page
+    // down to reveal it every time autoplay advances.
+    const offset = child.getBoundingClientRect().left - track.getBoundingClientRect().left;
+    track.scrollTo({ left: track.scrollLeft + offset, behavior: "smooth" });
   };
 
   useEffect(() => {
