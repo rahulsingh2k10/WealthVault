@@ -12,8 +12,10 @@
 
 A single route ends a session: `POST /api/auth/signout`. It requires no request body and
 no prior authentication check — there is no session state to validate beforehand, so it
-always succeeds. Used by the unlock screen's "Sign out" button, and by the same screen's
-own auto-signout when it detects a stale session.
+always succeeds. Called from three places: the sidebar's "Sign out" pill (shown on every
+authenticated page — `Sidebar.tsx`), the unlock screen's own "Sign out" button, and the
+unlock screen's auto-signout when it detects a stale session (a `userId` cookie whose user
+row no longer exists in the database).
 
 ---
 
@@ -79,3 +81,5 @@ None. This route never reads or writes any table — it only clears the session 
 |---|---|
 | `src/app/api/auth/signout/route.ts` | `POST /api/auth/signout` |
 | `src/lib/session.ts` | `getSession()` — the `iron-session` wrapper this route calls `.destroy()` on |
+| `src/components/layout/Sidebar.tsx` | Calls this route from the "Sign out" pill shown on every authenticated page |
+| `src/app/unlock/page.tsx` | Calls this route from its own "Sign out" button and from its stale-session auto-signout |

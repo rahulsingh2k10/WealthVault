@@ -9,7 +9,7 @@ export async function GET() {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({}, { status: 401 })
 
-  const rows = await prisma.appConfig.findMany({ where: { userId: session.userId, key: { in: ALLOWED } } })
+  const rows = await prisma.userPreference.findMany({ where: { userId: session.userId, key: { in: ALLOWED } } })
   const prefs = { ...DEFAULTS, ...Object.fromEntries(rows.map((r) => [r.key, r.value])) }
   return NextResponse.json(prefs)
 }
@@ -21,7 +21,7 @@ export async function PATCH(req: Request) {
   const { key, value } = await req.json()
   if (!ALLOWED.includes(key)) return NextResponse.json({ error: 'Invalid key' }, { status: 400 })
 
-  await prisma.appConfig.upsert({
+  await prisma.userPreference.upsert({
     where:  { userId_key: { userId: session.userId, key } },
     update: { value },
     create: { userId: session.userId, key, value },

@@ -131,8 +131,32 @@ change": **yes, it touches the database, and no, the schema does not need to cha
 | Returning, wrong passphrase (401) | None |
 | Any error path (401/404/500) | None |
 
-No other column on `users`, and no other table, is touched by this route. In particular:
-it does **not** touch `auth_platformId`, `subscriptionPlanId`, `subscription_plans`,
-`auth_platforms`, or `subscription_plan_history` — those are unrelated to passphrase/vault
-state. There is no database transaction wrapping this route; the only write (`verifier`)
-is a single statement, so there's no partial-write case to worry about.
+No other column on `users` is touched by this route, and it does **not** touch
+`auth_platformId`, `subscriptionPlanId`, `subscription_plans`, `auth_platforms`, or
+`subscription_plan_history` — those are unrelated to passphrase/vault state. There is no
+database transaction wrapping the `verifier` write itself; it's a single statement, so
+there's no partial-write case to worry about for that column.
+
+**Subscription reconciliation, on every successful unlock (200 only):** after
+`session.encryptionKey` is set — both the first-time and returning-user paths —
+this route also calls `reconcileSupersedingSubscriptions({ userId })`
+(`src/lib/services/SubscriptionService.ts`), which can read and conditionally write the
+`subscriptions` table (resolving a pending plan-change row whose `startAt` has passed) and
+call out to the Razorpay API. This does not affect the `200` response body or timing
+contract described above — it runs synchronously before the response is returned, so a
+resolved plan state is guaranteed visible on the very next page load. See
+`../payments/subscription-reconciliation.md` (Part 4) for the full design; this is *not*
+run on any error path (400/401/404/500), only on a successful unlock.
+
+---
+
+## Implementation notes
+
+| File | Role |
+|---|---|
+| `src/app/api/auth/unlock/route.ts` | `POST /api/auth/unlock` |
+| `src/lib/services/EncryptionService.ts` | `deriveKey`/`createVerifier`/`verifyKey` — thin wrapper around `src/lib/encryption.ts` |
+| `src/lib/validation/passphraseValidation.ts` | `validatePassphrase()` — the five server-side strength rules |
+| `src/lib/services/SubscriptionService.ts` | `reconcileSupersedingSubscriptions()` — called on every successful unlock, see **Database effect** |
+| `src/lib/session.ts` | `getSession()` — reads `userId`, writes `encryptionKey` on success |
+| `src/app/unlock/page.tsx` | The screen that calls this route — see `../screens/02 Passphrase.md` |

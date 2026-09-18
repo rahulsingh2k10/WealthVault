@@ -2,12 +2,17 @@
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import translations, { Locale, Translations } from "@/i18n/translations";
+import { COUNTRIES } from "@/i18n/countries";
 import { savePreference } from "@/lib/savePreference";
 
 const LOCALE_COOKIE  = "preferred-locale";
 const COUNTRY_COOKIE = "preferred-country";
 const DEFAULT_LOCALE: Locale = "en-US";
-const DEFAULT_COUNTRY = "US";
+const DEFAULT_COUNTRY = "IN";
+
+function isSupportedCountry(code: string): boolean {
+  return COUNTRIES.some((c) => c.code === code);
+}
 
 interface LocaleContextValue {
   locale:    Locale;
@@ -48,13 +53,14 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
 
     // Restore saved country, or auto-detect via IP
     const savedCountry = readCookie(COUNTRY_COOKIE, "");
-    if (savedCountry) {
+    if (savedCountry && isSupportedCountry(savedCountry)) {
       setCountryState(savedCountry);
     } else {
       fetch("https://ipapi.co/json/", { cache: "no-store" })
         .then((r) => r.json())
         .then((data) => {
-          const code: string = data?.country_code ?? DEFAULT_COUNTRY;
+          const detected: string = data?.country_code ?? DEFAULT_COUNTRY;
+          const code = isSupportedCountry(detected) ? detected : DEFAULT_COUNTRY;
           setCountryState(code);
           writeCookie(COUNTRY_COOKIE, code);
         })

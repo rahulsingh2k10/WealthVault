@@ -34,7 +34,13 @@ async function finalizeExpiredCancellationRows(rows: Subscription[], now: Date):
       const { getProvider } = await import("@/lib/payments");
       await getProvider().cancelNow(row.providerSubscriptionId);
     } catch (e) {
-      console.error("[subscription] failed to finalize an expired cancellation", row.providerSubscriptionId, e);
+      // Don't mark this cancelled locally without confirming it on Razorpay —
+      // that would leave our DB claiming a state Razorpay never actually
+      // reached. Leave the row exactly as it is; it still matches this
+      // function's own filter (cancelAtCycleEnd, no endedAt, past currentEnd),
+      // so the next call — next login, or the daily cron — retries it.
+      console.error("[subscription] failed to finalize an expired cancellation — left open for retry", row.providerSubscriptionId, e);
+      continue;
     }
     await prisma.subscription.update({
       where: { id: row.id },
@@ -349,7 +355,15 @@ export async function applySubscriptionEvent(evt: NormalizedWebhookEvent): Promi
       const { getProvider } = await import("@/lib/payments");
       await getProvider().cancelNow(row.providerSubscriptionId);
     } catch (e) {
-      console.error("[subscription] failed to cancel a cancel-at-cycle-end subscription", row.providerSubscriptionId, e);
+      // Couldn't confirm the cancellation on Razorpay — don't mark it
+      // cancelled locally on the strength of a failed call. Leave the row as
+      // the generic update above already wrote it (the charge genuinely
+      // happened, so status/currentEnd/paidCount reflect that honestly);
+      // cancelAtCycleEnd is still true, so finalizeExpiredCancellationRows
+      // will retry the cancellation once that (now later) currentEnd passes.
+      console.error("[subscription] failed to cancel a cancel-at-cycle-end subscription after an unexpected renewal charge", row.providerSubscriptionId, e);
+      await getEffectivePlan(row.userId);
+      return;
     }
     await prisma.subscription.update({
       where: { id: row.id },

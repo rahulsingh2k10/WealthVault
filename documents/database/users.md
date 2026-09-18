@@ -26,6 +26,7 @@
 | `avatar`             | `String?`  | Yes      | —        | Provider photo URL or uploaded image   |
 | `auth_platformId`    | `String`   | No       | —        | Foreign key to `auth_platforms.id`     |
 | `subscriptionPlanId` | `String`   | No       | —        | Foreign key to `subscription_plans.id` |
+| `razorpayCustomerId` | `String?`  | Yes      | —        | Razorpay Customer ID, set on first checkout |
 | `verifier`           | `String?`  | Yes      | —        | Encrypted passphrase verifier          |
 | `createdAt`          | `DateTime` | No       | `now()`  | Row creation timestamp                 |
 | `updatedAt`          | `DateTime` | No       | auto     | Auto-updated on write                  |
@@ -38,6 +39,7 @@
 - **`avatar`** — Either the OAuth provider's profile picture URL, or a user-uploaded base64 JPEG data URL (set via `PATCH /api/auth/avatar`). `NULL` for Apple sign-ins that never uploaded a photo.
 - **`auth_platformId`** — The provider name is read via the relation (`user.authPlatform.platform`), not stored directly on `User`. See **Relationships** below and `auth-platforms.md`.
 - **`subscriptionPlanId`** — The tier name is read via the relation (`user.subscriptionPlan.tier`), not stored directly on `User`. See **Relationships** below and `subscription-plans.md`.
+- **`razorpayCustomerId`** — The Razorpay Customer ID backing this user's paid-plan checkout. `NULL` until the user's first checkout attempt (`POST /api/subscription/create`), which calls `provider.ensureCustomer(...)` and persists the ID it returns; `POST /api/subscription/change-plan` reuses the same stored ID on subsequent checkouts rather than creating a new Razorpay customer each time. Not referenced as a foreign key from any other table — see `../payments/subscription-reconciliation.md` for the surrounding checkout/upgrade flow.
 - **`verifier`** — AES-256-GCM–encrypted verifier blob, derived from the user's vault passphrase (`encrypt("PORTFOLIO_APP_V1", derivedKey)`). `NULL` means the user has never set a passphrase (first-time vault setup pending). **The passphrase itself is never stored** — only this verifier, which can confirm a correct passphrase without revealing it. Written by `POST /api/auth/unlock` on first-time setup only; read (never rewritten) on every subsequent unlock. Full request/response details in `../api/unlock-api.md`.
 - **`createdAt`** — Set once, at row creation.
 - **`updatedAt`** — Updated automatically by Prisma on every write to the row (`@updatedAt`).
@@ -45,11 +47,13 @@
 ### Full current model (for reference)
 
 ```prisma
-enum Subscription {
+enum Tier {
   FREE
   MONTHLY
   QUARTERLY
   ANNUAL
+
+  @@map("Subscription")
 }
 
 enum Platform {
@@ -60,18 +64,21 @@ enum Platform {
 }
 
 model User {
-  id                  String               @id @default(uuid())
-  fullName            String
-  username            String               @unique
-  avatar              String?
-  auth_platformId     String
-  authPlatform        AuthPlatform         @relation(fields: [auth_platformId], references: [id])
-  subscriptionPlanId  String
-  subscriptionPlan    SubscriptionPlan     @relation(fields: [subscriptionPlanId], references: [id])
+  id                      String                    @id @default(uuid())
+  fullName                String
+  username                String                    @unique
+  avatar                  String?
+  auth_platformId         String
+  authPlatform            AuthPlatform              @relation(fields: [auth_platformId], references: [id])
+  subscriptionPlanId      String
+  subscriptionPlan        SubscriptionPlan          @relation(fields: [subscriptionPlanId], references: [id])
   subscriptionPlanHistory SubscriptionPlanHistory[]
-  verifier            String?
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
+  razorpayCustomerId      String?
+  subscriptions           Subscription[]
+  userPreferences         UserPreference[]
+  verifier                String?
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
 
   @@map("users")
 }
@@ -79,11 +86,12 @@ model User {
 
 ---
 
-## `Subscription` enum
+## `Tier` enum
 
 This enum appears on `SubscriptionPlan.tier` (see `subscription-plans.md`). A user's
 tier is read by joining through `subscriptionPlanId` (`user.subscriptionPlan.tier`), not
-stored on `User` directly.
+stored on `User` directly. The Prisma model is named `Tier`; the enum carries
+`@@map("Subscription")`, so the underlying Postgres enum type is still named `Subscription`.
 
 | Value | Meaning | Set by |
 |---|---|---|
@@ -166,5 +174,17 @@ See `subscription-plans.md` for the full relationship writeup, including the rev
 **`subscription_plan_history.userId` → `users.id`** (foreign key, reverse direction): each
 `subscription_plan_history` row belongs to one user. See `subscription-plan-history.md`.
 
-`users`, `subscription_plans`, `auth_platforms`, and `subscription_plan_history` are the four
-tables in the database.
+**`subscriptions.userId` → `users.id`** (foreign key, reverse direction): each Razorpay-backed
+`subscriptions` row belongs to one user, via the reverse relation `User.subscriptions
+Subscription[]`. See `../payments/subscription-reconciliation.md` for the full design —
+the `subscriptions` table does not yet have a dedicated file in this `database/` folder.
+
+**`user_preference.userId` → `users.id`** (foreign key, reverse direction): each
+`user_preference` row (country/locale/theme) belongs to one user, via the reverse relation
+`User.userPreferences UserPreference[]`. See `user-preference.md`.
+
+`users`, `subscription_plans`, `auth_platforms`, `subscription_plan_history`, `subscriptions`,
+`processed_webhook_events`, `user_preference`, and `nav_config` are the eight tables in the
+database. Of these, `subscriptions` and `processed_webhook_events` are documented by design
+in `../payments/subscription-reconciliation.md` rather than as standalone table-reference
+files here.

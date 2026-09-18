@@ -94,6 +94,7 @@ model User {
   subscriptionPlanHistory SubscriptionPlanHistory[]
   razorpayCustomerId      String?
   subscriptions           Subscription[]
+  userPreferences         UserPreference[]
   // AES-256-GCM encrypted verifier — encrypt("PORTFOLIO_APP_V1", derivedKey)
   // null  → first-time setup; non-null → passphrase already established
   // The passphrase itself is NEVER stored anywhere.
@@ -158,4 +159,30 @@ model ProcessedWebhookEvent {
 
   @@unique([provider, eventId])
   @@map("processed_webhook_events")
+}
+
+model UserPreference {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  key       String // "country" | "locale" | "theme"
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, key])
+  @@map("user_preference")
+}
+
+model NavConfig {
+  id        String @id @default(uuid())
+  country   String
+  href      String
+  labelKey  String
+  iconName  String
+  sortOrder Int    @default(0)
+
+  @@unique([country, href])
+  @@index([country])
+  @@map("nav_config")
 }
