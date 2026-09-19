@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 
 // PATCH /api/auth/avatar
 // Body: { avatar: "data:image/jpeg;base64,..." }
-// Saves the base64 data URL to the users table and updates the session.
+// Saves the base64 data URL to the users table.
 export async function PATCH(req: NextRequest) {
   const session = await getSession();
   if (!session.userId) {
@@ -27,10 +27,6 @@ export async function PATCH(req: NextRequest) {
     where: { id: session.userId },
     data: { avatar },
   });
-
-  // Keep session in sync
-  session.userAvatar = avatar;
-  await session.save();
 
   return NextResponse.json({ success: true });
 }
