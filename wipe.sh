@@ -37,21 +37,40 @@ if [ "$TARGET" = "testing" ] && [ -z "${TESTING_DATABASE_URL:-}" ]; then
   exit 1
 fi
 
+# Refuse if both are set and identical — almost certainly a misconfiguration
+# in .env, and would silently wipe "the other" environment under the wrong
+# label with no further warning.
+if [ -n "${PRODUCTION_DATABASE_URL:-}" ] && [ -n "${TESTING_DATABASE_URL:-}" ] \
+   && [ "$PRODUCTION_DATABASE_URL" = "$TESTING_DATABASE_URL" ]; then
+  echo "Refusing: PRODUCTION_DATABASE_URL and TESTING_DATABASE_URL are identical in frontend/.env."
+  echo "This is almost certainly a mistake — fix .env before running this script."
+  exit 1
+fi
+
+if [ "$TARGET" = "production" ]; then
+  RESOLVED_URL="$PRODUCTION_DATABASE_URL"
+else
+  RESOLVED_URL="$TESTING_DATABASE_URL"
+fi
+# host:port only — never print credentials.
+RESOLVED_HOST="$(echo "$RESOLVED_URL" | sed -E 's#^[a-zA-Z]+://[^@]*@##; s#/.*$##')"
+
 echo ""
+echo "Target: $TARGET  ($RESOLVED_HOST)"
 echo "This permanently deletes ALL users, subscriptions, plan history,"
-echo "webhook events, preferences, AND nav_config from: $TARGET"
+echo "webhook events, preferences, AND nav_config from this database."
 echo "(subscription_plans and auth_platforms are preserved)"
 echo ""
 
 if [ "$TARGET" = "production" ]; then
-  read -r -p "Type PRODUCTION to confirm wiping the LIVE database: " CONFIRM
+  read -r -p "Type PRODUCTION to confirm wiping $RESOLVED_HOST: " CONFIRM
   if [ "$CONFIRM" != "PRODUCTION" ]; then
     echo "Aborted."
     exit 1
   fi
   CONFIRM_FLAG="--confirm-production"
 else
-  read -r -p "Type yes to confirm wiping testing: " CONFIRM
+  read -r -p "Type yes to confirm wiping $RESOLVED_HOST: " CONFIRM
   if [ "$CONFIRM" != "yes" ]; then
     echo "Aborted."
     exit 1
