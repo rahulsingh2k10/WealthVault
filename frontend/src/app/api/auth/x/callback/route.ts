@@ -4,6 +4,8 @@ import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { logSubscriptionPlanHistoryIfChanged } from "@/lib/services/SubscriptionPlanHistoryService";
 
+export const dynamic = "force-dynamic";
+
 interface XTokenResponse {
   access_token: string;
   token_type: string;

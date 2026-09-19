@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { randomBytes, createHash } from "crypto";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const clientId = process.env.X_CLIENT_ID;
   if (!clientId) {

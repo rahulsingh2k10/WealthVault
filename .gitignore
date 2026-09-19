@@ -72,3 +72,4 @@ package-lock [0-9]*.json
 Investments.numbers
 
 .superpowers/
+.env*
