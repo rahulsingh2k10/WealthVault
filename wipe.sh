@@ -7,14 +7,16 @@
 #
 # Usage: ./wipe.sh testing
 #        ./wipe.sh production
+#        ./wipe.sh            (no argument = both)
+#        ./wipe.sh both
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FRONTEND_DIR="$SCRIPT_DIR/frontend"
 
-TARGET="${1:-}"
-if [[ "$TARGET" != "testing" && "$TARGET" != "production" ]]; then
-  echo "Usage: $0 testing|production"
+TARGET="${1:-both}"
+if [[ "$TARGET" != "testing" && "$TARGET" != "production" && "$TARGET" != "both" ]]; then
+  echo "Usage: $0 [testing|production|both]  (no argument defaults to both)"
   exit 1
 fi
 
@@ -28,11 +30,11 @@ set -a
 . "$FRONTEND_DIR/.env"
 set +a
 
-if [ "$TARGET" = "production" ] && [ -z "${PRODUCTION_DATABASE_URL:-}" ]; then
+if [[ "$TARGET" = "production" || "$TARGET" = "both" ]] && [ -z "${PRODUCTION_DATABASE_URL:-}" ]; then
   echo "Missing PRODUCTION_DATABASE_URL in frontend/.env."
   exit 1
 fi
-if [ "$TARGET" = "testing" ] && [ -z "${TESTING_DATABASE_URL:-}" ]; then
+if [[ "$TARGET" = "testing" || "$TARGET" = "both" ]] && [ -z "${TESTING_DATABASE_URL:-}" ]; then
   echo "Missing TESTING_DATABASE_URL in frontend/.env."
   exit 1
 fi
@@ -47,30 +49,33 @@ if [ -n "${PRODUCTION_DATABASE_URL:-}" ] && [ -n "${TESTING_DATABASE_URL:-}" ] \
   exit 1
 fi
 
-if [ "$TARGET" = "production" ]; then
-  RESOLVED_URL="$PRODUCTION_DATABASE_URL"
-else
-  RESOLVED_URL="$TESTING_DATABASE_URL"
-fi
 # host:port only — never print credentials.
-RESOLVED_HOST="$(echo "$RESOLVED_URL" | sed -E 's#^[a-zA-Z]+://[^@]*@##; s#/.*$##')"
+strip_host() { echo "$1" | sed -E 's#^[a-zA-Z]+://[^@]*@##; s#/.*$##'; }
 
 echo ""
-echo "Target: $TARGET  ($RESOLVED_HOST)"
+echo "Target: $TARGET"
+case "$TARGET" in
+  production) echo "  production -> $(strip_host "$PRODUCTION_DATABASE_URL")" ;;
+  testing)    echo "  testing    -> $(strip_host "$TESTING_DATABASE_URL")" ;;
+  both)
+    echo "  production -> $(strip_host "$PRODUCTION_DATABASE_URL")"
+    echo "  testing    -> $(strip_host "$TESTING_DATABASE_URL")"
+    ;;
+esac
 echo "This permanently deletes ALL users, subscriptions, plan history,"
-echo "webhook events, preferences, AND nav_config from this database."
+echo "webhook events, preferences, AND nav_config from the database(s) above."
 echo "(subscription_plans and auth_platforms are preserved)"
 echo ""
 
-if [ "$TARGET" = "production" ]; then
-  read -r -p "Type PRODUCTION to confirm wiping $RESOLVED_HOST: " CONFIRM
+if [[ "$TARGET" = "production" || "$TARGET" = "both" ]]; then
+  read -r -p "Type PRODUCTION to confirm wiping the database(s) above: " CONFIRM
   if [ "$CONFIRM" != "PRODUCTION" ]; then
     echo "Aborted."
     exit 1
   fi
   CONFIRM_FLAG="--confirm-production"
 else
-  read -r -p "Type yes to confirm wiping $RESOLVED_HOST: " CONFIRM
+  read -r -p "Type yes to confirm wiping the database(s) above: " CONFIRM
   if [ "$CONFIRM" != "yes" ]; then
     echo "Aborted."
     exit 1
