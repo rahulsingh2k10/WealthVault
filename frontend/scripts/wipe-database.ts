@@ -1,9 +1,14 @@
 /**
  * Wipes all user-generated data — users, subscriptions, plan history,
  * processed webhook events, user preferences — from one or both Railway
- * databases. Cancels every non-terminal Razorpay subscription first, since
- * Razorpay has no delete API and an orphaned local-DB row would otherwise
- * leave a subscription running on their side forever.
+ * databases. Cancels every Razorpay subscription not already cancelled
+ * first (active/recurring, paused, halted, pending, completed, expired —
+ * everything except "cancelled"), since Razorpay has no delete API and an
+ * orphaned local-DB row would otherwise leave a subscription running, or a
+ * completed one's mandate live, on their side forever. Attempting to cancel
+ * an already-terminal subscription (completed/expired) just gets rejected
+ * by Razorpay and is logged as ✗ below — harmless, so there's no reason to
+ * pre-filter it out.
  *
  * subscription_plans and auth_platforms are NEVER touched — the app depends
  * on them to function (this is exactly the bug that broke login after a
@@ -47,8 +52,6 @@ function loadEnvFile(file: string) {
   }
 }
 loadEnvFile(path.join(__dirname, "..", ".env"));
-
-const NON_TERMINAL_STATUSES = ["created", "authenticated", "active", "pending", "halted", "paused"];
 
 type Target = "production" | "testing" | "current";
 
@@ -133,11 +136,11 @@ async function runTarget(target: Target) {
     const { RazorpayProvider } = await import("../src/lib/payments/razorpay");
     const provider = new RazorpayProvider();
     const subs = await prisma.subscription.findMany({
-      where: { status: { in: NON_TERMINAL_STATUSES } },
+      where: { status: { not: "cancelled" } },
       select: { providerSubscriptionId: true, status: true },
     });
     if (subs.length > 0) {
-      console.log(`\nCancelling ${subs.length} non-terminal Razorpay subscription(s):`);
+      console.log(`\nCancelling ${subs.length} Razorpay subscription(s) not already cancelled:`);
       for (const sub of subs) {
         try {
           await provider.cancelNow(sub.providerSubscriptionId);
