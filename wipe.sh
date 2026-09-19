@@ -67,19 +67,15 @@ echo "webhook events, preferences, AND nav_config from the database(s) above."
 echo "(subscription_plans and auth_platforms are preserved)"
 echo ""
 
+read -r -p "Are you sure you want to delete $TARGET? (yes/no): " CONFIRM
+if [ "$CONFIRM" != "yes" ]; then
+  echo "Aborted."
+  exit 1
+fi
+
 if [[ "$TARGET" = "production" || "$TARGET" = "both" ]]; then
-  read -r -p "Type PRODUCTION to confirm wiping the database(s) above: " CONFIRM
-  if [ "$CONFIRM" != "PRODUCTION" ]; then
-    echo "Aborted."
-    exit 1
-  fi
   CONFIRM_FLAG="--confirm-production"
 else
-  read -r -p "Type yes to confirm wiping the database(s) above: " CONFIRM
-  if [ "$CONFIRM" != "yes" ]; then
-    echo "Aborted."
-    exit 1
-  fi
   CONFIRM_FLAG=""
 fi
 
