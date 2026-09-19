@@ -10,6 +10,7 @@
     "db:push": "prisma db push",
     "db:seed": "npx tsx prisma/seed.ts",
     "db:seed-nav": "npx tsx prisma/seed-nav.ts",
+    "db:seed-reference": "npx tsx prisma/seed-reference-data.ts",
     "db:studio": "prisma studio",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
