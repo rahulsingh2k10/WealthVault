@@ -65,10 +65,20 @@ if (!envArg || !["current", "testing", "production", "both"].includes(envArg)) {
 
 const targets: Target[] = envArg === "both" ? ["production", "testing"] : [envArg as Target];
 
+const DIVIDER = "─".repeat(56);
+
+function printRows(rows: Record<string, number>) {
+  const width = Math.max(...Object.keys(rows).map((k) => k.length));
+  for (const [key, value] of Object.entries(rows)) {
+    console.log(`  ${key.padEnd(width)} : ${value}`);
+  }
+}
+
 async function deleteTable(tableName: string, fn: () => Promise<{ count: number }>) {
-  console.log(`  Deleting ${tableName}...`);
+  console.log(`  → Deleting ${tableName}...`);
   const result = await fn();
-  console.log(`  ${tableName} deleted successfully (${result.count} row(s)).`);
+  const noun = result.count === 1 ? "row" : "rows";
+  console.log(`    ✓ ${tableName} deleted (${result.count} ${noun})`);
   return result;
 }
 
@@ -99,20 +109,24 @@ async function runTarget(target: Target) {
   const prisma = new PrismaClient();
 
   const host = new URL(process.env.DATABASE_URL!).host;
-  console.log(`\n=== Environment: ${target.toUpperCase()} — ${host} ===`);
+  console.log(`\n${DIVIDER}`);
+  console.log(`  Environment : ${target.toUpperCase()}`);
+  console.log(`  Host        : ${host}`);
+  console.log(DIVIDER);
   try {
-    const counts = {
-      users: await prisma.user.count(),
+    const counts: Record<string, number> = {
+      user_preference: await prisma.userPreference.count(),
+      processed_webhook_events: await prisma.processedWebhookEvent.count(),
+      subscription_plan_history: await prisma.subscriptionPlanHistory.count(),
       subscriptions: await prisma.subscription.count(),
-      subscriptionPlanHistory: await prisma.subscriptionPlanHistory.count(),
-      processedWebhookEvents: await prisma.processedWebhookEvent.count(),
-      userPreferences: await prisma.userPreference.count(),
-      ...(includeNavConfig ? { navConfig: await prisma.navConfig.count() } : {}),
+      users: await prisma.user.count(),
+      ...(includeNavConfig ? { nav_config: await prisma.navConfig.count() } : {}),
     };
-    console.log("Current row counts:", JSON.stringify(counts));
+    console.log("\nRow counts (before):");
+    printRows(counts);
 
     if (!doIt) {
-      console.log("(dry run — pass --yes to actually delete)");
+      console.log("\n(dry run — pass --yes to actually delete)");
       return;
     }
 
@@ -122,16 +136,19 @@ async function runTarget(target: Target) {
       where: { status: { in: NON_TERMINAL_STATUSES } },
       select: { providerSubscriptionId: true, status: true },
     });
-    for (const sub of subs) {
-      try {
-        await provider.cancelNow(sub.providerSubscriptionId);
-        console.log(`Cancelled Razorpay subscription ${sub.providerSubscriptionId} (was ${sub.status})`);
-      } catch (err) {
-        console.warn(`Could not cancel ${sub.providerSubscriptionId}:`, err instanceof Error ? err.message : err);
+    if (subs.length > 0) {
+      console.log(`\nCancelling ${subs.length} non-terminal Razorpay subscription(s):`);
+      for (const sub of subs) {
+        try {
+          await provider.cancelNow(sub.providerSubscriptionId);
+          console.log(`  ✓ Cancelled ${sub.providerSubscriptionId} (was ${sub.status})`);
+        } catch (err) {
+          console.log(`  ✗ Could not cancel ${sub.providerSubscriptionId}: ${err instanceof Error ? err.message : err}`);
+        }
       }
     }
 
-    console.log(`Deleting rows from ${target.toUpperCase()} (${host})...`);
+    console.log("\nDeleting rows:");
     const userPreferences = await deleteTable("user_preference", () => prisma.userPreference.deleteMany({}));
     const processedWebhookEvents = await deleteTable("processed_webhook_events", () => prisma.processedWebhookEvent.deleteMany({}));
     const planHistory = await deleteTable("subscription_plan_history", () => prisma.subscriptionPlanHistory.deleteMany({}));
@@ -141,24 +158,27 @@ async function runTarget(target: Target) {
       ? await deleteTable("nav_config", () => prisma.navConfig.deleteMany({}))
       : null;
 
-    console.log("Deleted ->", JSON.stringify({
-      userPreferences: userPreferences.count,
-      processedWebhookEvents: processedWebhookEvents.count,
-      planHistory: planHistory.count,
+    console.log("\nDeleted:");
+    printRows({
+      user_preference: userPreferences.count,
+      processed_webhook_events: processedWebhookEvents.count,
+      subscription_plan_history: planHistory.count,
       subscriptions: subscriptions.count,
       users: users.count,
-      ...(navConfig ? { navConfig: navConfig.count } : {}),
-    }));
+      ...(navConfig ? { nav_config: navConfig.count } : {}),
+    });
 
-    const preserved = {
-      subscriptionPlans: await prisma.subscriptionPlan.count(),
-      authPlatforms: await prisma.authPlatform.count(),
-      ...(includeNavConfig ? {} : { navConfig: await prisma.navConfig.count() }),
-    };
-    console.log("Preserved (untouched) ->", JSON.stringify(preserved));
+    console.log("\nPreserved (untouched):");
+    printRows({
+      subscription_plans: await prisma.subscriptionPlan.count(),
+      auth_platforms: await prisma.authPlatform.count(),
+      ...(includeNavConfig ? {} : { nav_config: await prisma.navConfig.count() }),
+    });
+
     if (includeNavConfig) {
-      console.log("nav_config was wiped too — reseed with: npm run db:seed-nav");
+      console.log("\nnav_config was wiped too — reseed with: npm run db:seed-nav");
     }
+    console.log(DIVIDER);
   } finally {
     await prisma.$disconnect();
   }
