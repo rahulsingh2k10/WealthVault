@@ -154,6 +154,10 @@ export default function UnlockClient({
     setLoading(true);
     setLoadingStep('unlocking');
     setError("");
+    // router.push() returns before the dashboard has loaded, so once navigation
+    // starts the overlay must stay up (the page unmounts it) — hiding it here
+    // would flash the passphrase form until the dashboard is ready.
+    let navigating = false;
     try {
       // Step 1: verify passphrase
       const res = await fetch("/api/auth/unlock", {
@@ -167,6 +171,7 @@ export default function UnlockClient({
         // account). Sign out and go home.
         setTheme("system");
         await fetch("/api/auth/signout", { method: "POST" }).catch(() => {});
+        navigating = true;
         window.location.href = "/";
         return;
       }
@@ -182,6 +187,7 @@ export default function UnlockClient({
           savePreference('theme', theme ?? 'dark'),
         ]);
         setLoadingStep('done');
+        navigating = true;
         router.push("/dashboard");
         router.refresh();
       } else {
@@ -194,12 +200,13 @@ export default function UnlockClient({
           if (prefs.theme)   setTheme(prefs.theme);
         }
         setLoadingStep('done');
+        navigating = true;
         router.push("/dashboard");
       }
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
-      setLoading(false);
+      if (!navigating) setLoading(false);
     }
   };
 
