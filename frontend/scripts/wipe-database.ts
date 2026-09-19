@@ -65,6 +65,13 @@ if (!envArg || !["current", "testing", "production", "both"].includes(envArg)) {
 
 const targets: Target[] = envArg === "both" ? ["production", "testing"] : [envArg as Target];
 
+async function deleteTable(tableName: string, fn: () => Promise<{ count: number }>) {
+  console.log(`  Deleting ${tableName}...`);
+  const result = await fn();
+  console.log(`  ${tableName} deleted successfully (${result.count} row(s)).`);
+  return result;
+}
+
 if (targets.includes("production") && doIt && !confirmedProduction) {
   console.error("Refusing: targeting production requires --confirm-production in addition to --yes.");
   process.exit(1);
@@ -92,7 +99,7 @@ async function runTarget(target: Target) {
   const prisma = new PrismaClient();
 
   const host = new URL(process.env.DATABASE_URL!).host;
-  console.log(`\n=== ${target.toUpperCase()} (${host}) ===`);
+  console.log(`\n=== Environment: ${target.toUpperCase()} — ${host} ===`);
   try {
     const counts = {
       users: await prisma.user.count(),
@@ -124,12 +131,15 @@ async function runTarget(target: Target) {
       }
     }
 
-    const userPreferences = await prisma.userPreference.deleteMany({});
-    const processedWebhookEvents = await prisma.processedWebhookEvent.deleteMany({});
-    const planHistory = await prisma.subscriptionPlanHistory.deleteMany({});
-    const subscriptions = await prisma.subscription.deleteMany({});
-    const users = await prisma.user.deleteMany({});
-    const navConfig = includeNavConfig ? await prisma.navConfig.deleteMany({}) : null;
+    console.log(`Deleting rows from ${target.toUpperCase()} (${host})...`);
+    const userPreferences = await deleteTable("user_preference", () => prisma.userPreference.deleteMany({}));
+    const processedWebhookEvents = await deleteTable("processed_webhook_events", () => prisma.processedWebhookEvent.deleteMany({}));
+    const planHistory = await deleteTable("subscription_plan_history", () => prisma.subscriptionPlanHistory.deleteMany({}));
+    const subscriptions = await deleteTable("subscriptions", () => prisma.subscription.deleteMany({}));
+    const users = await deleteTable("users", () => prisma.user.deleteMany({}));
+    const navConfig = includeNavConfig
+      ? await deleteTable("nav_config", () => prisma.navConfig.deleteMany({}))
+      : null;
 
     console.log("Deleted ->", JSON.stringify({
       userPreferences: userPreferences.count,
