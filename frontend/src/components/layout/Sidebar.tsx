@@ -93,7 +93,7 @@ function Pill({
   const className = cn(
     "group relative flex h-[42px] w-[172px] shrink-0 items-center justify-between gap-2.5 overflow-hidden rounded-r-xl px-3.5",
     "bg-[var(--ui-card-bg)] border border-[var(--ui-card-border)] shadow-[var(--ui-card-shadow)] backdrop-blur-lg",
-    "transition-[margin-left,box-shadow] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]",
+    "transition-[margin-left,box-shadow] duration-500 [transition-timing-function:cubic-bezier(0.16,1,0.3,1)]",
     "hover:-ml-3 focus-visible:-ml-3 focus-visible:outline-none",
     expanded ? "-ml-3" : "-ml-[122px]"
   );
