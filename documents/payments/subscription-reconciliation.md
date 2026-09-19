@@ -306,7 +306,8 @@ this exact class of bug can't silently regress again.
   failed-change UI card were exercised end-to-end against the running dev server — real
   checkout stub, real signed webhooks, real cron endpoint call — not just Jest.
 
-See `frontend/scripts/reset-test-data.ts` (`npm run db:reset-test`) for a script that
-cancels every non-terminal Razorpay subscription for the current database and wipes all
+See `frontend/scripts/wipe-database.ts` (`npm run db:reset-test`, or `npm run db:wipe --
+--env=testing|production|both` for a specific target) for a script that cancels every
+non-terminal Razorpay subscription for the target database(s) and wipes all
 user/subscription data except reference tables (`subscription_plans`, `auth_platforms`)
 — useful for repeatedly re-running the manual walkthroughs above against a clean slate.
