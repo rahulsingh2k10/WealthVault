@@ -14,9 +14,14 @@ export default async function UnlockPage() {
   // base64 data URL, far larger than a cookie can hold.
   const user = await prisma.user.findUnique({
     where: { id: session.userId },
-    select: { fullName: true, avatar: true },
+    select: { fullName: true, avatar: true, verifier: true },
   });
   if (!user) redirect("/");
 
-  return <UnlockClient initialUser={{ name: user.fullName, avatar: user.avatar ?? "" }} />;
+  return (
+    <UnlockClient
+      initialUser={{ name: user.fullName, avatar: user.avatar ?? "" }}
+      initialIsNewUser={!user.verifier}
+    />
+  );
 }

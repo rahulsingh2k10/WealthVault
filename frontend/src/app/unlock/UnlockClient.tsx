@@ -64,7 +64,13 @@ const INFO_POINTS = [
 const MIN_PASS = 12;
 const MAX_PASS = 256;
 
-export default function UnlockClient({ initialUser }: { initialUser: CurrentUser }) {
+export default function UnlockClient({
+  initialUser,
+  initialIsNewUser,
+}: {
+  initialUser: CurrentUser;
+  initialIsNewUser: boolean;
+}) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const { locale, country, setLocale, setCountry } = useLocale();
@@ -94,6 +100,7 @@ export default function UnlockClient({ initialUser }: { initialUser: CurrentUser
   const [showReset, setShowReset] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [showSaveAlert, setShowSaveAlert] = useState(false);
+  const [isNewUser, setIsNewUser] = useState(initialIsNewUser);
   const [copied, setCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -130,9 +137,20 @@ export default function UnlockClient({ initialUser }: { initialUser: CurrentUser
     }
   };
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!allValid) return;
+    // New user: make them save the passphrase BEFORE it is set up — the alert's
+    // confirm button is what actually calls unlockVault().
+    if (isNewUser) {
+      setShowSaveAlert(true);
+      return;
+    }
+    void unlockVault();
+  };
+
+  const unlockVault = async () => {
+    setShowSaveAlert(false);
     setLoading(true);
     setLoadingStep('unlocking');
     setError("");
@@ -163,7 +181,9 @@ export default function UnlockClient({ initialUser }: { initialUser: CurrentUser
           savePreference('locale', locale),
           savePreference('theme', theme ?? 'dark'),
         ]);
-        setShowSaveAlert(true);
+        setLoadingStep('done');
+        router.push("/dashboard");
+        router.refresh();
       } else {
         // Existing user: load their saved prefs and apply
         const prefsRes = await fetch("/api/preferences");
@@ -203,15 +223,11 @@ export default function UnlockClient({ initialUser }: { initialUser: CurrentUser
     }
   };
 
-  const handleOpenVault = () => {
-    router.push("/dashboard");
-    router.refresh();
-  };
-
   const handleResetVault = async () => {
     setResetting(true);
     try {
       await fetch("/api/auth/reset-vault", { method: "POST" });
+      setIsNewUser(true);
       setPassphrase("");
       setError("");
       setShowReset(false);
@@ -686,11 +702,19 @@ export default function UnlockClient({ initialUser }: { initialUser: CurrentUser
               {/* CTA */}
               <button
                 type="button"
-                onClick={handleOpenVault}
+                onClick={unlockVault}
                 className="w-full rounded-xl px-4 py-3.5 text-sm font-semibold text-white transition hover:opacity-90 active:scale-[0.98]"
                 style={{ background: `linear-gradient(90deg, ${accent}, ${accentWarm})` }}
               >
                 I&apos;ve saved it — Open Vault
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowSaveAlert(false)}
+                className="mt-3 w-full text-xs font-medium transition-opacity hover:opacity-70"
+                style={{ color: textMuted }}
+              >
+                Go back and change passphrase
               </button>
             </div>
           </div>
