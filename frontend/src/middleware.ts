@@ -22,6 +22,8 @@ export async function middleware(request: NextRequest) {
   // ── Always public ──────────────────────────────────────────────────────
   if (
     pathname === "/" ||
+    pathname === "/privacy" ||
+    pathname === "/terms" ||
     pathname.startsWith("/api/auth/google") ||
     pathname.startsWith("/api/auth/x") ||
     pathname.startsWith("/api/auth/linkedin") ||
