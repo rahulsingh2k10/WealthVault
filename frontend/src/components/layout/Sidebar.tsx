@@ -39,6 +39,7 @@ function Pill({
   icon: Icon,
   avatar,
   label,
+  sublabel,
   iconColor,
   glowRgb,
   active = false,
@@ -50,6 +51,7 @@ function Pill({
   icon?: React.ElementType;
   avatar?: { src?: string; initials: string };
   label: string;
+  sublabel?: string;
   iconColor: string;
   glowRgb: string; // "r,g,b"
   active?: boolean;
@@ -58,6 +60,7 @@ function Pill({
   onClick?: (e: React.MouseEvent) => void;
 }) {
   const expanded = revealed;
+  const textColor = active ? "text-[var(--ui-text-pri)]" : "text-[var(--ui-text-sec)] group-hover:text-[var(--ui-text-pri)]";
 
   const content = (
     <>
@@ -68,14 +71,16 @@ function Pill({
         )}
         style={{ background: `radial-gradient(circle, rgba(${glowRgb},0.35) 0%, transparent 70%)` }}
       />
-      <span
-        className={cn(
-          "relative flex-1 truncate text-sm font-semibold whitespace-nowrap",
-          active ? "text-[var(--ui-text-pri)]" : "text-[var(--ui-text-sec)] group-hover:text-[var(--ui-text-pri)]"
-        )}
-      >
-        {label}
-      </span>
+      {sublabel ? (
+        <span className="relative flex min-w-0 flex-1 flex-col justify-center leading-tight">
+          <span className={cn("truncate text-sm font-semibold whitespace-nowrap", textColor)}>{label}</span>
+          <span className={cn("truncate text-xs whitespace-nowrap", textColor)}>{sublabel}</span>
+        </span>
+      ) : (
+        <span className={cn("relative flex-1 truncate text-sm font-semibold whitespace-nowrap", textColor)}>
+          {label}
+        </span>
+      )}
       {Icon && <Icon className={cn("relative h-[17px] w-[17px] shrink-0", iconColor)} />}
       {avatar && (
         avatar.src ? (
@@ -91,7 +96,8 @@ function Pill({
   );
 
   const className = cn(
-    "group relative flex h-[42px] w-[172px] shrink-0 items-center justify-between gap-2.5 overflow-hidden rounded-r-xl px-3.5",
+    "group relative flex w-[172px] shrink-0 items-center justify-between gap-2.5 overflow-hidden rounded-r-xl px-3.5",
+    sublabel ? "h-[52px]" : "h-[42px]",
     "bg-[var(--ui-card-bg)] border border-[var(--ui-card-border)] shadow-[var(--ui-card-shadow)] backdrop-blur-lg",
     "transition-[margin-left,box-shadow] duration-500 [transition-timing-function:cubic-bezier(0.16,1,0.3,1)]",
     "hover:-ml-3 focus-visible:-ml-3 focus-visible:outline-none",
@@ -208,7 +214,8 @@ export function Sidebar() {
       <Pill
         id="/subscription"
         icon={CreditCard}
-        label={`${t.sidebar.subscription} · ${subscriptionLabel}`}
+        label={t.sidebar.subscription}
+        sublabel={subscriptionLabel}
         iconColor="text-orange-600"
         glowRgb="234,88,12"
         active={subscriptionActive}

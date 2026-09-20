@@ -141,7 +141,12 @@ export const MenuBar = React.forwardRef<HTMLDivElement, MenuBarProps>(
                       <span className={cn("transition-colors duration-300", item.iconColor)}>
                         <Icon className="h-5 w-5" />
                       </span>
-                      <span>{item.label}</span>
+                      <span className="relative inline-block">
+                        {item.label}
+                        {isActive && (
+                          <span className="absolute inset-x-1/4 -bottom-1 h-0.5 rounded-full bg-current" />
+                        )}
+                      </span>
                     </motion.div>
                     <motion.div
                       className={cn(
@@ -161,7 +166,12 @@ export const MenuBar = React.forwardRef<HTMLDivElement, MenuBarProps>(
                       <span className={cn("transition-colors duration-300", item.iconColor)}>
                         <Icon className="h-5 w-5" />
                       </span>
-                      <span>{item.label}</span>
+                      <span className="relative inline-block">
+                        {item.label}
+                        {isActive && (
+                          <span className="absolute inset-x-1/4 -bottom-1 h-0.5 rounded-full bg-current" />
+                        )}
+                      </span>
                     </motion.div>
                   </motion.div>
                 </button>
