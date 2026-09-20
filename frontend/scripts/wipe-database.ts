@@ -16,8 +16,9 @@
  *
  * nav_config (sidebar config) is preserved by default too, but — unlike the
  * two above — it's safe to wipe (GET /api/nav just returns [] when empty,
- * nothing throws), so pass --include-nav-config to also clear it. Reseed
- * afterward with `npm run db:seed-nav`.
+ * nothing throws), so pass --include-nav-config to also clear it. When
+ * that flag is set, it's automatically reseeded afterward (same logic as
+ * `npm run db:seed-nav`) so the database isn't left without a sidebar.
  *
  * --env=testing/production/both requires PRODUCTION_DATABASE_URL and/or
  * TESTING_DATABASE_URL in the environment (or frontend/.env, gitignored) —
@@ -39,6 +40,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import { seedNav } from "../prisma/seed-nav";
 
 function loadEnvFile(file: string) {
   if (!fs.existsSync(file)) return;
@@ -160,6 +162,10 @@ async function runTarget(target: Target) {
     const navConfig = includeNavConfig
       ? await deleteTable("nav_config", () => prisma.navConfig.deleteMany({}))
       : null;
+    if (includeNavConfig) {
+      const seeded = await seedNav(prisma);
+      console.log(`  → Reseeded nav_config (${seeded} rows)`);
+    }
 
     console.log("\nDeleted:");
     printRows({
@@ -178,9 +184,6 @@ async function runTarget(target: Target) {
       ...(includeNavConfig ? {} : { nav_config: await prisma.navConfig.count() }),
     });
 
-    if (includeNavConfig) {
-      console.log("\nnav_config was wiped too — reseed with: npm run db:seed-nav");
-    }
     console.log(DIVIDER);
   } finally {
     await prisma.$disconnect();
