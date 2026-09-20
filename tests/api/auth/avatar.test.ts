@@ -99,6 +99,24 @@ describeOrSkip("PATCH /api/auth/avatar", () => {
     }
   });
 
+  test("200 does not re-seal the session cookie — the avatar lives only in the users table", async () => {
+    const user = await createTestUser();
+    try {
+      const sealed = await sealSessionCookie({ userId: user.id });
+      const res = await patchAvatar(`${SESSION_COOKIE_NAME}=${sealed}`, {
+        avatar: VALID_AVATAR,
+      });
+      expect(res.status).toBe(200);
+      // A data URL avatar is far larger than a cookie can hold, so this route
+      // must not attempt to write it back into the session. No Set-Cookie
+      // header at all means the session was never touched.
+      const setCookie = res.headers.getSetCookie?.() ?? [];
+      expect(setCookie.some((c) => c.startsWith(`${SESSION_COOKIE_NAME}=`))).toBe(false);
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
   test("404 when the session's userId no longer exists", async () => {
     const sealed = await sealSessionCookie({ userId: "00000000-0000-0000-0000-000000000000" });
     const res = await patchAvatar(`${SESSION_COOKIE_NAME}=${sealed}`, {

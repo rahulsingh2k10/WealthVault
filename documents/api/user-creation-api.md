@@ -182,9 +182,14 @@ All four providers follow the same shape — each callback route calls
 | `oauth_state` | cookie | string | yes | Set by `GET /api/auth/x` |
 | `x_code_verifier` | cookie | string | yes | PKCE verifier; request fails without it |
 
-**Profile fetch:** `GET https://api.twitter.com/2/users/me` → `username` handle (→ `username`, **not** an email), `name` (→ `fullName`), `profile_image_url` (→ `avatar`)
+**Profile fetch:** `GET https://api.twitter.com/2/users/me?user.fields=name,username,profile_image_url` → `username` handle (→ `username`, **not** an email), `name` (→ `fullName`), `profile_image_url` (→ `avatar`, see below)
 
-**Database effect:** see [`UpsertUserInput`](#upsertuserinput-schema) — `auth_platformId` set to the `X` row's id, `avatar` set. Note `username` is the bare X handle here, not an email, since X's API doesn't expose the account's email address.
+**Avatar URL:** X's `profile_image_url` points at a low-resolution `_normal` thumbnail.
+The callback strips that suffix (`profile_image_url.replace("_normal", "")`) to get the
+full-size image, and falls back to `https://unavatar.io/twitter/<handle>` when X returns
+no `profile_image_url` at all.
+
+**Database effect:** see [`UpsertUserInput`](#upsertuserinput-schema) — `auth_platformId` set to the `X` row's id, `avatar` set (see **Avatar URL** above). Note `username` is the bare X handle here, not an email, since X's API doesn't expose the account's email address.
 
 **Responses**
 
@@ -257,7 +262,10 @@ The session cookie (via `src/lib/session.ts`) encodes:
   userId:     string   // the User.id of the row just created/updated
   userName:   string   // User.fullName
   userEmail:  string   // User.username
-  userAvatar: string   // provider avatar URL, or "" for Apple/X-without-image
+  userAvatar: string   // provider avatar URL; "" for Apple (never provides one) and,
+                        // in principle, for LinkedIn if it omits `picture` — X always
+                        // has one (falls back to unavatar.io), Google always has one
+                        // in practice (Google's userinfo endpoint always returns it)
 }
 ```
 
@@ -318,10 +326,15 @@ const user = await prisma.user.upsert({
 | `verifier` | not set — remains `NULL` (first-time vault setup happens later, in `/api/auth/unlock`) |
 | `createdAt` / `updatedAt` | set automatically by Prisma |
 
-**On `update`** (returning user, `username` already exists) — only `fullName`, `auth_platformId`,
-and (for Google/LinkedIn/X) `avatar` are refreshed. `subscriptionPlanId` is **not** touched
-on update, so a returning user keeps whatever tier they're on — logging in again never
-resets a paid subscription back to Free.
+**On `update`** (returning user, `username` already exists) — `auth_platformId` is always
+refreshed, and (for Google/LinkedIn/X) `avatar` is always refreshed. `fullName` is always
+refreshed too, **including for Apple**: Apple only sends the user's name once, on the very
+first authorization (see the Apple callback's `user` form field below), so on every later
+login `firstName`/`lastName` are empty and the computed `fullName` falls back to the
+literal string `"Apple User"` — a returning Apple user's stored name is overwritten with
+that placeholder on every login after the first, not left untouched.
+`subscriptionPlanId` is **not** touched on update, so a returning user keeps whatever
+tier they're on — logging in again never resets a paid subscription back to Free.
 
 ---
 

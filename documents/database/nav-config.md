@@ -20,10 +20,6 @@ Today only **India (`IN`)** is configured — 11 rows. `COUNTRIES` in
 `src/i18n/countries.ts` only has India uncommented, so it's the only country the settings
 dropdown offers. When another country is launched, it gets its own `nav_config` rows.
 
-This model was deleted from the schema in commit `f589006`, which left
-`src/app/api/nav/route.ts` calling a non-existent `prisma.navConfig` — every request 500'd
-and the sidebar rendered empty for every user until this table was restored.
-
 ---
 
 ## Column reference
@@ -86,9 +82,10 @@ model NavConfig {
 
 Seeded by **`frontend/prisma/seed-nav.ts`** (`npm run db:seed-nav`) — a standalone,
 idempotent script (`deleteMany` where `country = 'IN'`, then `createMany`). It is **not**
-part of `prisma/seed.ts`, which still references models deleted in `f589006` and does not
-run. The same 11 rows are duplicated in `tests/helpers/seedNavData.ts` (`ensureNavData()`)
-for the test suites — keep the two in lockstep.
+part of `prisma/seed.ts`, which references Prisma models absent from the current schema
+(`appConfig`, `equityHolding`, `bankAccount`, and others) and cannot run. The same 11 rows
+are duplicated in `tests/helpers/seedNavData.ts` (`ensureNavData()`) for the test suites —
+keep the two in lockstep.
 
 ---
 

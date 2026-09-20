@@ -18,10 +18,6 @@
   preference at least once; until then the API serves a hard-coded default. There is
   never more than one row per `(userId, key)` pair.
 
-This table replaces the earlier `app_config` table (Prisma model `AppConfig`), which was
-dropped from the schema in commit `f589006` and left the preferences UI silently
-non-functional until this table restored it.
-
 ---
 
 ## Column reference

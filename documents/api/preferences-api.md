@@ -46,6 +46,12 @@ The route reads and writes nothing sensitive and performs no encryption.
 | `200` | `Preferences` object (see **Schemas**) | Always, for a valid session — stored values merged over the defaults |
 | `401` | `{ "error": "Unauthorized" }` | No valid session (`session.userId` missing) — returned by `middleware.ts` before the route runs |
 
+`route.ts` itself also contains `if (!session.userId) return NextResponse.json({}, {
+status: 401 })` on both methods, but — same as `/api/nav` — this branch is unreachable
+for a real HTTP request, since middleware already rejects with `{ "error": "Unauthorized"
+}` before the request reaches the handler. It only fires if the route function is invoked
+directly, bypassing middleware.
+
 The `200` body always contains all three keys. For each key with no row in
 `user_preference`, the default is returned:
 

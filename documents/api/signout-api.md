@@ -14,8 +14,11 @@ A single route ends a session: `POST /api/auth/signout`. It requires no request 
 no prior authentication check — there is no session state to validate beforehand, so it
 always succeeds. Called from three places: the sidebar's "Sign out" pill (shown on every
 authenticated page — `Sidebar.tsx`), the unlock screen's own "Sign out" button, and the
-unlock screen's auto-signout when it detects a stale session (a `userId` cookie whose user
-row no longer exists in the database).
+unlock screen's submit handler when `POST /api/auth/unlock` returns `404` — a `userId`
+cookie whose user row no longer exists in the database, discovered only once the user
+submits a passphrase. (A stale session caught on `/unlock`'s initial load, before any
+passphrase is submitted, does not call this route — the page redirects to `/` directly,
+leaving the session cookie in place; see `../screens/02 Passphrase.md`.)
 
 ---
 
@@ -82,4 +85,4 @@ None. This route never reads or writes any table — it only clears the session 
 | `src/app/api/auth/signout/route.ts` | `POST /api/auth/signout` |
 | `src/lib/session.ts` | `getSession()` — the `iron-session` wrapper this route calls `.destroy()` on |
 | `src/components/layout/Sidebar.tsx` | Calls this route from the "Sign out" pill shown on every authenticated page |
-| `src/app/unlock/page.tsx` | Calls this route from its own "Sign out" button and from its stale-session auto-signout |
+| `src/app/unlock/UnlockClient.tsx` | Calls this route from its own "Sign out" button, and from the passphrase-submit handler when `/api/auth/unlock` returns `404` |

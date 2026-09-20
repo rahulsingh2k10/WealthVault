@@ -71,7 +71,7 @@ compared against the verifier, never re-validated for strength). The `400` respo
 | At least 2 special (non-alphanumeric) characters | `Passphrase must contain at least two special characters` |
 | 256 characters or fewer | `Passphrase must be 256 characters or fewer` |
 
-The client-side UI (`src/app/unlock/page.tsx`) enforces the identical five rules live as
+The client-side UI (`src/app/unlock/UnlockClient.tsx`) enforces the identical five rules live as
 the user types and disables the submit button until all pass — so in normal use this
 `400` is unreachable through the UI. It only fires if something bypasses the client check
 (a direct API call, or a client/server validation-logic drift, since the two are
@@ -159,4 +159,5 @@ run on any error path (400/401/404/500), only on a successful unlock.
 | `src/lib/validation/passphraseValidation.ts` | `validatePassphrase()` — the five server-side strength rules |
 | `src/lib/services/SubscriptionService.ts` | `reconcileSupersedingSubscriptions()` — called on every successful unlock, see **Database effect** |
 | `src/lib/session.ts` | `getSession()` — reads `userId`, writes `encryptionKey` on success |
-| `src/app/unlock/page.tsx` | The screen that calls this route — see `../screens/02 Passphrase.md` |
+| `src/app/unlock/page.tsx` | Server component; loads the signed-in user's name, avatar, and whether they have a `verifier` set yet, and passes them to `UnlockClient` |
+| `src/app/unlock/UnlockClient.tsx` | The client screen that calls this route — see `../screens/02 Passphrase.md` |

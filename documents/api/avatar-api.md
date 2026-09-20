@@ -71,11 +71,8 @@ This route touches exactly one column: `users.avatar`.
 | Oversized avatar (400) | None — fails before the update |
 | No valid session (401) | None |
 
-No other column on `users`, and no other table, is touched by this route.
-
-The route also writes the same value to `session.userAvatar` (the sealed
-`portfolio_session` cookie) immediately after the database write, so the two stay in
-sync for the remainder of the session without a page reload.
+No other column on `users`, no other table, and no part of the session cookie, is
+touched by this route.
 
 ---
 
@@ -84,4 +81,4 @@ sync for the remainder of the session without a page reload.
 | File | Role |
 |---|---|
 | `src/app/api/auth/avatar/route.ts` | `PATCH /api/auth/avatar` |
-| `src/lib/session.ts` | `getSession()` — reads `userId`, writes `userAvatar` back on success |
+| `src/lib/session.ts` | `getSession()` — reads `userId` |

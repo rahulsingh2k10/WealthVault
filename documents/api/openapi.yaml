@@ -3,11 +3,19 @@ info:
   title: WealthVault API
   version: "1.0.0"
   description: |
-    OAuth sign-in, vault-unlock, and profile routes for WealthVault, generated from
-    `user-creation-api.md` and `unlock-api.md`.
+    OAuth sign-in, vault unlock, session, profile, preference, navigation and
+    subscription routes for WealthVault.
 
-    Scope: this spec covers the four OAuth providers' initiate + callback routes,
-    `POST /api/auth/unlock`, and `PATCH /api/auth/avatar`.
+    Scope: the four OAuth providers' initiate + callback routes, the vault and session
+    routes under `/api/auth/*`, `/api/preferences`, `/api/nav`, the `/api/subscription/*`
+    routes (including the payment-provider webhook), the daily cron route, and the
+    `/dashboard` page gate. `GET /api/portfolio` and the per-asset-class collection and
+    item routes (`/api/bank`, `/api/cash-banking`, `/api/crypto`, `/api/fd-rd-ppf`,
+    `/api/fixed-income`, `/api/foreign`, `/api/gold-commodities`,
+    `/api/government-schemes`, `/api/holdings`, `/api/insurance`, `/api/liabilities`,
+    `/api/mutual-funds`, `/api/nps`, `/api/others`, `/api/post-office`,
+    `/api/real-estate`, `/api/stocks`, and each one's `/{id}`) respond
+    `501 { "error": "Not implemented" }` and are not documented individually.
 
     WealthVault has no dedicated "create a user" endpoint: a `users` row is created
     or updated as a side effect of a successful OAuth callback (a Prisma `upsert`),
@@ -15,18 +23,37 @@ info:
     `username` are only ever refreshed via that same OAuth login upsert; `avatar` is
     the one user detail with its own dedicated update route (`PATCH /api/auth/avatar`).
 
+    ### Authentication tiers
+
+    `frontend/src/middleware.ts` gates every route before its handler runs:
+
+    | Tier | Routes | Requirement |
+    |---|---|---|
+    | Public | `/api/auth/google*`, `/api/auth/x*`, `/api/auth/linkedin*`, `/api/auth/apple*`, `/api/auth/unlock`, `/api/auth/reset-vault`, `/api/auth/lock`, `/api/auth/me`, `/api/auth/avatar`, `/api/auth/signout`, `/api/subscription/webhook/*`, `/api/cron/finalize-cancellations` | None at the middleware; several handlers check `session.userId` themselves |
+    | Signed in | `/unlock`, `/api/preferences`, `/api/nav` | `userId` in the session |
+    | Signed in and unlocked | every other route (`/api/subscription`, `/api/subscription/*` except the webhook, `/dashboard`, …) | `userId` **and** `encryptionKey` in the session |
+
+    A request to a signed-in tier route with no session gets `401 { "error": "Unauthorized" }`
+    (or a `307` redirect to `/` for a page). A request to a signed-in-and-unlocked API route
+    from a session that has no `encryptionKey` gets `401 { "error": "Portfolio locked" }`
+    (or a `307` redirect to `/unlock` for a page).
+
     ### What every OAuth callback writes to `users` (the upsert)
 
-    | Column | On create (new `username`) | On update (returning user) |
+    | Column | On create (unseen `username`) | On update (returning user) |
     |---|---|---|
     | `id` | auto-generated `uuid()` | unchanged |
-    | `fullName` | from the provider profile | refreshed from the provider profile |
+    | `fullName` | from the provider profile (Apple: the one-time `user` form field, `Apple User` when absent) | refreshed from the provider profile, by the same rule |
     | `username` | provider-derived identity string (email, or bare handle for X) — this is the upsert key | unchanged |
     | `auth_platformId` | FK to `auth_platforms.id`, resolved from the provider | refreshed |
-    | `avatar` | provider's photo URL, or omitted entirely for Apple | refreshed (Google/LinkedIn/X only — never for Apple) |
+    | `avatar` | Google/LinkedIn: the profile `picture` when present. X: `profile_image_url` without its `_normal` size suffix, else `https://unavatar.io/twitter/<handle>`. Apple: omitted | Google/LinkedIn: overwritten only when the provider supplies a `picture`. X: always overwritten. Apple: never touched |
     | `subscriptionPlanId` | FK to `subscription_plans.id`, always the `FREE` row's id | **never touched** — a returning user keeps whatever tier they're on |
-    | `verifier` | left `NULL` (set later by `POST /api/auth/unlock`) | untouched |
+    | `verifier` | left `NULL` (set by `POST /api/auth/unlock`) | untouched |
     | `createdAt` / `updatedAt` | set automatically by Prisma | `updatedAt` refreshed |
+
+    After the upsert, the callback inserts a `subscription_plan_history` row when the
+    user's `subscriptionPlanId` differs from the plan recorded by their most recent
+    history row — always the case on a user's first login.
 
     ### What a successful callback writes to the session cookie
 
@@ -38,14 +65,17 @@ info:
     | `userId` | the `User.id` of the row just created/updated |
     | `userName` | `User.fullName` |
     | `userEmail` | `User.username` |
-    | `userAvatar` | provider avatar URL, or `""` for Apple/X-without-image |
+    | `userAvatar` | Google: `picture`. LinkedIn: `picture`, or `""`. X: the avatar saved to `users.avatar`. Apple: `""` |
 
-    `subscription` is deliberately not included in this cookie.
+    `subscription` is deliberately not included in this cookie. `encryptionKey` is added
+    later by `POST /api/auth/unlock`. The callback also deletes the `oauth_state` cookie
+    (and, for X, `x_code_verifier`).
 
     ### Failure redirect codes (`/?error=<code>`)
 
-    On any of these, no row is created or modified in `users` — the upsert is either
-    never reached, or its result is discarded because the route already returned:
+    Every failure redirects to `/?error=<code>` without establishing a session. For every
+    code except `server_error`, no `users` row is written; `server_error` can also occur
+    after the upsert has succeeded.
 
     | Code | When |
     |---|---|
@@ -69,15 +99,21 @@ tags:
   - name: LinkedIn
     description: LinkedIn OAuth sign-in
   - name: Unlock
-    description: Vault passphrase setup/verification, run after OAuth sign-in
+    description: Vault passphrase setup, verification and reset, run after OAuth sign-in
   - name: Profile
     description: Updating an existing user's own details
+  - name: Session
+    description: Reading the current identity, locking the vault, and ending the session
   - name: Preferences
     description: The current user's country, locale and theme settings
   - name: Navigation
     description: The country-specific sidebar navigation items
-  - name: Session
-    description: Ending an existing session
+  - name: Subscription
+    description: The current user's paid plan — checkout, cancellation, resumption and plan changes
+  - name: Webhooks
+    description: Inbound payment-provider events
+  - name: Cron
+    description: Scheduled maintenance jobs
   - name: Dashboard
     description: The protected page reached after OAuth sign-in and vault unlock
 
@@ -88,12 +124,16 @@ x-tagGroups:
     tags: [Unlock]
   - name: Profile
     tags: [Profile]
+  - name: Session
+    tags: [Session]
   - name: Preferences
     tags: [Preferences]
   - name: Navigation
     tags: [Navigation]
-  - name: Session
-    tags: [Session]
+  - name: Payments
+    tags: [Subscription, Webhooks]
+  - name: Scheduled jobs
+    tags: [Cron]
   - name: Dashboard
     tags: [Dashboard]
 
@@ -115,6 +155,13 @@ paths:
             Set-Cookie:
               schema: { type: string }
               example: "oauth_state=<token>; HttpOnly; Max-Age=600"
+        "500":
+          description: "`GOOGLE_CLIENT_ID` is not configured."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example: { error: "Google OAuth not configured" }
 
   /api/auth/google/callback:
     get:
@@ -129,9 +176,10 @@ paths:
       description: |
         Profile fetch (server-side): `GET https://www.googleapis.com/oauth2/v3/userinfo`
         → `email` (→ `username`), `given_name`/`family_name` (→ `fullName`), `picture` (→ `avatar`).
+        `email` and `sub` are both required.
 
         Database effect on `users` (full table in the Info section above):
-        `auth_platformId` set to the `GOOGLE` row's id, `avatar` set.
+        `auth_platformId` set to the `GOOGLE` row's id, `avatar` set when Google supplies a `picture`.
       responses:
         "302":
           description: |
@@ -157,6 +205,13 @@ paths:
             Set-Cookie:
               schema: { type: string }
               example: "oauth_state=<token>; HttpOnly; Max-Age=600"
+        "500":
+          description: "`APPLE_CLIENT_ID` is not configured."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example: { error: "Apple OAuth not configured" }
 
   /api/auth/apple/callback:
     post:
@@ -168,8 +223,8 @@ paths:
         body instead of `GET` + a query string, per Apple's `response_mode=form_post`.
 
         Profile fetch: decoded `id_token` JWT `email` claim (→ `username`, falls back to
-        `apple_{sub}@apple.com` since Apple omits `email` on repeat logins) + the one-time
-        `user` field (→ `fullName`, first login only).
+        `apple_{sub}@apple.com` when the claim is absent) + the one-time `user` field
+        (→ `fullName`, first authorization only; `Apple User` when it is absent).
 
         Database effect on `users` (full table in the Info section above):
         `auth_platformId` set to the `APPLE` row's id, `avatar` **never** set (Apple exposes
@@ -226,6 +281,13 @@ paths:
                 oauth_state=<token>; HttpOnly; Max-Age=600
                 x_code_verifier=<verifier>; HttpOnly; Max-Age=600
               description: Two cookies are set — `oauth_state`, and the PKCE (S256) `x_code_verifier`.
+        "500":
+          description: "`X_CLIENT_ID` is not configured."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example: { error: "X OAuth not configured" }
 
   /api/auth/x/callback:
     get:
@@ -243,8 +305,9 @@ paths:
         (→ `username`, **not** an email), `name` (→ `fullName`), `profile_image_url` (→ `avatar`).
 
         Database effect on `users` (full table in the Info section above):
-        `auth_platformId` set to the `X` row's id, `avatar` set. `username` is the bare X
-        handle here, not an email, since X's API doesn't expose the account's email address.
+        `auth_platformId` set to the `X` row's id, `avatar` set on every login. `username`
+        is the bare X handle here, not an email, since X's API doesn't expose the account's
+        email address.
       responses:
         "302":
           description: |
@@ -270,6 +333,13 @@ paths:
             Set-Cookie:
               schema: { type: string }
               example: "oauth_state=<token>; HttpOnly; Max-Age=600"
+        "500":
+          description: "`LINKEDIN_CLIENT_ID` is not configured."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example: { error: "LinkedIn OAuth not configured" }
 
   /api/auth/linkedin/callback:
     get:
@@ -284,9 +354,10 @@ paths:
       description: |
         Profile fetch: `GET https://api.linkedin.com/v2/userinfo` (OIDC) → `email`
         (→ `username`), `given_name`/`family_name` (→ `fullName`), `picture` (→ `avatar`).
+        `email` and `sub` are both required.
 
         Database effect on `users` (full table in the Info section above):
-        `auth_platformId` set to the `LINKEDIN` row's id, `avatar` set.
+        `auth_platformId` set to the `LINKEDIN` row's id, `avatar` set when LinkedIn supplies a `picture`.
       responses:
         "302":
           description: |
@@ -296,6 +367,52 @@ paths:
           headers:
             Location: { schema: { type: string } }
             Set-Cookie: { schema: { type: string } }
+
+  /api/auth/me:
+    get:
+      summary: Get the signed-in user's identity and effective plan
+      operationId: getCurrentUser
+      tags: [Session]
+      security:
+        - SessionCookie: []
+      description: |
+        Public at the middleware; the handler itself reads `session.userId`. Returns
+        `{ "user": null }` with status `200` when there is no session, or when the
+        session's `userId` matches no `users` row (a stale session).
+
+        `subscription` is the user's effective plan tier, computed from their subscription
+        rows. The computation may finalize the user's expired cancel-at-cycle-end
+        subscriptions on the payment provider and, when the effective plan differs from
+        `users.subscriptionPlanId`, updates that column and logs a `subscription_plan_history`
+        row. If the computation throws, `subscription` falls back to the stored
+        `users.subscriptionPlanId` tier, and `paymentRetrying`/`subscriptionEndsAt` are
+        `false`/`null`.
+
+        When `users.avatar` is empty and the session carries an avatar URL, that URL is
+        written to `users.avatar`.
+      responses:
+        "200":
+          description: 'The current user, or `{ "user": null }`.'
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentUserResponse"
+              examples:
+                signedIn:
+                  summary: Signed-in user
+                  value:
+                    user:
+                      id: "b7f0c1a2-3d4e-4f56-8a9b-0c1d2e3f4a5b"
+                      name: "Rahul Singh"
+                      email: "rahul@example.com"
+                      avatar: "https://lh3.googleusercontent.com/a/example"
+                      platform: GOOGLE
+                      subscription: FREE
+                      paymentRetrying: false
+                      subscriptionEndsAt: null
+                noSession:
+                  summary: No session, or a stale session
+                  value: { user: null }
 
   /api/auth/unlock:
     post:
@@ -311,6 +428,17 @@ paths:
         existing OAuth session (`session.userId`); this is the second of two distinct
         authentication steps (OAuth proves *who you are*, this proves *you know the vault
         passphrase*).
+
+        First-time path: the passphrase must pass strength validation (at least 12
+        characters; a letter and a number; at least two uppercase letters; at least two
+        special characters; at most 256 characters). Only the first failing rule's message
+        is returned. The route then stores an encrypted verifier derived from the passphrase
+        in `users.verifier`. Returning path: the derived key is checked against the stored
+        verifier; no strength validation runs.
+
+        On success, the derived key is sealed into the session cookie as `encryptionKey`
+        (the passphrase itself is never stored), and any due plan-change (superseding
+        subscription) for the user is resolved before the response is sent.
       requestBody:
         required: true
         content:
@@ -327,6 +455,10 @@ paths:
       responses:
         "200":
           description: Passphrase accepted.
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+              description: The re-sealed `portfolio_session` cookie, now containing `encryptionKey`.
           content:
             application/json:
               schema:
@@ -346,6 +478,18 @@ paths:
                 tooShort:
                   summary: First-time only — failed strength validation
                   value: { error: "Passphrase must be at least 12 characters" }
+                noDigit:
+                  summary: First-time only — no letter and number
+                  value: { error: "Passphrase must contain a letter and a number" }
+                noUpper:
+                  summary: First-time only — fewer than two uppercase letters
+                  value: { error: "Passphrase must contain at least two uppercase letters" }
+                noSpecial:
+                  summary: First-time only — fewer than two special characters
+                  value: { error: "Passphrase must contain at least two special characters" }
+                tooLong:
+                  summary: First-time only — over 256 characters
+                  value: { error: "Passphrase must be 256 characters or fewer" }
         "401":
           description: No valid session, or (returning user only) the passphrase didn't match.
           content:
@@ -367,25 +511,78 @@ paths:
                 $ref: "#/components/schemas/Error"
               example: { error: "User not found" }
         "500":
-          description: Any unhandled exception.
+          description: >-
+            Any unhandled exception, including a failure while resolving plan-changes,
+            which runs after `encryptionKey` has been stored in the session.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
               example: { error: "Failed to unlock" }
 
+  /api/auth/reset-vault:
+    post:
+      summary: Clear the vault passphrase so a fresh one can be set
+      operationId: resetVault
+      tags: [Unlock]
+      security:
+        - SessionCookie: []
+      description: |
+        Sets `users.verifier` to `NULL` for the signed-in user and removes `encryptionKey`
+        from the session, so the next `POST /api/auth/unlock` takes the first-time path
+        (`firstTime: true`) and establishes a fresh passphrase. No other row is modified
+        or deleted. No request body.
+
+        Public at the middleware; the handler requires `session.userId`.
+      responses:
+        "200":
+          description: Verifier cleared and vault locked.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Success"
+        "401":
+          description: No valid session.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example: { error: "Unauthorized" }
+
+  /api/auth/lock:
+    post:
+      summary: Lock the vault without signing out
+      operationId: lockVault
+      tags: [Session]
+      description: |
+        Removes `encryptionKey` from the session; the user's identity (`userId`,
+        `userName`, `userEmail`, `userAvatar`) stays, so the next protected request
+        redirects to `/unlock`. No request body. The handler performs no session check and
+        always responds `200`. Public at the middleware.
+      responses:
+        "200":
+          description: Vault locked.
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+              description: The re-sealed `portfolio_session` cookie, without `encryptionKey`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Success"
+
   /api/auth/avatar:
     patch:
-      summary: Update the current user's avatar
+      summary: Set the current user's avatar
       operationId: updateAvatar
       tags: [Profile]
       security:
         - SessionCookie: []
       description: |
-        Overwrites `users.avatar` with a client-uploaded image and keeps the session's
-        `userAvatar` in sync, replacing whatever avatar the OAuth provider originally
-        supplied. Independent of the unlock flow — can be called before or after
-        `POST /api/auth/unlock`.
+        Overwrites `users.avatar` with a client-uploaded image, replacing whatever avatar
+        the OAuth provider supplied. The session is not modified. Independent of the unlock
+        flow — can be called before or after `POST /api/auth/unlock`. Public at the
+        middleware; the handler requires `session.userId`.
 
         Database effect: `UPDATE users SET avatar = <data URL> WHERE id = :userId`.
       requestBody:
@@ -407,12 +604,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                required: [success]
-                properties:
-                  success:
-                    type: boolean
-                    enum: [true]
+                $ref: "#/components/schemas/Success"
         "400":
           description: Missing/malformed avatar data, or the image exceeds the size limit.
           content:
@@ -440,11 +632,11 @@ paths:
       operationId: signOut
       tags: [Session]
       description: |
-        Destroys the `portfolio_session` cookie's contents — `userId`, `userEmail`,
-        `userAvatar`, and (if the vault was unlocked) `encryptionKey` — in one call.
-        No request body. Idempotent: calling this with no session, an expired session,
-        or an already-cleared session all succeed identically; there's no session state
-        to check beforehand, so this route never returns 401.
+        Destroys the `portfolio_session` session — identity fields and (if the vault was
+        unlocked) `encryptionKey` — in one call. No request body. Idempotent: calling this
+        with no session, an expired session, or an already-cleared session all succeed
+        identically; there's no session state to check beforehand, so this route never
+        returns 401. Public at the middleware.
       responses:
         "200":
           description: Session cleared.
@@ -455,12 +647,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                required: [success]
-                properties:
-                  success:
-                    type: boolean
-                    enum: [true]
+                $ref: "#/components/schemas/Success"
 
   /api/preferences:
     get:
@@ -506,7 +693,7 @@ paths:
         - SessionCookie: []
       description: |
         Upserts a single preference row keyed on `(userId, key)` — the first `PATCH`
-        for a key inserts, every later `PATCH` for the same key updates that row's
+        for a key inserts, every later `PATCH` for the same key overwrites that row's
         `value`. There is no `DELETE`; a preference can only be overwritten.
 
         `value` is stored verbatim — not validated against a format or enum.
@@ -542,12 +729,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                required: [success]
-                properties:
-                  success:
-                    type: boolean
-                    enum: [true]
+                $ref: "#/components/schemas/Success"
         "400":
           description: "`key` is not one of `country`, `locale`, `theme`."
           content:
@@ -572,7 +754,7 @@ paths:
         - SessionCookie: []
       description: |
         Returns the ordered sidebar items for the given country from the `nav_config`
-        table. Only India (`IN`) is configured today; any other `country` (including an
+        table. Only India (`IN`) is configured; any other `country` (including an
         IP-detected one the user never chose) falls back to India's rows, so the sidebar
         is never empty. Labels are keys (`labelKey` → the client `t.nav[...]`, translated
         by language); `iconName` maps to the client `ICON_MAP`.
@@ -610,6 +792,565 @@ paths:
                 $ref: "#/components/schemas/Error"
               example: { error: "Unauthorized" }
 
+  /api/subscription:
+    get:
+      summary: Get the current user's subscription for the Manage Subscription screen
+      operationId: getSubscription
+      tags: [Subscription]
+      security:
+        - SessionCookie: []
+      description: |
+        Requires a signed-in, unlocked session. Returns `{ "tier": "FREE" }` when the user
+        has no subscription that currently grants access. Otherwise returns the granting
+        subscription with its display fields, any upcoming plan change
+        (`scheduledChange`) and any plan change whose payment failed (`failedChange`).
+
+        A subscription grants access while its status is `active`, `authenticated` or
+        `pending`; a `cancelled` or `completed` subscription, or one flagged
+        `cancelAtCycleEnd`, grants access until `currentEnd`. When several subscriptions
+        grant access, the one whose access extends furthest is returned.
+      responses:
+        "200":
+          description: The user's subscription view.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/FreeSubscription"
+                  - $ref: "#/components/schemas/ManagedSubscription"
+        "401":
+          $ref: "#/components/responses/VaultSessionRequired"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/subscription/create:
+    post:
+      summary: Start checkout for a paid plan
+      operationId: createSubscription
+      tags: [Subscription]
+      security:
+        - SessionCookie: []
+      description: |
+        Requires a signed-in, unlocked session and a user whose effective plan is `FREE`.
+        Creates a subscription with the payment provider (Razorpay) and a matching
+        `subscriptions` row with status `created`, and returns the values the browser needs
+        to open Razorpay Checkout.
+
+        An unpaid first-time subscription (`status = created`, no `supersedesId`) for the
+        same plan is reused: the request returns its existing `subscriptionId` instead of
+        creating another. A different plan gets its own subscription row.
+
+        The provider customer id is created on first use and stored in
+        `users.razorpayCustomerId`. The charged amount is the plan's `offerPrice` when set,
+        otherwise its `price`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tier]
+              properties:
+                tier:
+                  $ref: "#/components/schemas/PaidTier"
+                offerId:
+                  type: string
+                  description: Optional payment-provider offer id applied to the subscription.
+      responses:
+        "200":
+          description: Checkout details.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutResponse"
+        "400":
+          description: "`tier` is not `MONTHLY`, `QUARTERLY` or `ANNUAL`."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example: { error: "invalid tier" }
+        "401":
+          $ref: "#/components/responses/VaultSessionRequired"
+        "409":
+          description: The user's effective plan is not `FREE`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example: { error: "already_subscribed" }
+        "500":
+          description: >-
+            The plan has no `razorpayPlanId`, `intervalMonths` or `termMonths`
+            (`plan not configured for payments`), or any unhandled exception
+            (`internal error`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                planNotConfigured:
+                  value: { error: "plan not configured for payments" }
+                internal:
+                  value: { error: "internal error" }
+
+  /api/subscription/verify:
+    post:
+      summary: Confirm a completed Razorpay Checkout
+      operationId: verifySubscriptionPayment
+      tags: [Subscription]
+      security:
+        - SessionCookie: []
+      description: |
+        Requires a signed-in, unlocked session. Verifies the Checkout signature —
+        HMAC-SHA256 of `<razorpay_payment_id>|<razorpay_subscription_id>` keyed with the
+        Razorpay key secret — and, for a subscription owned by the caller that is still
+        `created`, sets its status to `authenticated`. A subscription already past
+        `created` (because a webhook arrived first) keeps its status.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [razorpay_payment_id, razorpay_subscription_id, razorpay_signature]
+              properties:
+                razorpay_payment_id:
+                  type: string
+                razorpay_subscription_id:
+                  type: string
+                razorpay_signature:
+                  type: string
+                  description: Hex signature returned by Razorpay Checkout.
+      responses:
+        "200":
+          description: Signature valid and subscription found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ok"
+        "400":
+          description: A field is missing, or the signature does not match.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                missingFields:
+                  value: { error: "missing fields" }
+                badSignature:
+                  value: { error: "bad signature" }
+        "401":
+          $ref: "#/components/responses/VaultSessionRequired"
+        "404":
+          description: No subscription with that provider id belongs to the caller.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example: { error: "not found" }
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/subscription/cancel:
+    post:
+      summary: Cancel the current subscription at the end of the paid cycle
+      operationId: cancelSubscription
+      tags: [Subscription]
+      security:
+        - SessionCookie: []
+      description: |
+        Requires a signed-in, unlocked session. Targets the caller's most recent
+        subscription whose status is `active`, `authenticated` or `pending`. Billing is
+        paused on the payment provider (reversible through `POST /api/subscription/resume`)
+        and the row is flagged `cancelAtCycleEnd`; access continues through `currentEnd`
+        and then drops to `FREE`. Once `currentEnd` has passed, the daily cron (or the
+        user's next plan lookup) fully cancels the subscription on the provider. No request
+        body.
+      responses:
+        "200":
+          description: Cancellation scheduled.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, accessUntil]
+                properties:
+                  ok:
+                    type: boolean
+                    enum: [true]
+                  accessUntil:
+                    type: string
+                    format: date-time
+                    nullable: true
+                    description: The paid-through date (`currentEnd`), or `null` if none is recorded.
+        "401":
+          $ref: "#/components/responses/VaultSessionRequired"
+        "404":
+          description: The caller has no `active`, `authenticated` or `pending` subscription.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example: { error: "not found" }
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/subscription/resume:
+    post:
+      summary: Undo a scheduled cancellation
+      operationId: resumeSubscription
+      tags: [Subscription]
+      security:
+        - SessionCookie: []
+      description: |
+        Requires a signed-in, unlocked session. Targets the caller's most recent
+        subscription flagged `cancelAtCycleEnd` whose status is `active`,
+        `authenticated`, `pending` or `paused`. Resumes billing on the payment provider,
+        clears `cancelAtCycleEnd`, and sets a `paused` row back to `active`. Only possible
+        while the paid cycle is still running (`currentEnd` in the future). No request body.
+      responses:
+        "200":
+          description: Subscription resumed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ok"
+        "401":
+          $ref: "#/components/responses/VaultSessionRequired"
+        "404":
+          description: No subscription with a scheduled cancellation exists.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example: { error: "nothing to resume" }
+        "409":
+          description: The paid cycle has already ended.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example: { error: "subscription has ended — subscribe again" }
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/subscription/abandon:
+    post:
+      summary: Discard a checkout the user walked away from
+      operationId: abandonSubscription
+      tags: [Subscription]
+      security:
+        - SessionCookie: []
+      description: |
+        Requires a signed-in, unlocked session. Called when the user dismisses Razorpay
+        Checkout. A subscription owned by the caller that is still `created` is marked
+        `cancelled` and cancelled on the provider; if it was a plan change, the
+        subscription it superseded is resumed on the provider. A subscription that is not
+        owned by the caller, or is already past `created`, is a silent no-op that returns
+        `{ "cancelled": false }`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [providerSubscriptionId]
+              properties:
+                providerSubscriptionId:
+                  type: string
+                  description: The Razorpay subscription id returned by checkout creation.
+      responses:
+        "200":
+          description: Result of the attempt.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [cancelled]
+                properties:
+                  cancelled:
+                    type: boolean
+        "400":
+          description: "`providerSubscriptionId` is missing or not a non-empty string."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example: { error: "providerSubscriptionId required" }
+        "401":
+          $ref: "#/components/responses/VaultSessionRequired"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/subscription/change-plan:
+    post:
+      summary: Schedule a switch to a different paid plan at the end of the current cycle
+      operationId: changeSubscriptionPlan
+      tags: [Subscription]
+      security:
+        - SessionCookie: []
+      description: |
+        Requires a signed-in, unlocked session and a subscription that currently grants
+        access. Creates a second subscription for the requested plan that starts at the
+        current subscription's `currentEnd` (`supersedesId` points at the current one) and
+        pauses the current subscription on the provider so the two cannot both charge at
+        the shared cycle boundary. Returns the Checkout details for the new subscription.
+
+        At most one change may be in flight. A previous change that never got a payment
+        mandate (`created`) or that the provider gave up on (`halted`) is deleted and
+        replaced; one that is `authenticated` or `pending` blocks the request with `409`.
+        A scheduled change is resolved when the user next unlocks or when the daily cron
+        runs. It is undone with `POST /api/subscription/cancel-scheduled-change`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tier]
+              properties:
+                tier:
+                  $ref: "#/components/schemas/PaidTier"
+      responses:
+        "200":
+          description: Checkout details for the scheduled subscription.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutResponse"
+        "400":
+          description: "`tier` is not a paid tier, or it equals the current plan."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                invalidTier:
+                  value: { error: "invalid tier" }
+                samePlan:
+                  value: { error: "already on this plan" }
+        "401":
+          $ref: "#/components/responses/VaultSessionRequired"
+        "404":
+          description: The caller has no subscription that grants access.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example: { error: "no active subscription" }
+        "409":
+          description: >-
+            The current subscription has no `currentEnd` yet, or a plan change is already
+            in progress.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                notActiveEnough:
+                  value: { error: "subscription not yet active enough to schedule a plan change" }
+                inProgress:
+                  value: { error: "a plan change is already in progress — cancel it before starting another" }
+        "500":
+          description: >-
+            The plan has no `razorpayPlanId`, `intervalMonths` or `termMonths`
+            (`plan not configured for payments`), or any unhandled exception
+            (`internal error`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                planNotConfigured:
+                  value: { error: "plan not configured for payments" }
+                internal:
+                  value: { error: "internal error" }
+
+  /api/subscription/cancel-scheduled-change:
+    post:
+      summary: Cancel a scheduled plan change
+      operationId: cancelScheduledPlanChange
+      tags: [Subscription]
+      security:
+        - SessionCookie: []
+      description: |
+        Requires a signed-in, unlocked session. Targets the caller's most recent
+        superseding subscription that is `created` or `authenticated` and has not started
+        yet. Cancels it on the provider, resumes the subscription it superseded, and
+        deletes the scheduled row. No request body.
+      responses:
+        "200":
+          description: Scheduled change removed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ok"
+        "401":
+          $ref: "#/components/responses/VaultSessionRequired"
+        "404":
+          description: The caller has no scheduled change.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example: { error: "no scheduled change" }
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/subscription/webhook/{provider}:
+    post:
+      summary: Receive a payment-provider webhook event
+      operationId: receiveSubscriptionWebhook
+      tags: [Webhooks]
+      description: |
+        Public at the middleware; authenticity is established by the request signature.
+        Only `razorpay` is a valid `provider`.
+
+        The signature is the hex HMAC-SHA256 of the raw request body keyed with
+        `RAZORPAY_WEBHOOK_SECRET`, sent in `X-Razorpay-Signature`. The route refuses to
+        process events when that secret is not configured (unless the fake payments
+        provider is selected with `PAYMENTS_PROVIDER=fake`).
+
+        Each event is recorded once in `processed_webhook_events`, keyed on
+        `(provider, eventId)`. `eventId` is the `X-Razorpay-Event-Id` header, or the
+        SHA-256 of the raw body when the header is absent. A redelivery of an event that
+        finished processing returns `{ "ok": true, "duplicate": true }` without
+        reprocessing; an event whose earlier attempt did not finish is processed again.
+        Processing writes absolute values from the payload, so reprocessing is safe.
+
+        Handled event names: `subscription.authenticated`, `subscription.activated`,
+        `subscription.charged`, `subscription.pending`, `subscription.halted`,
+        `subscription.paused`, `subscription.resumed`, `subscription.cancelled`,
+        `subscription.completed`, `subscription.updated`. Any other event is recorded and
+        acknowledged with `200` without changing a subscription.
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [razorpay]
+          description: The payment provider that sent the event.
+        - name: X-Razorpay-Signature
+          in: header
+          required: true
+          schema: { type: string }
+          description: Hex HMAC-SHA256 of the raw body.
+        - name: X-Razorpay-Event-Id
+          in: header
+          required: false
+          schema: { type: string }
+          description: Provider-assigned event id used for idempotency.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: The provider's event payload, passed through unmodified.
+              required: [event]
+              properties:
+                event:
+                  type: string
+                  example: "subscription.activated"
+                payload:
+                  type: object
+                  description: Contains `subscription.entity`, the full current subscription.
+      responses:
+        "200":
+          description: Event processed, or acknowledged as a duplicate.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok]
+                properties:
+                  ok:
+                    type: boolean
+                    enum: [true]
+                  duplicate:
+                    type: boolean
+                    enum: [true]
+                    description: Present only when the event had already been processed.
+        "400":
+          description: The signature is missing or does not match.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example: { error: "bad signature" }
+        "404":
+          description: "`provider` is not `razorpay`."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example: { error: "unknown provider" }
+        "500":
+          description: >-
+            The webhook secret is not configured (`webhook not configured`), the
+            idempotency record could not be written (`idempotency check failed`), or
+            applying the event failed (`processing failed`). The provider retries on a
+            non-2xx response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                notConfigured:
+                  value: { error: "webhook not configured" }
+                idempotency:
+                  value: { error: "idempotency check failed" }
+                processing:
+                  value: { error: "processing failed" }
+
+  /api/cron/finalize-cancellations:
+    get:
+      summary: Daily subscription maintenance sweep
+      operationId: finalizeCancellations
+      tags: [Cron]
+      security:
+        - CronSecret: []
+      description: |
+        Invoked daily at 18:30 UTC by Vercel Cron (`vercel.json`). Public at the
+        middleware. When `CRON_SECRET` is configured, the request must carry
+        `Authorization: Bearer <CRON_SECRET>`; when it is not configured, the route
+        performs no check.
+
+        Two sweeps run across all users: cancel-at-cycle-end subscriptions whose
+        `currentEnd` has passed are fully cancelled on the provider and marked `cancelled`,
+        and each affected user's stored plan is reconciled; then every plan change whose
+        start date has arrived is resolved — an `active` scheduled subscription replaces
+        the one it superseded, and one the provider gave up on (`halted`) is rolled back.
+      responses:
+        "200":
+          description: Counts from the two sweeps.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [finalized, upgraded, rolledBack]
+                properties:
+                  finalized:
+                    type: integer
+                    description: Cancel-at-cycle-end subscriptions past `currentEnd` that were processed.
+                  upgraded:
+                    type: integer
+                    description: Scheduled plan changes that took effect.
+                  rolledBack:
+                    type: integer
+                    description: Scheduled plan changes rolled back to the original subscription.
+        "401":
+          description: "`CRON_SECRET` is configured and the `Authorization` header does not match."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example: { error: "Unauthorized" }
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /dashboard:
     get:
       summary: Load the dashboard page
@@ -632,8 +1373,8 @@ paths:
         upgrade-plan prompt modal, shown only to a signed-in user whose effective plan
         tier is `FREE` (`getUpgradePromptData()` /
         `src/lib/services/UpgradePromptService.ts`). A user on any paid tier sees no
-        modal and no other page content — there is no portfolio-summary or widget
-        content on this route today.
+        modal and no other page content — the route has no portfolio-summary or widget
+        content.
       responses:
         "200":
           description: >-
@@ -685,14 +1426,48 @@ components:
       schema: { type: string }
       description: PKCE verifier cookie set by `GET /api/auth/x`; the callback fails without it.
 
+  responses:
+    VaultSessionRequired:
+      description: |
+        Returned by `middleware.ts` before the handler runs. `{ "error": "Unauthorized" }`
+        when there is no session; `{ "error": "Portfolio locked" }` when the session has
+        a `userId` but no `encryptionKey` (vault locked). The handler also returns
+        `{ "error": "Unauthorized" }` when `session.userId` is absent.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            unauthorized:
+              summary: No session
+              value: { error: "Unauthorized" }
+            locked:
+              summary: Signed in, vault locked
+              value: { error: "Portfolio locked" }
+    InternalError:
+      description: Any unhandled exception.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example: { error: "internal error" }
+
   securitySchemes:
     SessionCookie:
       type: apiKey
       in: cookie
       name: portfolio_session
       description: >-
-        Sealed iron-session cookie set by any OAuth callback route; must contain
-        userId. Missing or expired → 401 Unauthorized.
+        Sealed iron-session cookie (`httpOnly`, `Secure` in production, 8-hour lifetime)
+        set by any OAuth callback route; must contain userId. Routes in the
+        signed-in-and-unlocked tier also require `encryptionKey`, which
+        `POST /api/auth/unlock` adds. Missing or expired → 401 Unauthorized.
+    CronSecret:
+      type: http
+      scheme: bearer
+      description: >-
+        The `CRON_SECRET` environment value, sent by Vercel Cron as
+        `Authorization: Bearer <CRON_SECRET>`. Enforced only when `CRON_SECRET` is set.
 
   schemas:
     NavItem:
@@ -754,9 +1529,190 @@ components:
         firstTime:
           type: boolean
           description: >-
-            Reflects the state of user.verifier before this request. True exactly once
-            per user — the very first successful unlock — false on every subsequent
-            unlock.
+            Reflects the state of user.verifier before this request. True when the user
+            had no verifier — the first successful unlock, and the first unlock after
+            `POST /api/auth/reset-vault` — and false otherwise.
+
+    CurrentUserResponse:
+      type: object
+      required: [user]
+      properties:
+        user:
+          type: object
+          nullable: true
+          description: "`null` when there is no session or the session's user no longer exists."
+          required: [id, name, email, avatar, platform, subscription, paymentRetrying, subscriptionEndsAt]
+          properties:
+            id:
+              type: string
+              description: "`users.id` (uuid)."
+            name:
+              type: string
+              description: "`users.fullName`."
+            email:
+              type: string
+              description: "`users.username` — an email, or the bare handle for X."
+            avatar:
+              type: string
+              description: Avatar URL or base64 data URL; `""` when the user has none.
+            platform:
+              type: string
+              enum: [GOOGLE, APPLE, X, LINKEDIN]
+              description: The provider the user last signed in with.
+            subscription:
+              $ref: "#/components/schemas/Tier"
+            paymentRetrying:
+              type: boolean
+              description: True while a granting subscription is in the provider's payment-retry state (`pending`).
+            subscriptionEndsAt:
+              type: string
+              format: date-time
+              nullable: true
+              description: The paid-through date of the effective plan, or `null`.
+
+    Tier:
+      type: string
+      enum: [FREE, MONTHLY, QUARTERLY, ANNUAL]
+
+    PaidTier:
+      type: string
+      enum: [MONTHLY, QUARTERLY, ANNUAL]
+
+    FreeSubscription:
+      type: object
+      required: [tier]
+      description: The user has no subscription that grants access.
+      properties:
+        tier:
+          type: string
+          enum: [FREE]
+
+    ManagedSubscription:
+      type: object
+      required:
+        - tier
+        - planName
+        - status
+        - amountPerCycle
+        - intervalLabel
+        - nextChargeAt
+        - currentEnd
+        - priceLockedThrough
+        - cancelAtCycleEnd
+        - paymentRetrying
+        - retryUrl
+        - scheduledChange
+        - failedChange
+      properties:
+        tier:
+          $ref: "#/components/schemas/PaidTier"
+        planName:
+          type: string
+          enum: [Reserve, Treasury, Sovereign]
+          description: Display name — `MONTHLY` is Reserve, `QUARTERLY` is Treasury, `ANNUAL` is Sovereign.
+        status:
+          type: string
+          enum: [created, authenticated, active, pending, halted, paused, cancelled, completed, expired]
+          description: The subscription's provider-mirrored status.
+        amountPerCycle:
+          type: string
+          description: Currency-formatted amount per billing cycle, no decimals.
+          example: "₹6,000"
+        intervalLabel:
+          type: string
+          enum: [month, quarter, year]
+        nextChargeAt:
+          type: string
+          format: date-time
+          nullable: true
+        currentEnd:
+          type: string
+          format: date-time
+          nullable: true
+          description: The paid-through date; access is valid until here.
+        priceLockedThrough:
+          type: string
+          format: date-time
+          description: The subscription's creation date plus the plan's `termMonths` days.
+        cancelAtCycleEnd:
+          type: boolean
+        paymentRetrying:
+          type: boolean
+        retryUrl:
+          type: string
+          nullable: true
+          description: The provider-hosted payment page, present only while `paymentRetrying` is true.
+        scheduledChange:
+          type: object
+          nullable: true
+          description: A plan change that will start at the end of the current cycle.
+          required: [tier, planName, startsAt, amountPerCycle]
+          properties:
+            tier:
+              $ref: "#/components/schemas/PaidTier"
+            planName:
+              type: string
+              enum: [Reserve, Treasury, Sovereign]
+            startsAt:
+              type: string
+              format: date-time
+            amountPerCycle:
+              type: string
+              example: "₹18,000"
+        failedChange:
+          type: object
+          nullable: true
+          description: >-
+            A plan change whose payment never completed (`created` or `halted`); present
+            only when there is no `scheduledChange`.
+          required: [tier, planName]
+          properties:
+            tier:
+              $ref: "#/components/schemas/PaidTier"
+            planName:
+              type: string
+              enum: [Reserve, Treasury, Sovereign]
+
+    CheckoutResponse:
+      type: object
+      required: [checkout]
+      properties:
+        checkout:
+          type: object
+          required: [provider, razorpay]
+          properties:
+            provider:
+              type: string
+              enum: [razorpay]
+            razorpay:
+              type: object
+              required: [subscriptionId, name]
+              properties:
+                keyId:
+                  type: string
+                  description: The public Razorpay key id (`NEXT_PUBLIC_RAZORPAY_KEY_ID`).
+                subscriptionId:
+                  type: string
+                  description: The Razorpay subscription id to open in Checkout.
+                name:
+                  type: string
+                  enum: [WealthVault]
+
+    Success:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+
+    Ok:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
 
     Error:
       type: object

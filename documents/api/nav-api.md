@@ -115,9 +115,12 @@ No table is ever written to by this route.
 
 | File | Role |
 |---|---|
-| `src/components/layout/Sidebar.tsx` | Calls `GET /api/nav?country=<country>` on mount and whenever `country` (from `LocaleContext`) changes; maps each `NavItem` to `{ href, label: t.nav[labelKey], icon: ICON_MAP[iconName] }` and renders the list. Empty response (either shape) renders as no nav items — the caller doesn't need to special-case `401`. |
+| `src/components/layout/CategoryMenuBar.tsx` | Calls `GET /api/nav?country=<country>` on mount and whenever `country` (from `LocaleContext`) changes; maps each `NavItem` to a menu entry (`label` via `t.nav[labelKey]`, `icon` via `ICON_MAP[iconName]`) and renders the floating category menu. Empty response (either shape) renders as no menu items — the caller doesn't need to special-case `401`. |
 
-No other file calls this route.
+`CategoryMenuBar` and `Sidebar` are separate floating pieces of the authenticated shell
+(`src/components/layout/AppShell.tsx`) — `Sidebar` shows the signed-in user and account
+actions via `/api/auth/me`, `CategoryMenuBar` shows the country's nav items via this
+route. No other file calls this route.
 
 ---
 

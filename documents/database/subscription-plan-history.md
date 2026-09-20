@@ -59,8 +59,7 @@ model SubscriptionPlanHistory {
 
 ## Current data
 
-Populated by `logSubscriptionPlanHistoryIfChanged()` (`src/lib/services/SubscriptionPlanHistoryService.ts`),
-called from all four OAuth callback routes right after the `prisma.user.upsert(...)` call:
+Populated by `logSubscriptionPlanHistoryIfChanged()` (`src/lib/services/SubscriptionPlanHistoryService.ts`):
 
 ```typescript
 export async function logSubscriptionPlanHistoryIfChanged(userId: string, subscriptionPlanId: string): Promise<void> {
@@ -77,10 +76,22 @@ export async function logSubscriptionPlanHistoryIfChanged(userId: string, subscr
 }
 ```
 
-Every sign-in checks the user's most recent row against their current
-`subscriptionPlanId`. A new row is only inserted when they differ (or the user has none
-yet — the first login always logs one, recording the initial `FREE` plan every new
-signup lands on). No other route or code path reads or writes this table.
+It has two call sites, both passing what they just wrote (or are about to rely on) as
+`users.subscriptionPlanId`, so the check is always "does this match the latest row":
+
+- All four OAuth callback routes (`google`, `apple`, `x`, `linkedin`), right after
+  `prisma.user.upsert(...)` — logs a row whenever a sign-in resolves to a different plan
+  than the user's last recorded one, and always logs one on a brand-new signup (no prior
+  row exists, so `!latest` is true), recording the initial `FREE` plan.
+- `getEffectivePlan()` (`SubscriptionService.ts`), whenever the plan it just computed from
+  the user's `subscriptions` rows differs from the cached `users.subscriptionPlanId` — it
+  updates that cache column and logs the change in the same step. `getEffectivePlan()` runs
+  on `GET /api/auth/me`, `POST /api/subscription/create`, and `UpgradePromptService`, so a
+  plan change driven by a Razorpay webhook or by `reconcileSupersedingSubscriptions` gets
+  logged here the next time any of those run for that user, not at the moment the
+  underlying `subscriptions` row changed.
+
+No other route or code path reads or writes this table.
 
 ---
 

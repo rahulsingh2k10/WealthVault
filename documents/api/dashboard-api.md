@@ -72,16 +72,18 @@ export default async function DashboardPage() {
 ```
 
 `getUpgradePromptData` (`src/lib/services/UpgradePromptService.ts`) returns `null` — and
-the page renders nothing — for any user whose effective plan tier isn't `FREE`
+the page renders nothing — when `session.userId` is missing, when it matches no `users`
+row, or when the user's effective plan tier isn't `FREE`
 (`getEffectivePlan(userId).tier !== "FREE"`). For a `FREE`-tier user it returns the active
 paid plans (`MONTHLY`/`QUARTERLY`/`ANNUAL`) as view models plus a member count (paid users,
 floored to the nearest hundred, `null` if 100 or fewer), which `UpgradePrompt`
 (`src/components/dashboard/UpgradePrompt.tsx`) renders as a modal. There is no other
 dashboard content — no widgets, charts, or portfolio summary render on this route today.
 
-The sidebar and header are independently functional — the sidebar makes its own
-client-side calls to `/api/auth/me` (to show the signed-in user) and `/api/nav` (to
-populate its nav list). Neither call originates from this page or blocks its render.
+The sidebar and the floating category menu are independently functional — `Sidebar`
+makes its own client-side call to `/api/auth/me` (to show the signed-in user), and
+`CategoryMenuBar` makes its own call to `/api/nav` (to populate the category menu).
+Neither call originates from this page or blocks its render.
 
 ---
 
@@ -102,7 +104,7 @@ plans), plus whatever `getEffectivePlan` reads to resolve the user's current pla
 | `src/app/(app)/dashboard/loading.tsx` | Suspense fallback shown while the page's server data resolves |
 | `src/app/(app)/layout.tsx` | Shared layout for every `(app)` route — the defensive `encryptionKey` check and the `AppShell` wrap live here, not per-page |
 | `src/middleware.ts` | The actual auth gate — decides `/`, `/unlock`, or pass-through before the page runs |
-| `src/components/layout/AppShell.tsx` | Shared authenticated-app shell (sidebar + header) this page renders into |
+| `src/components/layout/AppShell.tsx` | Shared authenticated-app shell (`Sidebar` + `CategoryMenuBar` + `RenewalBanner`) this page renders into |
 | `src/lib/services/UpgradePromptService.ts` | `getUpgradePromptData()` — builds the free-tier upgrade prompt's view model |
 | `src/components/dashboard/UpgradePrompt.tsx` | Renders the upgrade prompt modal |
 | `src/lib/session.ts` | `getSession()` — reads `userId`/`encryptionKey` from the sealed cookie |
